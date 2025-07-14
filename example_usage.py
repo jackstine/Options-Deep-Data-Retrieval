@@ -23,14 +23,7 @@ def main() -> None:
     quotes = provider.fetch_quotes(symbols)
     
     for quote in quotes:
-        print(f"\n{quote.symbol}:")
-        print(f"  Price: ${quote.price}")
-        print(f"  Volume: {quote.volume:,}")
-        print(f"  Day High: ${quote.day_high}")
-        print(f"  Day Low: ${quote.day_low}")
-        print(f"  Market Cap: ${quote.market_cap}")
-        print(f"  Source: {quote.source}")
-        print(f"  Timestamp: {quote.timestamp}")
+        quote.print()
     
     # Fetch additional single quote
     print("\n=== Single Quote Example ===")
@@ -38,10 +31,6 @@ def main() -> None:
     if single_quote:
         quote = single_quote[0]
         print(f"\nTSLA Quote:")
-        print(f"  Price: ${quote.price}")
-        print(f"  P/E Ratio: {quote.pe_ratio}")
-        print(f"  52-Week High: ${quote.fifty_two_week_high}")
-        print(f"  52-Week Low: ${quote.fifty_two_week_low}")
     
     # Show sample supported symbols
     supported_symbols = provider.get_supported_symbols()
