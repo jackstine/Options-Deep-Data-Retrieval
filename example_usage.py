@@ -1,6 +1,6 @@
 """Example usage of the Yahoo Finance data source provider."""
 
-from src.data_sources.stock_quotes.providers.yahoo_finance import YahooFinanceProvider
+from src.data_sources.yahoo_finance.yahoo_finance import YahooFinanceProvider
 
 
 def main() -> None:
