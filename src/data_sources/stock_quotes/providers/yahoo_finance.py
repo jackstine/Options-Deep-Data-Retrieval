@@ -7,8 +7,8 @@ from decimal import Decimal
 from typing import List, Optional, Dict, Any
 import logging
 
-from src.data_sources.base import DataSourceBase
-from src.data_sources.models.stock_quote import StockQuote
+from src.data_sources.stock_quotes.base import DataSourceBase
+from src.data_sources.stock_quotes.models.stock_quote import StockQuote
 
 
 logger = logging.getLogger(__name__)
@@ -50,10 +50,12 @@ class YahooFinanceProvider(DataSourceBase):
                 info = ticker.info
                 
                 # Get current quote data
-                quote = self._normalize_quote_data(symbol, info)
+                quote = self._generate_stock_quote(symbol, info)
                 if quote:
                     quotes.append(quote)
                 else:
+                    # TODO_JAKE we might get an error such as a 429.
+                    # we need to see what the rate limit is on the yFinance.... if we are going to use it.
                     logger.warning(f"No data available for symbol: {symbol}")
                     
             except Exception as e:
@@ -62,9 +64,9 @@ class YahooFinanceProvider(DataSourceBase):
         
         return quotes
     
-    def _normalize_quote_data(self, symbol: str, info: Dict[str, Any]) -> Optional[StockQuote]:
+    def _generate_stock_quote(self, symbol: str, info: Dict[str, Any]) -> Optional[StockQuote]:
         """
-        Normalize Yahoo Finance data to StockQuote format.
+        Generate a Yahoo Finance data to StockQuote format.
         
         Args:
             symbol: Stock symbol

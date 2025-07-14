@@ -1,3 +1,6 @@
 # this is the claude code file for hooks.
 hook_output.txt
 
+#Python folders and structures.
+__pycache__
+

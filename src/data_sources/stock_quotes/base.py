@@ -3,7 +3,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List
-from src.data_sources.models.stock_quote import StockQuote
+from src.data_sources.stock_quotes.models.stock_quote import StockQuote
 
 
 class DataSourceBase(ABC):
