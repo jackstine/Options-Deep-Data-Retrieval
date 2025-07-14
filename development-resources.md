@@ -54,10 +54,6 @@ from typing import Union
 # Python 3.10+ syntax (preferred)
 def process_input(data: str | int | float) -> str:
     return str(data)
-
-# Pre-3.10 syntax
-def process_input_legacy(data: Union[str, int, float]) -> str:
-    return str(data)
 ```
 
 #### Optional Types
@@ -67,10 +63,6 @@ from typing import Optional
 # Python 3.10+ syntax (preferred)
 def get_stock_price(symbol: str) -> float | None:
     # May return None if stock not found
-    pass
-
-# Pre-3.10 syntax
-def get_stock_price_legacy(symbol: str) -> Optional[float]:
     pass
 ```
 
@@ -162,42 +154,6 @@ class Stock(Base):
     exchange: str = Column(String(50), nullable=False)
     sector: Optional[str] = Column(String(100))
 ```
-
-#### Data Transformation
-```python
-from pandas import DataFrame
-from typing import Dict, Any
-
-class DataTransformer:
-    def transform(self, raw_data: Dict[str, Any]) -> DataFrame:
-        """Transform raw API data to DataFrame."""
-        pass
-    
-    def validate_data(self, data: DataFrame) -> bool:
-        """Validate data integrity."""
-        pass
-```
-
-#### Algorithm Results
-```python
-from dataclasses import dataclass
-from typing import Dict, List
-from enum import Enum
-
-class SignalType(Enum):
-    BUY = "buy"
-    SELL = "sell"
-    HOLD = "hold"
-
-@dataclass
-class AnalysisResult:
-    symbol: str
-    algorithm_name: str
-    signal: SignalType
-    confidence: float  # 0.0 to 1.0
-    metadata: Dict[str, Any]
-```
-
 ### Mypy Configuration
 
 Create a `mypy.ini` file in your project root:
