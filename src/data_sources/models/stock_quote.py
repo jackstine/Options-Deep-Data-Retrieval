@@ -73,6 +73,24 @@ class StockQuote:
             source=data['source']
         )
     
+    def print(self) -> None:
+        """
+        this will print out the stock quote information
+        """
+        # TODO does not print out all the stock quote informaiton.
+        print(f"\n{self.symbol}:")
+        print(f"  Price: ${self.price}")
+        print(f"  Volume: {self.volume:,}")
+        print(f"  Day High: ${self.day_high}")
+        print(f"  Day Low: ${self.day_low}")
+        print(f"  Market Cap: ${self.market_cap}")
+        print(f"  Source: {self.source}")
+        print(f"  Timestamp: {self.timestamp}")
+        print(f"  Price: ${self.price}")
+        print(f"  P/E Ratio: {self.pe_ratio}")
+        print(f"  52-Week High: ${self.fifty_two_week_high}")
+        print(f"  52-Week Low: ${self.fifty_two_week_low}")
+    
     def __str__(self) -> str:
         """String representation of stock quote."""
         return f"StockQuote(symbol={self.symbol}, price={self.price}, volume={self.volume}, source={self.source})"
@@ -80,3 +98,4 @@ class StockQuote:
     def __repr__(self) -> str:
         """Detailed string representation of stock quote."""
         return self.__str__()
+    

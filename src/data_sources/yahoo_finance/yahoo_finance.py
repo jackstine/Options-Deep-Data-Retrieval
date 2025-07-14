@@ -6,9 +6,10 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional, Dict, Any
 import logging
+import json
 
-from src.data_sources.stock_quotes.base import DataSourceBase
-from src.data_sources.stock_quotes.models.stock_quote import StockQuote
+from src.data_sources.base.base import DataSourceBase
+from src.data_sources.models.stock_quote import StockQuote
 
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,9 @@ class YahooFinanceProvider(DataSourceBase):
                 info = ticker.info
                 
                 # Get current quote data
+                # TODO_JAKE need to confirm all the data that we can get from yfinance
+                # print(json.dumps(info, indent=2))
+
                 quote = self._generate_stock_quote(symbol, info)
                 if quote:
                     quotes.append(quote)
