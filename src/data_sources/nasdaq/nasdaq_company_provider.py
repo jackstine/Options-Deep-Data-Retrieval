@@ -1,8 +1,10 @@
 """NASDAQ company data source provider with abstraction wrapper."""
 
 from __future__ import annotations
-from typing import List
+from typing import List, Optional
 import logging
+import json
+from pathlib import Path
 
 from src.data_sources.base.company_base import CompanyDataSourceBase
 from src.data_sources.models.company import Company
@@ -106,3 +108,86 @@ class NasdaqCompanyProvider(CompanyDataSourceBase):
         self._companies_cache = []
         self._cache_loaded = False
         logger.info("Company cache cleared")
+    
+    def save_to_file(self, file_path: str, companies: Optional[List[Company]] = None) -> bool:
+        """
+        Save company data to a JSON file.
+        
+        Args:
+            file_path: Path where to save the company data
+            companies: Optional list of companies to save. If None, saves all cached companies.
+            
+        Returns:
+            True if save was successful, False otherwise
+        """
+        try:
+            # Use cached companies if none provided
+            if companies is None:
+                if not self._cache_loaded:
+                    self.fetch_companies()
+                companies = self._companies_cache
+            
+            # Convert companies to dictionaries for JSON serialization
+            companies_data = [company.to_dict() for company in companies]
+            
+            # Create directory if it doesn't exist
+            file_path_obj = Path(file_path)
+            file_path_obj.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Save to JSON file
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump({
+                    'source': self.name,
+                    'company_count': len(companies_data),
+                    'companies': companies_data
+                }, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"Successfully saved {len(companies_data)} companies to {file_path}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error saving companies to file {file_path}: {str(e)}")
+            return False
+    
+    def load_from_file(self, file_path: str) -> List[Company]:
+        """
+        Load company data from a JSON file.
+        
+        Args:
+            file_path: Path to the file containing company data
+            
+        Returns:
+            List of Company objects loaded from file
+            
+        Raises:
+            FileNotFoundError: If file doesn't exist
+            ValueError: If file format is invalid
+        """
+        file_path_obj = Path(file_path)
+        
+        if not file_path_obj.exists():
+            raise FileNotFoundError(f"Company data file not found: {file_path}")
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # Validate file format
+            if 'companies' not in data:
+                raise ValueError("Invalid file format: missing 'companies' key")
+            
+            # Convert dictionaries back to Company objects
+            companies = [Company.from_dict(company_data) for company_data in data['companies']]
+            
+            # Update cache with loaded data
+            self._companies_cache = companies
+            self._cache_loaded = True
+            
+            logger.info(f"Successfully loaded {len(companies)} companies from {file_path}")
+            return companies
+            
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON format in file {file_path}: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error loading companies from file {file_path}: {str(e)}")
+            raise

@@ -56,6 +56,46 @@ def main() -> None:
         print(f"\nSample NYSE companies:")
         for company in nyse_companies[:3]:
             print(f"  {company.ticker} - {company.company_name}")
+    
+    # Save companies to file
+    print("\n=== File Operations ===")
+    file_path = "data/nasdaq_companies.json"
+    
+    print(f"Saving all companies to {file_path}...")
+    if provider.save_to_file(file_path):
+        print("✓ Successfully saved companies to file")
+    else:
+        print("✗ Failed to save companies to file")
+        return
+    
+    # Save filtered companies (tech companies)
+    tech_file_path = "data/tech_companies.json"
+    tech_companies = provider.search_companies("Tech")
+    print(f"\nSaving {len(tech_companies)} tech companies to {tech_file_path}...")
+    if provider.save_to_file(tech_file_path, tech_companies):
+        print("✓ Successfully saved tech companies to file")
+    else:
+        print("✗ Failed to save tech companies to file")
+    
+    # Demonstrate loading from file
+    print(f"\nLoading companies from {file_path}...")
+    try:
+        # Clear cache first to test loading
+        provider.clear_cache()
+        loaded_companies = provider.load_from_file(file_path)
+        print(f"✓ Successfully loaded {len(loaded_companies)} companies from file")
+        
+        # Show first few loaded companies
+        print("\nFirst 3 loaded companies:")
+        for company in loaded_companies[:3]:
+            print(f"  {company.ticker} - {company.company_name} ({company.exchange})")
+            
+    except FileNotFoundError:
+        print("✗ File not found")
+    except ValueError as e:
+        print(f"✗ Invalid file format: {e}")
+    except Exception as e:
+        print(f"✗ Error loading file: {e}")
 
 
 if __name__ == "__main__":
