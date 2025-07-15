@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 import os
-from typing import Optional
 from dataclasses import dataclass
-
+from dotenv import load_dotenv
 
 @dataclass
 class EnvironmentVariables:
   _NASDAQ_API_KEY:str="NASDAQ_API_KEY"
+
+  def __post_init__(self):
+    # need to load the environment variables from the .env file.
+    load_dotenv()
 
   @classmethod
   def get_nasdaq_api_key(cls):
