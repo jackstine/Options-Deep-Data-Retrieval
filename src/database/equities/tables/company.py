@@ -1,7 +1,7 @@
 """SQLAlchemy Company table for database operations."""
 
 from __future__ import annotations
-from sqlalchemy import Column, Integer, String, DateTime, Text
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean
 from sqlalchemy.sql import func
 
 from src.database.equities.base import Base
@@ -27,6 +27,9 @@ class Company(Base):
     country = Column(String(100), nullable=True)
     market_cap = Column(Integer, nullable=True)
     description = Column(Text, nullable=True)
+    
+    # Trading status
+    active = Column(Boolean, nullable=False, default=True, index=True)
     
     # Data source tracking
     source = Column(String(50), nullable=False, index=True)
@@ -54,11 +57,9 @@ class Company(Base):
             sector=self.sector, # type: ignore[arg-type]
             industry=self.industry, # type: ignore[arg-type]
             country=self.country, # type: ignore[arg-type]
-            currency=self.currency, # type: ignore[arg-type]
             market_cap=self.market_cap, # type: ignore[arg-type]
-            employees=self.employees, # type: ignore[arg-type]
-            website=self.website, # type: ignore[arg-type]
             description=self.description, # type: ignore[arg-type]
+            active=self.active, # type: ignore[arg-type]
             source=self.source # type: ignore[arg-type]
         )
     
@@ -82,6 +83,7 @@ class Company(Base):
             country=company_data.country,
             market_cap=company_data.market_cap,
             description=company_data.description,
+            active=company_data.active,
             source=company_data.source
         )
     
@@ -100,4 +102,5 @@ class Company(Base):
         self.country = company_data.country
         self.market_cap = company_data.market_cap
         self.description = company_data.description
+        self.active = company_data.active
         self.source = company_data.source

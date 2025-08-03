@@ -17,6 +17,7 @@ class Company:
     country: Optional[str] = None
     market_cap: Optional[int] = None
     description: Optional[str] = None
+    active: bool = True
     source: str = ""
     
     def to_dict(self) -> Dict[str, Any]:
