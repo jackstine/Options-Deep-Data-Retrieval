@@ -4,8 +4,8 @@ hook_output.txt
 # Python folders and structures.
 __pycache__
 
-# Environment variable files.
-.env
+# Environment variable files. any file that starts with `.` and ends with `env`
+.*env
 
 # ignore all the data files
 **/data
