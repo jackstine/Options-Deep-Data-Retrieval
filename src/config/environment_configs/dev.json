@@ -1,0 +1,16 @@
+{
+  "databases": {
+    "equities": {
+      "host": "dev-db-server.example.com",
+      "port": 5432,
+      "database": "equities-dev",
+      "username": "dev_user"
+    },
+    "algorithm": {
+      "host": "dev-db-server.example.com",
+      "port": 5432,
+      "database": "algorithms-dev",
+      "username": "dev_user"
+    }
+  }
+}

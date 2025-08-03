@@ -1,0 +1,16 @@
+{
+  "databases": {
+    "equities": {
+      "host": "localhost",
+      "port": 5432,
+      "database": "equities-local",
+      "username": "postgres"
+    },
+    "algorithm": {
+      "host": "localhost",
+      "port": 5432,
+      "database": "algorithms-local",
+      "username": "postgres"
+    }
+  }
+}
