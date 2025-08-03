@@ -3,12 +3,14 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
+from pydantic import BaseModel
 
 
 @dataclass
-class Company:
+class Company(BaseModel):
     """Generic company information model."""
     
+    id: Optional[int] = None
     ticker: str
     company_name: str
     exchange: str
@@ -43,6 +45,7 @@ class Company:
     def from_dict(cls, data: Dict[str, Any]) -> Company:
         """Create Company instance from dictionary."""
         return cls(
+            id=data['id'],
             ticker=data['ticker'],
             company_name=data['company_name'],
             exchange=data['exchange'],

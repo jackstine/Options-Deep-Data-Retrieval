@@ -1,12 +1,20 @@
 """Example usage of the NASDAQ company data source provider."""
 
+import json
+from pathlib import Path
 from src.data_sources.nasdaq.nasdaq_company_provider import NasdaqCompanyProvider
+from src.data_sources.nasdaq.company import get_dict_of_stocks
 
 
 def main() -> None:
     """Demonstrate usage of the NASDAQ company data source."""
     
     print("=== NASDAQ Company Provider Usage ===")
+    
+    # First, save raw company data to JSON file
+    print("\n=== Saving Raw Company Data ===")
+    save_raw_companies_to_json()
+    
     provider = NasdaqCompanyProvider()
     
     # Fetch all companies
@@ -96,6 +104,31 @@ def main() -> None:
         print(f"✗ Invalid file format: {e}")
     except Exception as e:
         print(f"✗ Error loading file: {e}")
+
+
+def save_raw_companies_to_json() -> None:
+    """Fetch raw company data and save to JSON file."""
+    try:
+        print("Fetching raw company data from NASDAQ...")
+        raw_companies = get_dict_of_stocks()
+        
+        if raw_companies is None:
+            print("✗ Failed to fetch raw company data")
+            return
+        
+        # Ensure data directory exists
+        data_dir = Path("data")
+        data_dir.mkdir(exist_ok=True)
+        
+        # Save to JSON file with pretty formatting
+        output_file = data_dir / "raw_companies.json"
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(raw_companies, f, indent=2, ensure_ascii=False)
+        
+        print(f"✓ Successfully saved {len(raw_companies)} raw company records to {output_file}")
+        
+    except Exception as e:
+        print(f"✗ Error saving raw company data: {e}")
 
 
 if __name__ == "__main__":

@@ -13,6 +13,22 @@ class Headers:
 def get_companies() -> list[Company]:
   """
   returns the list of companies by making a request to nasdaq
+  returns data with the following info.
+
+    "ticker": "ARIA",
+    "exchange": "NASDAQ",
+    "company_name": "ARIAD Pharmaceuticals Inc."
+  """
+  return _convert_dict_to_stocks(get_dict_of_stocks())
+
+def get_dict_of_stocks() -> list[dict]|None:
+  """
+  returns the raw dict of stocks from the Nasdaq company listing api.
+  this will read all the data from the API, and will return raw dictionary of the stocks.
+
+    "ticker": "ARIA",
+    "exchange": "NASDAQ",
+    "company_name": "ARIAD Pharmaceuticals Inc."
   """
   api_key = en.ENVIRONMENT_VARIABLES.get_nasdaq_api_key()
   url = f'https://data.nasdaq.com/api/v3/datatables/QUOTEMEDIA/TICKERS?api_key={api_key}&qopts.export=true'
@@ -20,8 +36,7 @@ def get_companies() -> list[Company]:
   if response.status_code == 200:
       try:
         content = _validate_response_contents(response.json())
-        dict_of_stocks = _read_download_file(content)
-        return _convert_dict_to_stocks(dict_of_stocks)
+        return _read_download_file(content)
       except Exception as e:
         raise BaseException("get companies did not get the expected response") from e
   else:
@@ -81,7 +96,7 @@ def _read_csv_from_file(f) -> list[dict]:
   """
   read_csv_from_file will read the csv file, get the csv file
 
-  should return a list of dicts with "company_name", "ticker", "exchange"
+  should return a list of dicts with all available headers and data
   """
   data = []
   csv_reader = csv.reader(io.TextIOWrapper(f, encoding='utf-8'))
@@ -94,8 +109,11 @@ def _read_csv_from_file(f) -> list[dict]:
       assert Headers.EXCHANGE in headers
     else:
       d = dict()
-      for i in range(0,3):
-        d[headers[i]] = row[i]
+      for j in range(len(headers)):
+        if j < len(row):
+          d[headers[j]] = row[j]
+        else:
+          d[headers[j]] = ""  # Handle missing values
       data.append(d)
   return data
 
