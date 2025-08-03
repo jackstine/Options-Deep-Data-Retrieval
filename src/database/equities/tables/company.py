@@ -19,7 +19,7 @@ class Company(Base):
     # Core company information
     ticker = Column(String(20), nullable=False, unique=True, index=True)
     company_name = Column(String(500), nullable=False)
-    exchange = Column(String(20), nullable=False, index=True)
+    exchange = Column(String(20), nullable=False)
     
     # Optional company details
     sector = Column(String(100), nullable=True, index=True)
@@ -32,7 +32,7 @@ class Company(Base):
     active = Column(Boolean, nullable=False, default=True, index=True)
     
     # Data source tracking
-    source = Column(String(50), nullable=False, index=True)
+    source = Column(String(50), nullable=False)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
