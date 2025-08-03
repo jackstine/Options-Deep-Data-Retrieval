@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from src.data_sources.nasdaq.nasdaq_company_provider import NasdaqCompanyProvider
 from src.data_sources.nasdaq.company import get_dict_of_stocks
+from src.data_sources.nasdaq.screener import load_screener_files_from_directory, find_latest_screener_file
 
 
 def main() -> None:
@@ -14,6 +15,10 @@ def main() -> None:
     # First, save raw company data to JSON file
     print("\n=== Saving Raw Company Data ===")
     save_raw_companies_to_json()
+    
+    # Load and save screener data
+    print("\n=== NASDAQ Screener Data ===")
+    save_screener_data_to_json()
     
     provider = NasdaqCompanyProvider()
     
@@ -129,6 +134,61 @@ def save_raw_companies_to_json() -> None:
         
     except Exception as e:
         print(f"✗ Error saving raw company data: {e}")
+
+
+def save_screener_data_to_json() -> None:
+    """Load NASDAQ screener data and save to JSON file."""
+    try:
+        # Path to screener data directory
+        screener_dir = Path("src/data_sources/nasdaq/data/data_screener")
+        
+        if not screener_dir.exists():
+            print(f"✗ Screener directory not found: {screener_dir}")
+            return
+        
+        # Find the latest screener file
+        latest_file = find_latest_screener_file(screener_dir)
+        if latest_file:
+            print(f"Loading latest screener file: {latest_file.name}")
+        else:
+            print("No screener files found, loading all files in directory...")
+        
+        # Load all screener data
+        print("Loading NASDAQ screener data...")
+        screener_companies = load_screener_files_from_directory(screener_dir)
+        
+        if not screener_companies:
+            print("✗ No screener data found")
+            return
+        
+        # Ensure data directory exists
+        data_dir = Path("data")
+        data_dir.mkdir(exist_ok=True)
+        
+        # Save to JSON file with pretty formatting
+        output_file = data_dir / "nasdaq_screener_companies.json"
+        screener_data = [company.to_dict() for company in screener_companies]
+        
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump({
+                'source': 'NASDAQ_SCREENER',
+                'company_count': len(screener_data),
+                'companies': screener_data
+            }, f, indent=2, ensure_ascii=False)
+        
+        print(f"✓ Successfully saved {len(screener_companies)} screener companies to {output_file}")
+        
+        # Show some sample data
+        print(f"\nSample screener companies:")
+        for company in screener_companies[:3]:
+            print(f"  {company.ticker} - {company.company_name}")
+            if company.sector:
+                print(f"    Sector: {company.sector}")
+            if company.market_cap:
+                print(f"    Market Cap: ${company.market_cap:,}")
+        
+    except Exception as e:
+        print(f"✗ Error saving screener data: {e}")
 
 
 if __name__ == "__main__":

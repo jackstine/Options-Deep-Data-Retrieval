@@ -17,10 +17,7 @@ class Company(BaseModel):
     sector: Optional[str] = None
     industry: Optional[str] = None
     country: Optional[str] = None
-    currency: Optional[str] = None
     market_cap: Optional[int] = None
-    employees: Optional[int] = None
-    website: Optional[str] = None
     description: Optional[str] = None
     source: str = ""
     
@@ -33,10 +30,7 @@ class Company(BaseModel):
             'sector': self.sector,
             'industry': self.industry,
             'country': self.country,
-            'currency': self.currency,
             'market_cap': self.market_cap,
-            'employees': self.employees,
-            'website': self.website,
             'description': self.description,
             'source': self.source
         }
@@ -52,10 +46,7 @@ class Company(BaseModel):
             sector=data.get('sector'),
             industry=data.get('industry'),
             country=data.get('country'),
-            currency=data.get('currency'),
             market_cap=data.get('market_cap'),
-            employees=data.get('employees'),
-            website=data.get('website'),
             description=data.get('description'),
             source=data.get('source', '')
         )
@@ -72,10 +63,6 @@ class Company(BaseModel):
             print(f"  Country: {self.country}")
         if self.market_cap:
             print(f"  Market Cap: ${self.market_cap:,}")
-        if self.employees:
-            print(f"  Employees: {self.employees:,}")
-        if self.website:
-            print(f"  Website: {self.website}")
         print(f"  Source: {self.source}")
     
     def __str__(self) -> str:
