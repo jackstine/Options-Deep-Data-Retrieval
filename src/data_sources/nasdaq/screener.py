@@ -54,6 +54,8 @@ def load_screener_file(file_path: str | Path) -> List[Company]:
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             csv_reader = csv.DictReader(f)
+            if csv_reader.fieldnames == None:
+                raise ValueError(f"data in the csv is not found: {file_path}")
             
             # Validate required headers exist
             required_headers = [
@@ -188,6 +190,7 @@ def _convert_screener_row_to_company(row: dict) -> Optional[Company]:
     exchange = "NASDAQ"  # Default to NASDAQ since this is screener data
     
     return Company(
+        id=None,
         ticker=symbol,
         company_name=name,
         exchange=exchange,
@@ -195,6 +198,7 @@ def _convert_screener_row_to_company(row: dict) -> Optional[Company]:
         industry=industry,
         country=country,
         market_cap=market_cap,
+        description=None,
         source="NASDAQ_SCREENER"
     )
 

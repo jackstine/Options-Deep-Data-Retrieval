@@ -3,17 +3,15 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
-from pydantic import BaseModel
-
 
 @dataclass
-class Company(BaseModel):
+class Company:
     """Generic company information model."""
     
-    id: Optional[int] = None
     ticker: str
     company_name: str
     exchange: str
+    id: Optional[int] = None
     sector: Optional[str] = None
     industry: Optional[str] = None
     country: Optional[str] = None
