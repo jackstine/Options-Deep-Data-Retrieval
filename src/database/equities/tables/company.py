@@ -1,11 +1,19 @@
 """SQLAlchemy Company table for database operations."""
 
 from __future__ import annotations
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean
+from datetime import datetime
+from typing import TYPE_CHECKING
+from sqlalchemy import String, DateTime, Text, Boolean
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from src.database.equities.base import Base
 from src.data_sources.models.company import Company as CompanyDataModel
+
+# Import for relationship type hint
+if TYPE_CHECKING:
+    from src.database.equities.tables.ticker import Ticker
+    from src.database.equities.tables.ticker_history import TickerHistory
 
 
 class Company(Base):
@@ -14,33 +22,36 @@ class Company(Base):
     __tablename__ = 'companies'
     
     # Primary key with auto-incrementing serial ID
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     
     # Core company information
-    ticker = Column(String(20), nullable=False, unique=True, index=True)
-    company_name = Column(String(500), nullable=False)
-    exchange = Column(String(20), nullable=False)
+    company_name: Mapped[str] = mapped_column(String(500), nullable=False)
+    exchange: Mapped[str] = mapped_column(String(20), nullable=False)
     
     # Optional company details
-    sector = Column(String(100), nullable=True, index=True)
-    industry = Column(String(200), nullable=True, index=True)
-    country = Column(String(100), nullable=True)
-    market_cap = Column(Integer, nullable=True)
-    description = Column(Text, nullable=True)
+    sector: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    industry: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
+    country: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    market_cap: Mapped[int | None] = mapped_column(nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     
     # Trading status
-    active = Column(Boolean, nullable=False, default=True, index=True)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
     
     # Data source tracking
-    source = Column(String(50), nullable=False)
+    source: Mapped[str] = mapped_column(String(50), nullable=False)
     
     # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    
+    # Relationships
+    tickers: Mapped[list["Ticker"]] = relationship("Ticker", back_populates="company")
+    ticker_history: Mapped[list["TickerHistory"]] = relationship("TickerHistory", back_populates="company")
     
     def __repr__(self) -> str:
         """String representation of Company."""
-        return f"<Company(id={self.id}, ticker='{self.ticker}', name='{self.company_name}')>"
+        return f"<Company(id={self.id}, name='{self.company_name}')>"
     
     def to_data_model(self) -> CompanyDataModel:
         """
@@ -50,17 +61,16 @@ class Company(Base):
             CompanyDataModel instance
         """
         return CompanyDataModel(
-            id=self.id, # type: ignore[arg-type]
-            ticker=self.ticker, # type: ignore[arg-type]
-            company_name=self.company_name, # type: ignore[arg-type]
-            exchange=self.exchange, # type: ignore[arg-type]
-            sector=self.sector, # type: ignore[arg-type]
-            industry=self.industry, # type: ignore[arg-type]
-            country=self.country, # type: ignore[arg-type]
-            market_cap=self.market_cap, # type: ignore[arg-type]
-            description=self.description, # type: ignore[arg-type]
-            active=self.active, # type: ignore[arg-type]
-            source=self.source # type: ignore[arg-type]
+            id=self.id,
+            company_name=self.company_name,
+            exchange=self.exchange,
+            sector=self.sector,
+            industry=self.industry,
+            country=self.country,
+            market_cap=self.market_cap,
+            description=self.description,
+            active=self.active,
+            source=self.source
         )
     
     @classmethod
@@ -75,7 +85,6 @@ class Company(Base):
             Company SQLAlchemy model instance
         """
         return cls(
-            ticker=company_data.ticker,
             company_name=company_data.company_name,
             exchange=company_data.exchange,
             sector=company_data.sector,
@@ -94,7 +103,6 @@ class Company(Base):
         Args:
             company_data: CompanyDataModel instance with updated data
         """
-        self.ticker = company_data.ticker
         self.company_name = company_data.company_name
         self.exchange = company_data.exchange
         self.sector = company_data.sector

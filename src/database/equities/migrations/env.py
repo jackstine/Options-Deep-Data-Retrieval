@@ -14,6 +14,8 @@ sys.path.insert(0, str(src_path))
 
 from src.database.equities.base import Base
 from src.database.equities.tables.company import Company
+from src.database.equities.tables.ticker import Ticker
+from src.database.equities.tables.ticker_history import TickerHistory
 from src.config.configuration import CONFIG
 
 # this is the Alembic Config object, which provides
