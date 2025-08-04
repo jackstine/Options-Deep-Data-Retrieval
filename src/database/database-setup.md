@@ -21,20 +21,20 @@ echo "Password set: ${OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD:+Yes}"
 
 #### Create Database User (if not exists)
 The equities database uses specific users per environment:
-- **Local**: `e-user`
+- **Local**: `e_user`
 - **Dev**: `dev_user` 
 - **Prod**: `prod_user`
 
-**For Local Environment (`e-user`):**
+**For Local Environment (`e_user`):**
 ```bash
-# Check if e-user exists
-psql -U postgres -c "SELECT rolname FROM pg_roles WHERE rolname = 'e-user';"
+# Check if e_user exists
+psql -U postgres -c "SELECT rolname FROM pg_roles WHERE rolname = 'e_user';"
 
 # If user doesn't exist, create it:
 psql -U postgres -c "
-CREATE USER \"e-user\" WITH PASSWORD 'your_secure_password';
-ALTER USER \"e-user\" CREATEDB;
-GRANT CONNECT ON DATABASE postgres TO \"e-user\";
+CREATE USER e_user WITH PASSWORD 'your_secure_password';
+ALTER USER e_user CREATEDB;
+GRANT CONNECT ON DATABASE postgres TO e_user;
 "
 ```
 
@@ -44,7 +44,7 @@ GRANT CONNECT ON DATABASE postgres TO \"e-user\";
 psql -U postgres
 
 -- For local environment
-CREATE DATABASE "equities-local" OWNER "e-user";
+CREATE DATABASE "equities-local" OWNER e_user;
 
 -- For dev environment  
 CREATE DATABASE "equities-dev" OWNER "dev_user";
@@ -57,11 +57,11 @@ CREATE DATABASE "equities-prod" OWNER "prod_user";
 ```sql
 -- For local environment
 psql -U postgres -d "equities-local" -c "
-GRANT ALL PRIVILEGES ON SCHEMA public TO \"e-user\";
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"e-user\";
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"e-user\";
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO \"e-user\";
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO \"e-user\";
+GRANT ALL PRIVILEGES ON SCHEMA public TO e_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO e_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO e_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO e_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO e_user;
 "
 ```
 
@@ -104,7 +104,7 @@ Verify database connectivity with the correct user:
 
 ```bash
 # Test connection for local environment
-psql -h localhost -U e-user -d equities-local -c "SELECT version();"
+psql -h localhost -U e_user -d equities-local -c "SELECT version();"
 
 # Test connection for dev environment  
 psql -h dev-db-server.example.com -U dev_user -d equities-dev -c "SELECT version();"
@@ -197,7 +197,7 @@ Connect to database and check table structure:
 
 ```sql
 -- Connect to database with correct user
-psql -h localhost -U e-user -d equities-local
+psql -h localhost -U e_user -d equities-local
 
 -- List all tables
 \dt
@@ -539,7 +539,7 @@ echo $ENVIRONMENT
 echo ${OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD:+Password is set}
 
 # Test database connection manually for local environment
-psql -h localhost -U e-user -d equities-local -c "SELECT 1;"
+psql -h localhost -U e_user -d equities-local -c "SELECT 1;"
 
 # For other environments, use appropriate usernames:
 # psql -h dev-db-server.example.com -U dev_user -d equities-dev -c "SELECT 1;"
@@ -561,17 +561,17 @@ alembic upgrade head
 
 #### 5. "Permission denied on database"
 ```bash
-# Check database user permissions for e-user
-psql -h localhost -U postgres -d postgres -c "SELECT rolname, rolsuper, rolcreatedb FROM pg_roles WHERE rolname = 'e-user';"
+# Check database user permissions for e_user
+psql -h localhost -U postgres -d postgres -c "SELECT rolname, rolsuper, rolcreatedb FROM pg_roles WHERE rolname = 'e_user';"
 
 # Grant necessary permissions if needed
-psql -h localhost -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE \"equities-local\" TO \"e-user\";"
+psql -h localhost -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE \"equities-local\" TO e_user;"
 
 # Ensure schema permissions are set
 psql -h localhost -U postgres -d "equities-local" -c "
-GRANT ALL PRIVILEGES ON SCHEMA public TO \"e-user\";
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"e-user\";
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"e-user\";
+GRANT ALL PRIVILEGES ON SCHEMA public TO e_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO e_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO e_user;
 "
 ```
 
@@ -659,7 +659,7 @@ export ENVIRONMENT=local
 export OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD=your_password
 
 # Database connection test
-psql -h localhost -U e-user -d equities-local -c "SELECT version();"
+psql -h localhost -U e_user -d equities-local -c "SELECT version();"
 ```
 
 This completes the setup of the companies table in the equities database. The table is now ready for data population and integration with the Options Deep application.
