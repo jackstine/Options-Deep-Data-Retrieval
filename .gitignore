@@ -9,3 +9,6 @@ __pycache__
 
 # ignore all the data files
 **/data
+
+# ignore all the vscode configurations as well.
+.vscode
