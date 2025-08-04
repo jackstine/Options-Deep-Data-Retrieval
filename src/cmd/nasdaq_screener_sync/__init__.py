@@ -1,0 +1,1 @@
+"""NASDAQ screener sync command-line interface."""

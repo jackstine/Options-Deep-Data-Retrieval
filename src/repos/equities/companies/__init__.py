@@ -1,0 +1,1 @@
+"""Companies repository package."""
