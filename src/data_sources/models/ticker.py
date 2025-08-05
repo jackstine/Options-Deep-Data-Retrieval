@@ -10,7 +10,7 @@ class Ticker:
     """Currently active ticker symbol model."""
     
     symbol: str
-    company_id: int
+    company_id: Optional[int] = None # not required because it can be retrieved from sources that have just the symbol
     id: Optional[int] = None
     
     def to_dict(self) -> Dict[str, Any]:

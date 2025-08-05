@@ -8,6 +8,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from src.data_sources.models.company import Company
+from src.data_sources.models.ticker import Ticker
 
 
 logger = logging.getLogger(__name__)
@@ -189,9 +190,15 @@ def _convert_screener_row_to_company(row: dict) -> Optional[Company]:
     # Determine exchange from symbol characteristics (basic heuristic)
     exchange = "NASDAQ"  # Default to NASDAQ since this is screener data
     
+    # Create ticker model (company_id will be set when company is saved to database)
+    ticker_model = Ticker(
+        symbol=symbol,
+        company_id=None  # Will be updated when company is inserted
+    )
+    
     return Company(
         id=None,
-        ticker=symbol,
+        ticker=ticker_model,
         company_name=name,
         exchange=exchange,
         sector=sector,

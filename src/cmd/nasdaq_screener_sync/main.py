@@ -13,6 +13,7 @@ import sys
 
 from src.data_sources.nasdaq.database_integration import (
     sync_screener_with_database, 
+    sync_companies_and_tickers_with_database,
     print_sync_results
 )
 
@@ -20,8 +21,8 @@ from src.data_sources.nasdaq.database_integration import (
 def main() -> int:
     """Sync NASDAQ screener data with database."""
     try:
-        print("Syncing NASDAQ screener with database...")
-        results = sync_screener_with_database()
+        print("Syncing NASDAQ screener companies and tickers with database...")
+        results = sync_companies_and_tickers_with_database()
         print_sync_results(results)
         return 0
         
