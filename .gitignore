@@ -12,3 +12,8 @@ __pycache__
 
 # ignore all the vscode configurations as well.
 .vscode
+
+# I do not want to share the stupid documentation of the ai
+/ai_documentation
+.claude/
+/agents
