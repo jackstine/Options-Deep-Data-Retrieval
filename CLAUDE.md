@@ -57,6 +57,7 @@ This document contains critical information about working with this codebase. Fo
 - **repos** - this will contain database repos to tables or collections that are peristant data stores.
 - **data_sources** - this will contain data sources that are external to our application, where we fetch data from third parties.
 - **cmd** - this will contain single driven commands and programs that the system will run.
+   - **cmd/examples** - this will contain examples of the data_sources retrival code, it should not connect the data_sources to database, but could be used for checking the contents of a data_source and placing it in a file.
 - **utils** - this is where you can find DRY code for a lot of common functionality.
 - **database** - this where database is constructed using alembic.
 - **config** - this is where setting up configurations, environment variables, and the like are stored.
