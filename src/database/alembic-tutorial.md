@@ -404,7 +404,7 @@ pg_dump your_production_db > backup_before_migration.sql
 After migrations create tables, you can add database operations:
 
 ```python
-# In nasdaq_company_provider.py
+# In screener.py or similar data source
 def save_to_database(self, companies: List[Company]) -> bool:
     """Save companies to database after fetching from API."""
     with db_connection.session_scope() as session:
