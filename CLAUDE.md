@@ -60,3 +60,10 @@ This document contains critical information about working with this codebase. Fo
 - **utils** - this is where you can find DRY code for a lot of common functionality.
 - **database** - this where database is constructed using alembic.
 - **config** - this is where setting up configurations, environment variables, and the like are stored.
+- **pipelines** - merging the repos and the data_sources together using dependency injection to abstract the use of the data sources.
+
+## Testing
+- tests are created in the same sub-directories as the code
+- test data is created in the @tests folder
+- tests utilize `*_mock.py` files to mock out the data from `repos` and `data_sources`
+

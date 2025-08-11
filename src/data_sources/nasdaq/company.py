@@ -1,6 +1,8 @@
 import requests
 import src.config.environment as en
 from src.data_sources.models.company import Company
+from src.data_sources.base.company_data_source import CompanyDataSource
+from typing import List
 import zipfile
 import io
 import csv
@@ -10,40 +12,96 @@ class Headers:
   TICKER = "ticker"
   EXCHANGE = "exchange"
 
+
+class NasdaqCompanySource(CompanyDataSource):
+  """NASDAQ company data source using API."""
+  
+  @property
+  def name(self) -> str:
+    """Name of the data source."""
+    return "NASDAQ API"
+  
+  def get_companies(self) -> List[Company]:
+    """
+    Returns the list of companies by making a request to NASDAQ API.
+    Returns data with the following info:
+      "ticker": "ARIA",
+      "exchange": "NASDAQ", 
+      "company_name": "ARIAD Pharmaceuticals Inc."
+    """
+    return _convert_dict_to_stocks(self._get_dict_of_stocks())
+  
+  def is_available(self) -> bool:
+    """Check if NASDAQ API is available."""
+    try:
+      api_key = en.ENVIRONMENT_VARIABLES.get_nasdaq_api_key()
+      return api_key is not None
+    except Exception:
+      return False
+  
+  def _get_dict_of_stocks(self) -> List[dict] | None:
+    """
+    Returns the raw dict of stocks from the NASDAQ company listing API.
+    This will read all the data from the API, and will return raw dictionary of the stocks.
+      "ticker": "ARIA",
+      "exchange": "NASDAQ",
+      "company_name": "ARIAD Pharmaceuticals Inc."
+    """
+    api_key = en.ENVIRONMENT_VARIABLES.get_nasdaq_api_key()
+    url = f'https://data.nasdaq.com/api/v3/datatables/QUOTEMEDIA/TICKERS?api_key={api_key}&qopts.export=true'
+    response = requests.get(url)
+    if response.status_code == 200:
+        try:
+          content = _validate_response_contents(response.json())
+          return _read_download_file(content)
+        except Exception as e:
+          raise BaseException("get companies did not get the expected response") from e
+    else:
+        raise BaseException(f'Failed to retrieve nasdaq companies. Status code: {response.status_code}')
+
+
+# Backward compatibility functions
 def get_companies() -> list[Company]:
   """
-  returns the list of companies by making a request to nasdaq
-  returns data with the following info.
-
+  DEPRECATED: Use NasdaqCompanySource class instead.
+  
+  Returns the list of companies by making a request to NASDAQ API.
+  Returns data with the following info:
     "ticker": "ARIA",
     "exchange": "NASDAQ",
     "company_name": "ARIAD Pharmaceuticals Inc."
   """
-  return _convert_dict_to_stocks(get_dict_of_stocks())
+  source = NasdaqCompanySource()
+  return source.get_companies()
 
 def get_dict_of_stocks() -> list[dict]|None:
   """
-  returns the raw dict of stocks from the Nasdaq company listing api.
-  this will read all the data from the API, and will return raw dictionary of the stocks.
-
+  DEPRECATED: Use NasdaqCompanySource._get_dict_of_stocks() instead.
+  
+  Returns the raw dict of stocks from the NASDAQ company listing API.
+  This will read all the data from the API, and will return raw dictionary of the stocks.
     "ticker": "ARIA",
-    "exchange": "NASDAQ",
+    "exchange": "NASDAQ", 
     "company_name": "ARIAD Pharmaceuticals Inc."
   """
-  api_key = en.ENVIRONMENT_VARIABLES.get_nasdaq_api_key()
-  url = f'https://data.nasdaq.com/api/v3/datatables/QUOTEMEDIA/TICKERS?api_key={api_key}&qopts.export=true'
-  response = requests.get(url)
-  if response.status_code == 200:
-      try:
-        content = _validate_response_contents(response.json())
-        return _read_download_file(content)
-      except Exception as e:
-        raise BaseException("get companies did not get the expected response") from e
-  else:
-      raise BaseException(f'Failed to retrieve nasdaq companies. Status code: {response.status_code}')
+  source = NasdaqCompanySource()
+  return source._get_dict_of_stocks()
 
 def _convert_dict_to_stocks(ds):
-  return [Company(ticker=k[Headers.TICKER], company_name=k[Headers.COMPANY_NAME], exchange=k[Headers.EXCHANGE], source="NASDAQ") for k in ds]
+  """Convert dictionary data to Company objects."""
+  from src.data_sources.models.ticker import Ticker
+  
+  companies = []
+  for k in ds:
+    ticker = Ticker(symbol=k[Headers.TICKER], company_id=None)
+    company = Company(
+      company_name=k[Headers.COMPANY_NAME], 
+      exchange=k[Headers.EXCHANGE],
+      ticker=ticker,
+      source="NASDAQ"
+    )
+    companies.append(company)
+  return companies
 
 
 def _validate_response_contents(content) -> str:
@@ -118,9 +176,15 @@ def _read_csv_from_file(f) -> list[dict]:
   return data
 
 if __name__ == "__main__":
-  # read_download_file("https://aws-gis-link-pro-us-east-1-datahub.s3.amazonaws.com/export/QUOTEMEDIA/TICKERS/QUOTEMEDIA_TICKERS_6d75499fefd916e54334b292986eafcc.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAX5EW3SB5MGHOSTNG%2F20240808%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240808T191558Z&X-Amz-Expires=1800&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEDwaCXVzLWVhc3QtMSJGMEQCIG3kL2yPFvsOS9Vj8U3ZOxFvO1q1QPb3l2nzp%2BI64ZCrAiAYP5L9jGh7lgUodVSVXyC2KGCjNG%2Fpyh81a193%2BgdmLiqMBQg0EAIaDDU0MzYyOTc0MjIwMiIMlrIueSX34Mup9Eb0KukEdFoZPwhvK%2BolGTSTk5fFZ3mzVuFiqUC0hvOqR1iM3REKoPiYYNrBr2FchBLceliGXsshXfQT4VyI%2BaTRCnpmfkjd9nsM7PT2HJTObrryhdcMDip5ltD02rsG7g5AZVwBC1m184W2tvUiCtdnXAWp%2FJnCruAEtSz91eMkoRx3ulisEeGntLT6s3ArdxzXoFEF0bfFR6c29TbcE93bKNzwKm9zm45HB2mtmn5Lggt%2BBueoV1aVbfvQ2zkHWEtB8ByxYYt8gSeMReHIgRTxS4Qk2iwGaZ4hkpi3GJ9RNIK2XVAzjBpTIkvSN2D38SfTAdCxSfu5CR8lmY1iGfzHGXDCdtC7uHzaQ%2F7sW2QlBcPtm5fi0gmlGu1%2BQWRv8P29NNmQ5OOC90GL5ulMEYKePk4w6dXA9qMIE0bjiE2OYDTfUJq%2FFYisUopDYFfFvsv3EUtQ81xTPu8f8g3yrpXHJZxRL4FmVPi1NoSo1BZ6gZpFqCEkO5A4GhQ6jB97SKWCSybOrP8LWZePzg4ouqMNohcBglOwphMBd1FLRG1lI2rt3hqPywx8zXgAk%2FYzQZQfbeHLgl0ID11X6BvrsbaE3NLzlZNsuPULEfLHAmeV5R%2BmaaATgf1ATvkB6trbXOXlog8QixxmDdZztL4ruJqm2wtxuq5g5Y13G47bT4pABazCG1W4un8PZL8K5uvW%2B8oja1kHcOuUpBApioaIgLJ39SYEDRitVBIvHJnh7j1P4BmNDWX6YmZemf9Lrr6oi97USwsWM3C4g1BPkOfmqeWjviblgksIScpcFIQpw67WzNrpziC2V89SYfnAKdQw7rLUtQY6mwGWoSmREOpRlxZkM79IXq4nB8F1%2FRCY6nsT5Pd52ULpnLo3wcpj8m8XQvW9VraH3gWigPqIRwwHdZaN2bJmxSCA0k1faI3RZ5nxHQRcBPTJucithbBSnUrrpxEvkBXT1AiqYinOO6olDxEbL%2B38zskvXUvi7LggZGLNAYJ3vBGfK8%2BcluWUZmMEQWKVv4iZ7ci29YX5C9FDUT8%2FhA%3D%3D&X-Amz-SignedHeaders=host&X-Amz-Signature=27bea85f97c2710c7dc666cca2162f4cf19f355de6e37b3e295dca6b609ca2ab")
-  # get_companies()
-  data = get_companies()
-  for d in data:
-    print(d)
+  # Example usage with new class
+  source = NasdaqCompanySource()
+  if source.is_available():
+    print(f"Using data source: {source.name}")
+    companies = source.get_companies()
+    print(f"Retrieved {len(companies)} companies")
+    for company in companies[:5]:  # Show first 5
+      company.print()
+      print("-" * 40)
+  else:
+    print("NASDAQ API source is not available")
 

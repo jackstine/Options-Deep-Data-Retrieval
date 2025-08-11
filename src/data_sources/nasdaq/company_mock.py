@@ -6,7 +6,9 @@ from typing import List, Dict, Any, Optional
 from faker import Faker
 
 from src.data_sources.models.company import Company
+from src.data_sources.models.ticker import Ticker
 from src.data_sources.models.test_providers import StockMarketProvider
+from src.data_sources.base.company_data_source import CompanyDataSource
 
 
 logger = logging.getLogger(__name__)
@@ -18,8 +20,8 @@ class Headers:
     EXCHANGE = "exchange"
 
 
-class NasdaqCompanyAPIMock:
-    """Mock implementation of NASDAQ Company API for testing."""
+class NasdaqCompanySourceMock(CompanyDataSource):
+    """Mock implementation of NasdaqCompanySource for testing."""
     
     def __init__(self, seed: int = 12345):
         """Initialize mock NASDAQ API with Faker for realistic data."""
@@ -47,6 +49,17 @@ class NasdaqCompanyAPIMock:
             {"ticker": "UBER", "company_name": "Uber Technologies Inc.", "exchange": "NYSE"},
         ]
     
+    @property
+    def name(self) -> str:
+        """Name of the data source."""
+        return "NASDAQ API (Mock)"
+    
+    def is_available(self) -> bool:
+        """Check if the mock NASDAQ API is available."""
+        if self._should_fail:
+            return False
+        return True
+    
     def get_companies(self) -> List[Company]:
         """
         Mock get_companies function that simulates the NASDAQ API call.
@@ -60,10 +73,10 @@ class NasdaqCompanyAPIMock:
         if self._should_fail:
             raise Exception(self._error_message)
         
-        raw_data = self.get_dict_of_stocks()
-        return self._convert_dict_to_stocks(raw_data)
+        raw_data = self._get_dict_of_stocks()
+        return _convert_dict_to_stocks(raw_data)
     
-    def get_dict_of_stocks(self) -> List[Dict[str, str]]:
+    def _get_dict_of_stocks(self) -> List[Dict[str, str]] | None:
         """
         Mock get_dict_of_stocks function that simulates NASDAQ API response.
         
@@ -109,15 +122,7 @@ class NasdaqCompanyAPIMock:
         Returns:
             List of Company objects
         """
-        return [
-            Company(
-                ticker=item[Headers.TICKER],
-                company_name=item[Headers.COMPANY_NAME],
-                exchange=item[Headers.EXCHANGE],
-                source="NASDAQ"
-            )
-            for item in data
-        ]
+        return _convert_dict_to_stocks(data)
     
     # Mock-specific utility methods
     def set_company_count(self, count: int) -> None:
@@ -170,34 +175,57 @@ class NasdaqCompanyAPIMock:
         return len(self._predefined_companies)
 
 
+# Module-level function that matches original
+def _convert_dict_to_stocks(ds):
+    """Convert dictionary data to Company objects."""
+    companies = []
+    for k in ds:
+        ticker = Ticker(symbol=k[Headers.TICKER], company_id=None)
+        company = Company(
+            company_name=k[Headers.COMPANY_NAME],
+            exchange=k[Headers.EXCHANGE], 
+            ticker=ticker,
+            source="NASDAQ"
+        )
+        companies.append(company)
+    return companies
+
+
 # Global mock instance for function mocking
-_global_mock = NasdaqCompanyAPIMock()
+_global_mock = NasdaqCompanySourceMock()
 
 def mock_get_companies() -> List[Company]:
     """Mock version of get_companies function."""
     return _global_mock.get_companies()
 
-def mock_get_dict_of_stocks() -> List[Dict[str, str]]:
+def mock_get_dict_of_stocks() -> List[Dict[str, str]] | None:
     """Mock version of get_dict_of_stocks function."""
-    return _global_mock.get_dict_of_stocks()
+    return _global_mock._get_dict_of_stocks()
 
 # Factory function for easy mock creation
-def create_nasdaq_company_api_mock(seed: int = 12345) -> NasdaqCompanyAPIMock:
-    """Factory function to create a NasdaqCompanyAPIMock instance."""
-    return NasdaqCompanyAPIMock(seed=seed)
+def create_nasdaq_company_source_mock(seed: int = 12345) -> NasdaqCompanySourceMock:
+    """Factory function to create a NasdaqCompanySourceMock instance."""
+    return NasdaqCompanySourceMock(seed=seed)
+
+# Backward compatibility
+def create_nasdaq_company_api_mock(seed: int = 12345) -> NasdaqCompanySourceMock:
+    """DEPRECATED: Use create_nasdaq_company_source_mock instead."""
+    return NasdaqCompanySourceMock(seed=seed)
 
 
 # Example usage for testing
 if __name__ == "__main__":
-    # Create mock API
-    mock_api = create_nasdaq_company_api_mock()
+    # Create mock source
+    mock_source = create_nasdaq_company_source_mock()
     
-    print(f"Mock API initialized with {mock_api.get_predefined_companies_count()} predefined companies")
-    print(f"Configured to generate {mock_api._company_count} total companies")
+    print(f"Mock source initialized with {mock_source.get_predefined_companies_count()} predefined companies")
+    print(f"Configured to generate {mock_source._company_count} total companies")
+    print(f"Data source name: {mock_source.name}")
+    print(f"Is available: {mock_source.is_available()}")
     
     # Test normal operation
     print("\n--- Testing Normal Operation ---")
-    companies = mock_api.get_companies()
+    companies = mock_source.get_companies()
     print(f"Generated {len(companies)} companies")
     
     # Show first few companies
@@ -206,41 +234,41 @@ if __name__ == "__main__":
     
     # Test error simulation
     print("\n--- Testing Error Simulation ---")
-    mock_api.simulate_auth_error()
+    mock_source.simulate_auth_error()
     
     try:
-        companies = mock_api.get_companies()
+        companies = mock_source.get_companies()
     except Exception as e:
         print(f"Caught expected auth error: {e}")
     
     # Test rate limit error
-    mock_api.simulate_rate_limit_error()
+    mock_source.simulate_rate_limit_error()
     
     try:
-        companies = mock_api.get_companies()
+        companies = mock_source.get_companies()
     except Exception as e:
         print(f"Caught expected rate limit error: {e}")
     
     # Reset and test again
-    mock_api.reset_error()
-    companies = mock_api.get_companies()
+    mock_source.reset_error()
+    companies = mock_source.get_companies()
     print(f"After reset: Generated {len(companies)} companies successfully")
     
     # Test company count configuration
     print("\n--- Testing Company Count Configuration ---")
     original_count = len(companies)
-    mock_api.set_company_count(25)
-    companies = mock_api.get_companies()
+    mock_source.set_company_count(25)
+    companies = mock_source.get_companies()
     print(f"Changed company count: {original_count} -> {len(companies)}")
     
     # Test adding predefined companies
     print("\n--- Testing Predefined Company Management ---")
-    mock_api.add_predefined_company("TEST", "Test Company Inc.", "NASDAQ")
-    companies = mock_api.get_companies()
-    test_company = next((c for c in companies if c.ticker == "TEST"), None)
+    mock_source.add_predefined_company("TEST", "Test Company Inc.", "NASDAQ")
+    companies = mock_source.get_companies()
+    test_company = next((c for c in companies if c.ticker and c.ticker.symbol == "TEST"), None)
     print(f"Added TEST company: {'Found' if test_company else 'Not found'}")
     if test_company:
-        print(f"  {test_company.ticker} - {test_company.company_name} ({test_company.exchange})")
+        print(f"  {test_company.ticker.symbol} - {test_company.company_name} ({test_company.exchange})")
     
     # Test global mock functions
     print("\n--- Testing Global Mock Functions ---")
@@ -252,20 +280,20 @@ if __name__ == "__main__":
     
     # Test network error simulation
     print("\n--- Testing Network Error ---")
-    mock_api.simulate_network_error()
+    mock_source.simulate_network_error()
     
     try:
-        companies = mock_api.get_companies()
+        companies = mock_source.get_companies()
     except Exception as e:
         print(f"Caught expected network error: {e}")
     
     # Test invalid response simulation
-    mock_api.simulate_invalid_response()
+    mock_source.simulate_invalid_response()
     
     try:
-        companies = mock_api.get_companies()
+        companies = mock_source.get_companies()
     except Exception as e:
         print(f"Caught expected invalid response error: {e}")
     
-    mock_api.reset_error()
+    mock_source.reset_error()
     print("Mock reset to normal operation")
