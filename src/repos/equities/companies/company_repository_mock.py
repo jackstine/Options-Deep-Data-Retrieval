@@ -8,7 +8,7 @@ from faker import Faker
 
 from src.data_sources.models.company import Company as CompanyDataModel
 from src.data_sources.models.ticker import Ticker
-from tests.unit.test_providers import StockMarketProvider
+from src.data_sources.models.test_providers import StockMarketProvider
 
 
 logger = logging.getLogger(__name__)
@@ -292,6 +292,7 @@ if __name__ == "__main__":
     for company in fake_companies:
         print(f"  - {company.company_name} ({company.ticker.symbol if company.ticker else 'N/A'})")
     
-    # Test filtering
-    tech_companies = mock_repo.get([c for c in mock_repo.get_all_companies() if c.sector == 'Technology'])
+    # Test filtering by getting technology companies manually
+    all_companies = mock_repo.get_all_companies()
+    tech_companies = [c for c in all_companies if c.sector == 'Technology']
     print(f"\nFound {len(tech_companies)} technology companies")
