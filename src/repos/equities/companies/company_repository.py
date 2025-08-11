@@ -39,9 +39,13 @@ class CompanyRepository(BaseRepository[CompanyDataModel, CompanyTable]):
         """Get set of active company ticker symbols."""
         try:
             with self._SessionLocal() as session:
-                # Query for active company symbols
+                from src.database.equities.tables.ticker import Ticker as TickerTable
+                
+                # Query for active company symbols by joining with ticker table
                 result = session.execute(
-                    select(CompanyTable.ticker).where(CompanyTable.active == True)
+                    select(TickerTable.symbol)
+                    .join(CompanyTable, TickerTable.company_id == CompanyTable.id)
+                    .where(CompanyTable.active == True)
                 )
                 
                 active_symbols = {row[0] for row in result.fetchall()}

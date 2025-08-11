@@ -198,13 +198,16 @@ class CompanyRepositoryMock:
     
     # Domain-specific methods
     def get_active_company_symbols(self) -> Set[str]:
-        """Get set of active company ticker symbols."""
+        """Get set of active company ticker symbols by joining with ticker data."""
+        # Simulate the database join: CompanyTable JOIN TickerTable
+        # In our mock, we get symbols from the ticker information of active companies
         symbols = set()
+        
         for company in self._companies.values():
             if company.active and company.ticker:
                 symbols.add(company.ticker.symbol)
         
-        logger.info(f"Mock: Retrieved {len(symbols)} active company symbols")
+        logger.info(f"Mock: Retrieved {len(symbols)} active company symbols (simulating join)")
         return symbols
     
     def get_all_companies(self) -> List[CompanyDataModel]:

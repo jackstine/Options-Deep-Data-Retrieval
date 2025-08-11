@@ -6,3 +6,10 @@ python-dotenv>=1.1.1
 SQLAlchemy>=2.0.0
 psycopg2-binary>=2.9.0
 alembic>=1.11.0
+
+# Pydantic typing
+pydantic>=2.11.7
+pydantic_core>=2.33.2
+
+# Testing
+Faker>=37.5.3
