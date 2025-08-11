@@ -17,12 +17,18 @@ from src.repos.equities.tickers.ticker_history_repository import TickerHistoryRe
 class CompanyPipeline:
     """Company ingestion pipeline with comprehensive database synchronization."""
     
-    def __init__(self):
+    def __init__(
+        self, 
+        company_repo: CompanyRepository = None,
+        ticker_repo: TickerRepository = None, 
+        ticker_history_repo: TickerHistoryRepository = None,
+        logger: logging.Logger = None
+    ):
         """Initialize the pipeline with repositories and logger."""
-        self.company_repo = CompanyRepository()
-        self.ticker_repo = TickerRepository()
-        self.ticker_history_repo = TickerHistoryRepository()
-        self.logger = logging.getLogger(__name__)
+        self.company_repo = company_repo or CompanyRepository()
+        self.ticker_repo = ticker_repo or TickerRepository()
+        self.ticker_history_repo = ticker_history_repo or TickerHistoryRepository()
+        self.logger = logger or logging.getLogger(__name__)
     
     def run_ingestion(self, sources: List[CompanyDataSource]) -> Dict[str, int]:
         """
