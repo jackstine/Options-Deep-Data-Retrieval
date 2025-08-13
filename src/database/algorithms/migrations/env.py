@@ -1,19 +1,17 @@
-from logging.config import fileConfig
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
-from alembic import context
 import sys
+from logging.config import fileConfig
 from pathlib import Path
 
-# Add the src directory to the Python path  
+from alembic import context
+from sqlalchemy import engine_from_config, pool
+
+# Add the src directory to the Python path
 # this assumes that the file is located at "src/database/algorithms/migrations/env.py" or any other 4 depths of levels
 src_path = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(src_path))
 
-from src.database.algorithms.base import Base
 from src.config.configuration import CONFIG
+from src.database.algorithms.base import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -31,7 +29,7 @@ target_metadata = Base.metadata
 # Set the database URL from environment configuration
 # Target algorithms database for migrations
 db_config = CONFIG.get_database_config("algorithm")
-config.set_main_option('sqlalchemy.url', db_config.get_connection_string())
+config.set_main_option("sqlalchemy.url", db_config.get_connection_string())
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -77,9 +75,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
