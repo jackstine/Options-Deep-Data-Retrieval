@@ -14,7 +14,6 @@ __pycache__
 .vscode
 
 # I do not want to share the stupid documentation of the ai
-/ai_documentation/
 .claude/
 /agents/
 /prompts/
