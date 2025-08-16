@@ -7,7 +7,9 @@ authors = [
     { name = "Jake Cukjati", email = "" }
 ]
 requires-python = ">=3.13.5"
-dependencies = []
+dependencies = [
+    "sqlalchemy[mypy]>=2.0.43",
+]
 
 [dependency-groups]
 dev = [
