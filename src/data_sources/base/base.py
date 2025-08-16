@@ -1,10 +1,10 @@
 """Abstract base class for data sources."""
 
+from src.data_sources.models.stock_quote import StockQuote
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-
-from src.data_sources.models.stock_quote import StockQuote
 
 
 class DataSourceBase(ABC):

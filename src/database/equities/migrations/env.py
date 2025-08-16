@@ -1,6 +1,9 @@
-import sys
+from src.config.configuration import CONFIG
+from src.database.equities.base import Base
+
 from logging.config import fileConfig
 from pathlib import Path
+import sys
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
@@ -10,8 +13,6 @@ from sqlalchemy import engine_from_config, pool
 src_path = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(src_path))
 
-from src.config.configuration import CONFIG
-from src.database.equities.base import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

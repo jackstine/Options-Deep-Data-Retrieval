@@ -1,10 +1,5 @@
 """Company ingestion pipeline."""
 
-from __future__ import annotations
-
-import logging
-from datetime import date
-
 from src.data_sources.base.company_data_source import CompanyDataSource
 from src.data_sources.models.company import Company
 from src.data_sources.models.ticker import Ticker as TickerDataModel
@@ -14,6 +9,11 @@ from src.data_sources.models.ticker_history import (
 from src.repos.equities.companies.company_repository import CompanyRepository
 from src.repos.equities.tickers.ticker_history_repository import TickerHistoryRepository
 from src.repos.equities.tickers.ticker_repository import TickerRepository
+
+from __future__ import annotations
+
+from datetime import date
+import logging
 
 
 class CompanyPipeline:

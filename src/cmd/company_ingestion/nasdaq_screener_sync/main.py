@@ -7,14 +7,14 @@ Usage:
     python -m src.cmd.company_ingestion.nasdaq_screener_sync.main [screener_dir]
 """
 
+from src.data_sources.nasdaq.screener import NasdaqScreenerSource
+from src.pipelines.companies.simple_pipeline import CompanyPipeline
+
 from __future__ import annotations
 
 import logging
-import sys
 from pathlib import Path
-
-from src.data_sources.nasdaq.screener import NasdaqScreenerSource
-from src.pipelines.companies.simple_pipeline import CompanyPipeline
+import sys
 
 
 def setup_logging():

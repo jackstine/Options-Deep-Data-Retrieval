@@ -1,13 +1,13 @@
 """Mock implementation of TickerRepository for testing."""
 
+from src.data_sources.models.test_providers import StockMarketProvider
+from src.data_sources.models.ticker import Ticker as TickerDataModel
+
 from __future__ import annotations
 
 import logging
 
 from faker import Faker
-
-from src.data_sources.models.test_providers import StockMarketProvider
-from src.data_sources.models.ticker import Ticker as TickerDataModel
 
 logger = logging.getLogger(__name__)
 

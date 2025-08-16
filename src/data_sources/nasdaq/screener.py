@@ -1,14 +1,14 @@
 """NASDAQ screener data loader for CSV files."""
 
+from src.data_sources.base.company_data_source import CompanyDataSource
+from src.data_sources.models.company import Company
+from src.data_sources.models.ticker import Ticker
+
 from __future__ import annotations
 
 import csv
 import logging
 from pathlib import Path
-
-from src.data_sources.base.company_data_source import CompanyDataSource
-from src.data_sources.models.company import Company
-from src.data_sources.models.ticker import Ticker
 
 
 class ScreenerHeaders:

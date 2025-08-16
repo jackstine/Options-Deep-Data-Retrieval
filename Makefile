@@ -1,7 +1,7 @@
-# used to install the requirements.txt
-PHONY: install-r
-install-r:
-	pip install -r requirements.txt
+# install dependencies using uv
+PHONY: install
+install:
+	uv sync
 
 # install development dependencies using uv
 PHONY: install-dev

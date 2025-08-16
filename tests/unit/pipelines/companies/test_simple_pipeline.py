@@ -1,8 +1,5 @@
 """Comprehensive tests for CompanyPipeline using mocks."""
 
-import logging
-import unittest
-
 from src.data_sources.models.company import Company
 from src.data_sources.models.ticker import Ticker
 from src.data_sources.nasdaq.company_mock import create_nasdaq_company_source_mock
@@ -19,6 +16,9 @@ from src.repos.equities.tickers.ticker_history_repository_mock import (
 from src.repos.equities.tickers.ticker_repository_mock import (
     create_ticker_repository_mock,
 )
+
+import logging
+import unittest
 
 
 class TestCompanyPipeline(unittest.TestCase):

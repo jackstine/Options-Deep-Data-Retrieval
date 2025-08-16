@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, fields
 from datetime import date
+import logging
 from typing import Any, Generic, TypeVar
 
 from sqlalchemy import create_engine, func, inspect, or_, select, update

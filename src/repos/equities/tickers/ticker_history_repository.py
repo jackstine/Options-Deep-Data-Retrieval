@@ -1,13 +1,5 @@
 """TickerHistory repository for database operations."""
 
-from __future__ import annotations
-
-import logging
-from datetime import date
-
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
-
 from src.config.configuration import CONFIG
 from src.data_sources.models.ticker_history import (
     TickerHistory as TickerHistoryDataModel,
@@ -16,6 +8,14 @@ from src.database.equities.tables.ticker_history import (
     TickerHistory as TickerHistoryDBModel,
 )
 from src.repos.base_repository import BaseRepository, QueryOptions
+
+from __future__ import annotations
+
+from datetime import date
+import logging
+
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger(__name__)
 

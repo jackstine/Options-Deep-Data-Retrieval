@@ -1,12 +1,12 @@
+import src.config.environment as en
+from src.data_sources.base.company_data_source import CompanyDataSource
+from src.data_sources.models.company import Company
+
 import csv
 import io
 import zipfile
 
 import requests
-
-import src.config.environment as en
-from src.data_sources.base.company_data_source import CompanyDataSource
-from src.data_sources.models.company import Company
 
 
 class Headers:

@@ -57,11 +57,11 @@ def example_custom_source():
     """Example showing how to create a custom data source."""
     print("\n=== Custom Source Example ===")
 
-    import logging
-
     from src.data_sources.base.company_data_source import CompanyDataSource
     from src.data_sources.models.company import Company
     from src.data_sources.models.ticker import Ticker
+
+    import logging
 
     class MockDataSource(CompanyDataSource):
         """Mock data source for demonstration."""

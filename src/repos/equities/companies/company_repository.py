@@ -1,16 +1,16 @@
 """Company repository for database operations."""
 
+from src.config.configuration import CONFIG
+from src.data_sources.models.company import Company as CompanyDataModel
+from src.database.equities.tables.company import Company as CompanyTable
+from src.repos.base_repository import BaseRepository
+
 from __future__ import annotations
 
 import logging
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
-
-from src.config.configuration import CONFIG
-from src.data_sources.models.company import Company as CompanyDataModel
-from src.database.equities.tables.company import Company as CompanyTable
-from src.repos.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
 
