@@ -257,7 +257,14 @@ class CompanyPipeline:
                         continue
                     ticker_symbol = company.ticker.symbol
                     try:
-                        if self.company_repo.update_company(ticker_symbol, company):
+                        # Create update object with only market_cap
+                        market_cap_update = Company(
+                            company_name="",  # Empty = ignored by base repository
+                            exchange="",      # Empty = ignored by base repository
+                            market_cap=company.market_cap  # Only this will be updated
+                        )
+                        
+                        if self.company_repo.update_company(ticker_symbol, market_cap_update):
                             results["updated"] += 1
                         else:
                             results["skipped"] += 1

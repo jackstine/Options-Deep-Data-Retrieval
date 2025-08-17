@@ -11,7 +11,7 @@ install-dev:
 # run all unit tests
 PHONY: unit-test
 unit-test:
-	PYTHONPATH=. python -m unittest discover -s tests -p "test_*.py" -v
+	PYTHONPATH=. python -m unittest discover -s src -p "test_*.py" -v
 
 # Linting Commands
 
