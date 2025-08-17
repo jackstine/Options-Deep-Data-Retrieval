@@ -14,9 +14,6 @@ __pycache__
 .vscode
 
 # ai resources
-.claude/*
-# symlink points to ../.claude/commands, so that we can work in worktrees
-!.claude/commands
 /agents/
 /prompts/
 # include the ai working space, but nothing in it.
