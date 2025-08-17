@@ -3,6 +3,9 @@
 
 from src.data_sources.nasdaq.screener import NasdaqScreenerSource
 from src.pipelines.companies.simple_pipeline import CompanyPipeline
+from src.repos.equities.companies.company_repository import CompanyRepository
+from src.repos.equities.tickers.ticker_history_repository import TickerHistoryRepository
+from src.repos.equities.tickers.ticker_repository import TickerRepository
 
 
 def example_single_source():
@@ -57,11 +60,11 @@ def example_custom_source():
     """Example showing how to create a custom data source."""
     print("\n=== Custom Source Example ===")
 
+    import logging
+
     from src.data_sources.base.company_data_source import CompanyDataSource
     from src.data_sources.models.company import Company
     from src.data_sources.models.ticker import Ticker
-
-    import logging
 
     class MockDataSource(CompanyDataSource):
         """Mock data source for demonstration."""
@@ -89,8 +92,11 @@ def example_custom_source():
                 ),
             ]
 
-    class MockCompanyRepository:
+    class MockCompanyRepository(CompanyRepository):
         """Mock company repository for testing."""
+
+        def __init__(self) -> None:
+            super().__init__()
 
         def get_active_company_symbols(self) -> set[str]:
             return set()  # Empty set for mock
@@ -106,8 +112,11 @@ def example_custom_source():
         def get_company_by_ticker(self, ticker_symbol: str) -> Company | None:
             return None  # Not found for mock
 
-    class MockTickerRepository:
+    class MockTickerRepository(TickerRepository):
         """Mock ticker repository for testing."""
+
+        def __init__(self) -> None:
+            super().__init__()
 
         def get_active_ticker_symbols(self) -> set[str]:
             return set()  # Empty set for mock
@@ -116,8 +125,11 @@ def example_custom_source():
             print(f"[MOCK] Would insert {len(tickers)} tickers")
             return len(tickers)
 
-    class MockTickerHistoryRepository:
+    class MockTickerHistoryRepository(TickerHistoryRepository):
         """Mock ticker history repository for testing."""
+
+        def __init__(self) -> None:
+            super().__init__()
 
         def bulk_insert_ticker_histories(self, ticker_histories) -> int:
             print(f"[MOCK] Would insert {len(ticker_histories)} ticker histories")

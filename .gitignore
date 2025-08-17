@@ -19,5 +19,7 @@ __pycache__
 !.claude/commands
 /agents/
 /prompts/
+# include the ai working space, but nothing in it.
+ai-working/*
 
 

@@ -7,17 +7,17 @@ Usage:
     python -m src.cmd.company_ingestion.nasdaq_screener_sync.main [screener_dir]
 """
 
-from src.data_sources.nasdaq.screener import NasdaqScreenerSource
-from src.pipelines.companies.simple_pipeline import CompanyPipeline
-
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 import sys
+from pathlib import Path
+
+from src.data_sources.nasdaq.screener import NasdaqScreenerSource
+from src.pipelines.companies.simple_pipeline import CompanyPipeline
 
 
-def setup_logging():
+def setup_logging() -> None:
     """Set up logging configuration."""
     logging.basicConfig(
         level=logging.INFO,
@@ -29,7 +29,7 @@ def setup_logging():
 def main() -> int:
     """Ingest NASDAQ screener company data."""
     # Use default screener directory or command line argument
-    screener_dir = sys.argv[1] if len(sys.argv) > 1 else None
+    screener_dir = sys.argv[1] if len(sys.argv) > 1 else "."
 
     # Verify screener directory exists if provided
     if screener_dir and not Path(screener_dir).exists():
@@ -40,6 +40,9 @@ def main() -> int:
 
     try:
         # Create source and pipeline
+        if screener_dir is None:
+            print("Error: No screener directory provided")
+            return 1
         source = NasdaqScreenerSource(screener_dir)
         pipeline = CompanyPipeline()
 

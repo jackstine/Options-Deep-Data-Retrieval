@@ -1,10 +1,11 @@
 """SQLAlchemy base configuration for Equities database."""
 
-from src.config.configuration import CONFIG
-
 from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
+
+from src.config.configuration import CONFIG
 
 # This is the primary database for this configuration.
 DATABASE = "equities"
@@ -14,20 +15,20 @@ Base = declarative_base()
 
 
 # Database engine and session for equities
-def get_engine():
+def get_engine() -> Engine:
     """Get database engine for equities database."""
     config = CONFIG.get_database_config(DATABASE)
     return create_engine(config.get_connection_string())
 
 
-def get_session():
+def get_session() -> Session:
     """Get database session for equities database."""
     engine = get_engine()
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     return SessionLocal()
 
 
-def create_tables():
+def create_tables() -> None:
     """Create all tables in the equities database."""
     engine = get_engine()
     Base.metadata.create_all(bind=engine)

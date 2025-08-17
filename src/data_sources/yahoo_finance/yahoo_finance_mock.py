@@ -1,16 +1,16 @@
 """Mock implementation of Yahoo Finance data source for testing."""
 
+from __future__ import annotations
+
+import logging
+from datetime import datetime
+from decimal import Decimal
+
+from faker import Faker
+
 from src.data_sources.base.base import DataSourceBase
 from src.data_sources.models.stock_quote import StockQuote
 from src.data_sources.models.test_providers import StockMarketProvider
-
-from __future__ import annotations
-
-from datetime import datetime
-from decimal import Decimal
-import logging
-
-from faker import Faker
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class YahooFinanceProviderMock(DataSourceBase):
         self._connection_valid = True
         self._should_fail = False
         self._error_message = "Mock API error"
-        self._supported_symbols = set()
+        self._supported_symbols: set[str] = set()
 
         # Initialize with common symbols
         self._initialize_supported_symbols()
@@ -266,7 +266,7 @@ class YahooFinanceProviderMock(DataSourceBase):
         selected_symbols = self.fake.random_choices(
             available_symbols, length=symbol_count
         )
-        return self.fetch_quotes(selected_symbols)
+        return self.fetch_quotes(list(selected_symbols))
 
     def simulate_rate_limit(self) -> None:
         """Simulate API rate limiting."""

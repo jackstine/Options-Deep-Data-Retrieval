@@ -1,11 +1,11 @@
 """Equities configuration model."""
 
-from src.config.models.database import DatabaseConfig
-
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
+
+from src.config.models.database import DatabaseConfig
 
 
 @dataclass
