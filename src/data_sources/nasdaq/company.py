@@ -1,13 +1,13 @@
 import csv
 import io
-import zipfile
 from typing import Any
-
-import requests
+import zipfile
 
 import src.config.environment as en
 from src.data_sources.base.company_data_source import CompanyDataSource
 from src.data_sources.models.company import Company
+
+import requests
 
 
 class Headers:

@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime
 from decimal import Decimal
+import logging
 from typing import Any
-
-import yfinance as yf  # type: ignore
 
 from src.data_sources.base.base import DataSourceBase
 from src.data_sources.models.stock_quote import StockQuote
+
+import yfinance as yf  # type: ignore
 
 logger = logging.getLogger(__name__)
 

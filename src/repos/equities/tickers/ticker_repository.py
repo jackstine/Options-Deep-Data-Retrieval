@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import logging
 
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
-
 from src.config.configuration import CONFIG
 from src.data_sources.models.ticker import Ticker as TickerDataModel
 from src.database.equities.tables.ticker import Ticker as TickerDBModel
 from src.repos.base_repository import BaseRepository
+
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger(__name__)
 

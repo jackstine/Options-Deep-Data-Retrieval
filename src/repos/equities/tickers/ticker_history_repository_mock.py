@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import date, timedelta
+import logging
 from typing import Any
-
-from faker import Faker
 
 from src.data_sources.models.test_providers import StockMarketProvider
 from src.data_sources.models.ticker_history import (
     TickerHistory as TickerHistoryDataModel,
 )
+
+from faker import Faker
 
 logger = logging.getLogger(__name__)
 

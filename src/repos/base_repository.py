@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
-import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, fields
 from datetime import date
+import logging
 from typing import Any, Generic, Protocol, TypeVar
 
 from sqlalchemy import create_engine, func, inspect, or_, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.types import String, Text
+
 
 # Protocols for type safety
 class DataModelProtocol(Protocol):

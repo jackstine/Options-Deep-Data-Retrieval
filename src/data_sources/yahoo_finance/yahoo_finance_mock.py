@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime
 from decimal import Decimal
-
-from faker import Faker
+import logging
 
 from src.data_sources.base.base import DataSourceBase
 from src.data_sources.models.stock_quote import StockQuote
 from src.data_sources.models.test_providers import StockMarketProvider
+
+from faker import Faker
 
 logger = logging.getLogger(__name__)
 

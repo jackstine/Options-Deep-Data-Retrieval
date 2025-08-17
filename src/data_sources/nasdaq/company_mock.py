@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import logging
 
-from faker import Faker
-
 from src.data_sources.base.company_data_source import CompanyDataSource
 from src.data_sources.models.company import Company
 from src.data_sources.models.test_providers import StockMarketProvider
 from src.data_sources.models.ticker import Ticker
+
+from faker import Faker
 
 logger = logging.getLogger(__name__)
 
