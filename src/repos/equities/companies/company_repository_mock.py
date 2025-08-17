@@ -1,14 +1,16 @@
 """Mock implementation of CompanyRepository for testing."""
 
-from src.data_sources.models.company import Company as CompanyDataModel
-from src.data_sources.models.test_providers import StockMarketProvider
-from src.data_sources.models.ticker import Ticker
-
 from __future__ import annotations
 
 import logging
 
+from typing import Any
+
 from faker import Faker
+
+from src.data_sources.models.company import Company as CompanyDataModel
+from src.data_sources.models.test_providers import StockMarketProvider
+from src.data_sources.models.ticker import Ticker
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +62,7 @@ class CompanyRepositoryMock:
         ]
 
         for company_data in sample_companies:
-            ticker_symbol = company_data.pop("ticker_symbol")
+            ticker_symbol = str(company_data.pop("ticker_symbol"))
             ticker = Ticker(symbol=ticker_symbol, company_id=self._next_id)
 
             company = CompanyDataModel(
@@ -69,14 +71,18 @@ class CompanyRepositoryMock:
                 country="United States",
                 active=True,
                 source="MOCK_DATA",
-                **company_data,
+                company_name=str(company_data["company_name"]),
+                exchange=str(company_data["exchange"]),
+                sector=str(company_data.get("sector")),
+                industry=str(company_data.get("industry")),
+                market_cap=int(str(company_data["market_cap"])) if company_data.get("market_cap") is not None and company_data["market_cap"] != "" else None,
             )
 
             self._companies[self._next_id] = company
-            self._ticker_to_company[ticker_symbol] = self._next_id
+            self._ticker_to_company[str(ticker_symbol)] = self._next_id
             self._next_id += 1
 
-    def _create_fake_company(self, **overrides) -> CompanyDataModel:
+    def _create_fake_company(self, **overrides: Any) -> CompanyDataModel:
         """Create a realistic Company with Faker data."""
         ticker_symbol = self.fake.stock_ticker()
 
@@ -285,7 +291,7 @@ class CompanyRepositoryMock:
 
     def simulate_database_error(
         self, method_name: str, error_message: str = "Database error"
-    ):
+    ) -> None:
         """Simulate database error for testing error handling."""
         # This would typically be implemented with a flag system
         # For now, just log the simulation

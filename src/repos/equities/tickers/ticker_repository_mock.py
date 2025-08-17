@@ -1,13 +1,14 @@
 """Mock implementation of TickerRepository for testing."""
 
-from src.data_sources.models.test_providers import StockMarketProvider
-from src.data_sources.models.ticker import Ticker as TickerDataModel
-
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from faker import Faker
+
+from src.data_sources.models.test_providers import StockMarketProvider
+from src.data_sources.models.ticker import Ticker as TickerDataModel
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class TickerRepositoryMock:
 
     def _initialize_sample_data(self) -> None:
         """Initialize with realistic sample tickers."""
-        sample_tickers = [
+        sample_tickers: list[dict[str, int | str]] = [
             {"symbol": "AAPL", "company_id": 1},
             {"symbol": "MSFT", "company_id": 2},
             {"symbol": "AMZN", "company_id": 3},
@@ -47,19 +48,24 @@ class TickerRepositoryMock:
         ]
 
         for ticker_data in sample_tickers:
-            ticker = TickerDataModel(id=self._next_id, **ticker_data)
+            ticker = TickerDataModel(
+                id=self._next_id,
+                symbol=str(ticker_data["symbol"]),
+                company_id=int(ticker_data["company_id"]),
+            )
 
             self._tickers[self._next_id] = ticker
             self._symbol_to_ticker[ticker.symbol] = self._next_id
 
             # Track company relationships
-            if ticker.company_id not in self._company_tickers:
-                self._company_tickers[ticker.company_id] = []
-            self._company_tickers[ticker.company_id].append(self._next_id)
+            if ticker.company_id is not None:
+                if ticker.company_id not in self._company_tickers:
+                    self._company_tickers[ticker.company_id] = []
+                self._company_tickers[ticker.company_id].append(self._next_id)
 
             self._next_id += 1
 
-    def _create_fake_ticker(self, **overrides) -> TickerDataModel:
+    def _create_fake_ticker(self, **overrides: Any) -> TickerDataModel:
         """Create a realistic Ticker with Faker data."""
         default_data = {
             "id": self._next_id,
@@ -160,7 +166,8 @@ class TickerRepositoryMock:
                 if ticker.symbol in self._symbol_to_ticker:
                     del self._symbol_to_ticker[ticker.symbol]
                 ticker.symbol = update_data.symbol
-                self._symbol_to_ticker[ticker.symbol] = ticker.id
+                if ticker.id is not None:
+                    self._symbol_to_ticker[ticker.symbol] = ticker.id
 
             if update_data.company_id is not None and update_data.company_id != 0:
                 # Update company relationships
@@ -174,7 +181,10 @@ class TickerRepositoryMock:
                 ticker.company_id = new_company_id
                 if new_company_id not in self._company_tickers:
                     self._company_tickers[new_company_id] = []
-                if ticker.id not in self._company_tickers[new_company_id]:
+                if (
+                    ticker.id is not None
+                    and ticker.id not in self._company_tickers[new_company_id]
+                ):
                     self._company_tickers[new_company_id].append(ticker.id)
 
             count += 1
@@ -268,7 +278,7 @@ class TickerRepositoryMock:
 
     def simulate_database_error(
         self, method_name: str, error_message: str = "Database error"
-    ):
+    ) -> None:
         """Simulate database error for testing error handling."""
         logger.warning(
             f"Mock: Simulating database error for {method_name}: {error_message}"

@@ -1,8 +1,5 @@
 """SQLAlchemy Ticker table for database operations."""
 
-from src.data_sources.models.ticker import Ticker as TickerDataModel
-from src.database.equities.base import Base
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -11,6 +8,9 @@ from typing import TYPE_CHECKING
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+
+from src.data_sources.models.ticker import Ticker as TickerDataModel
+from src.database.equities.base import Base
 
 # Import for relationship type hint
 if TYPE_CHECKING:
@@ -80,4 +80,5 @@ class Ticker(Base):
             ticker_data: TickerDataModel instance with updated data
         """
         self.symbol = ticker_data.symbol
-        self.company_id = ticker_data.company_id
+        if ticker_data.company_id is not None:
+            self.company_id = ticker_data.company_id

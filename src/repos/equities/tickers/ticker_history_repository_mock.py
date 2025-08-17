@@ -1,16 +1,17 @@
 """Mock implementation of TickerHistoryRepository for testing."""
 
+from __future__ import annotations
+
+import logging
+from datetime import date, timedelta
+from typing import Any
+
+from faker import Faker
+
 from src.data_sources.models.test_providers import StockMarketProvider
 from src.data_sources.models.ticker_history import (
     TickerHistory as TickerHistoryDataModel,
 )
-
-from __future__ import annotations
-
-from datetime import date, timedelta
-import logging
-
-from faker import Faker
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ class TickerHistoryRepositoryMock:
         """Initialize with realistic sample ticker histories."""
         today = date.today()
 
-        sample_histories = [
+        sample_histories: list[dict[str, Any]] = [
             # Current active tickers
             {
                 "symbol": "AAPL",
@@ -112,7 +113,14 @@ class TickerHistoryRepositoryMock:
         ]
 
         for history_data in sample_histories:
-            history = TickerHistoryDataModel(id=self._next_id, **history_data)
+            history = TickerHistoryDataModel(
+                id=self._next_id,
+                symbol=str(history_data["symbol"]),
+                company_id=int(history_data["company_id"]),
+                valid_from=history_data["valid_from"],
+                valid_to=history_data.get("valid_to"),
+                active=bool(history_data["active"]),
+            )
 
             self._ticker_histories[self._next_id] = history
 
@@ -128,7 +136,7 @@ class TickerHistoryRepositoryMock:
 
             self._next_id += 1
 
-    def _create_fake_ticker_history(self, **overrides) -> TickerHistoryDataModel:
+    def _create_fake_ticker_history(self, **overrides: Any) -> TickerHistoryDataModel:
         """Create a realistic TickerHistory with Faker data."""
         today = date.today()
 
@@ -157,7 +165,7 @@ class TickerHistoryRepositoryMock:
 
     # Base repository methods
     def get(
-        self, filter_model: TickerHistoryDataModel | None = None, options=None
+        self, filter_model: TickerHistoryDataModel | None = None, options: Any = None
     ) -> list[TickerHistoryDataModel]:
         """Get ticker histories based on filter."""
         histories = list(self._ticker_histories.values())
@@ -275,7 +283,10 @@ class TickerHistoryRepositoryMock:
 
                 if history.symbol not in self._symbol_histories:
                     self._symbol_histories[history.symbol] = []
-                if history.id not in self._symbol_histories[history.symbol]:
+                if (
+                    history.id is not None
+                    and history.id not in self._symbol_histories[history.symbol]
+                ):
                     self._symbol_histories[history.symbol].append(history.id)
 
             if update_data.company_id is not None and update_data.company_id != 0:
@@ -290,7 +301,10 @@ class TickerHistoryRepositoryMock:
                 history.company_id = new_company_id
                 if new_company_id not in self._company_histories:
                     self._company_histories[new_company_id] = []
-                if history.id not in self._company_histories[new_company_id]:
+                if (
+                    history.id is not None
+                    and history.id not in self._company_histories[new_company_id]
+                ):
                     self._company_histories[new_company_id].append(history.id)
 
             if update_data.valid_to is not None:
@@ -442,7 +456,7 @@ class TickerHistoryRepositoryMock:
         """Add fake ticker histories for testing."""
         histories = []
         for _ in range(count):
-            history_data = {}
+            history_data: dict[str, Any] = {}
             if company_id is not None:
                 history_data["company_id"] = company_id
             if symbol is not None:
@@ -472,7 +486,7 @@ class TickerHistoryRepositoryMock:
 
     def simulate_database_error(
         self, method_name: str, error_message: str = "Database error"
-    ):
+    ) -> None:
         """Simulate database error for testing error handling."""
         logger.warning(
             f"Mock: Simulating database error for {method_name}: {error_message}"

@@ -1,5 +1,13 @@
 """TickerHistory repository for database operations."""
 
+from __future__ import annotations
+
+import logging
+from datetime import date
+
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+
 from src.config.configuration import CONFIG
 from src.data_sources.models.ticker_history import (
     TickerHistory as TickerHistoryDataModel,
@@ -8,14 +16,6 @@ from src.database.equities.tables.ticker_history import (
     TickerHistory as TickerHistoryDBModel,
 )
 from src.repos.base_repository import BaseRepository, QueryOptions
-
-from __future__ import annotations
-
-from datetime import date
-import logging
-
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ class TickerHistoryRepository(
         self,
         symbol: str,
         company_id: int,
-        valid_from: date = None,
+        valid_from: date | None = None,
         valid_to: date | None = None,
         active: bool = True,
     ) -> TickerHistoryDataModel:
@@ -130,7 +130,7 @@ class TickerHistoryRepository(
         return self.get(active_filter)
 
     def deactivate_ticker_history(
-        self, symbol: str, company_id: int, end_date: date = None
+        self, symbol: str, company_id: int, end_date: date | None = None
     ) -> bool:
         """Deactivate a ticker history record using base repository update."""
         if end_date is None:

@@ -1,15 +1,15 @@
 """Mock implementation of NASDAQ company data source for testing."""
 
-from src.data_sources.base.company_data_source import CompanyDataSource
-from src.data_sources.models.company import Company
-from src.data_sources.models.test_providers import StockMarketProvider
-from src.data_sources.models.ticker import Ticker
-
 from __future__ import annotations
 
 import logging
 
 from faker import Faker
+
+from src.data_sources.base.company_data_source import CompanyDataSource
+from src.data_sources.models.company import Company
+from src.data_sources.models.test_providers import StockMarketProvider
+from src.data_sources.models.ticker import Ticker
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +97,8 @@ class NasdaqCompanySourceMock(CompanyDataSource):
             raise Exception(self._error_message)
 
         raw_data = self._get_dict_of_stocks()
+        if raw_data is None:
+            return []
         return _convert_dict_to_stocks(raw_data)
 
     def _get_dict_of_stocks(self) -> list[dict[str, str]] | None:
@@ -151,6 +153,8 @@ class NasdaqCompanySourceMock(CompanyDataSource):
         Returns:
             List of Company objects
         """
+        if data is None:
+            return []
         return _convert_dict_to_stocks(data)
 
     # Mock-specific utility methods
@@ -209,7 +213,7 @@ class NasdaqCompanySourceMock(CompanyDataSource):
 
 
 # Module-level function that matches original
-def _convert_dict_to_stocks(ds):
+def _convert_dict_to_stocks(ds: list[dict[str, str]]) -> list[Company]:
     """Convert dictionary data to Company objects."""
     companies = []
     for k in ds:
@@ -311,9 +315,10 @@ if __name__ == "__main__":
     )
     print(f"Added TEST company: {'Found' if test_company else 'Not found'}")
     if test_company:
-        print(
-            f"  {test_company.ticker.symbol} - {test_company.company_name} ({test_company.exchange})"
-        )
+        if test_company.ticker:
+            print(
+                f"  {test_company.ticker.symbol} - {test_company.company_name} ({test_company.exchange})"
+            )
 
     # Test global mock functions
     print("\n--- Testing Global Mock Functions ---")
@@ -321,7 +326,10 @@ if __name__ == "__main__":
     print(f"Global mock generated {len(global_companies)} companies")
 
     global_dict_data = mock_get_dict_of_stocks()
-    print(f"Global mock dict data contains {len(global_dict_data)} records")
+    if global_dict_data:
+        print(f"Global mock dict data contains {len(global_dict_data)} records")
+    else:
+        print("Global mock dict data is None")
 
     # Test network error simulation
     print("\n--- Testing Network Error ---")

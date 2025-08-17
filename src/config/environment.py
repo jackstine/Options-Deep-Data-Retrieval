@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 
 from dotenv import load_dotenv
 
@@ -12,17 +12,17 @@ from dotenv import load_dotenv
 class EnvironmentVariables:
     _NASDAQ_API_KEY: str = "NASDAQ_API_KEY"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # need to load the environment variables from the .env file.
         load_dotenv()
 
     @classmethod
-    def get_nasdaq_api_key(cls):
+    def get_nasdaq_api_key(cls) -> str:
         """Get the Nasdaq API Key"""
         return cls._get_value(cls._NASDAQ_API_KEY)
 
     @staticmethod
-    def _get_value(key):
+    def _get_value(key: str) -> str:
         """Load environment variables after initialization."""
         value = os.getenv(key)
         if value == None:

@@ -1,16 +1,17 @@
 """Company repository for database operations."""
 
-from src.config.configuration import CONFIG
-from src.data_sources.models.company import Company as CompanyDataModel
-from src.database.equities.tables.company import Company as CompanyTable
-from src.repos.base_repository import BaseRepository
-
 from __future__ import annotations
 
 import logging
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
+
+from src.config.configuration import CONFIG
+from src.data_sources.models.company import Company as CompanyDataModel
+from src.data_sources.models.ticker import Ticker
+from src.database.equities.tables.company import Company as CompanyTable
+from src.repos.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ class CompanyRepository(BaseRepository[CompanyDataModel, CompanyTable]):
     def get_company_by_ticker(self, ticker: str) -> CompanyDataModel | None:
         """Get company by ticker symbol using base repository."""
         ticker_filter = CompanyDataModel(
-            ticker=ticker.upper(), company_name="", exchange=""
+            ticker=Ticker(symbol=ticker.upper()), company_name="", exchange=""
         )
         return self.get_one(ticker_filter)
 
@@ -80,14 +81,14 @@ class CompanyRepository(BaseRepository[CompanyDataModel, CompanyTable]):
     def update_company(self, ticker: str, company_data: CompanyDataModel) -> bool:
         """Update company by ticker using base repository."""
         ticker_filter = CompanyDataModel(
-            ticker=ticker.upper(), company_name="", exchange=""
+            ticker=Ticker(symbol=ticker.upper()), company_name="", exchange=""
         )
         return self.update(ticker_filter, company_data) > 0
 
     def deactivate_company(self, ticker: str) -> bool:
         """Deactivate company using base repository update."""
         ticker_filter = CompanyDataModel(
-            ticker=ticker.upper(), company_name="", exchange=""
+            ticker=Ticker(symbol=ticker.upper()), company_name="", exchange=""
         )
         deactivate_data = CompanyDataModel(active=False, company_name="", exchange="")
         return self.update(ticker_filter, deactivate_data) > 0

@@ -1,12 +1,13 @@
-import src.config.environment as en
-from src.data_sources.base.company_data_source import CompanyDataSource
-from src.data_sources.models.company import Company
-
 import csv
 import io
 import zipfile
+from typing import Any
 
 import requests
+
+import src.config.environment as en
+from src.data_sources.base.company_data_source import CompanyDataSource
+from src.data_sources.models.company import Company
 
 
 class Headers:
@@ -30,7 +31,10 @@ class NasdaqCompanySource(CompanyDataSource):
           "exchange": "NASDAQ",
           "company_name": "ARIAD Pharmaceuticals Inc."
         """
-        return _convert_dict_to_stocks(self._get_dict_of_stocks())
+        dict_data = self._get_dict_of_stocks()
+        if dict_data is None:
+            return []
+        return _convert_dict_to_stocks(dict_data)
 
     def is_available(self) -> bool:
         """Check if NASDAQ API is available."""
@@ -91,7 +95,7 @@ def get_dict_of_stocks() -> list[dict] | None:
     return source._get_dict_of_stocks()
 
 
-def _convert_dict_to_stocks(ds):
+def _convert_dict_to_stocks(ds: list[dict]) -> list[Company]:
     """Convert dictionary data to Company objects."""
     from src.data_sources.models.ticker import Ticker
 
@@ -108,7 +112,7 @@ def _convert_dict_to_stocks(ds):
     return companies
 
 
-def _validate_response_contents(content) -> str:
+def _validate_response_contents(content: dict) -> str:
     """Returns the content that we design from the nasdaq response.  This should return the URL of the
     signed bucket file
     """
@@ -127,19 +131,20 @@ def _validate_response_contents(content) -> str:
             raise BaseException("nasdaq response does not have {F}")
     else:
         raise BaseException("nasdaq response does not have {DBD}")
-    return content
+    return str(content)
 
 
-def _read_download_file(url) -> list[dict] | None:
+def _read_download_file(url: str) -> list[dict] | None:
     """This will make a request to get the url zip file and return the data from
     the single file in the zip file that is a csv file.
     """
     response = requests.get(url)
     if response.status_code == 200:
         return _unzip_company_info_file(response.content)
+    return None
 
 
-def _unzip_company_info_file(content) -> list[dict]:
+def _unzip_company_info_file(content: bytes) -> list[dict]:
     """Will take the zip contents, that contains 1 file that is a CSV and return
     data from it, if the contents of the csv file contains the headers
     then the returned data is a list of dictionaries of the data.
@@ -154,7 +159,7 @@ def _unzip_company_info_file(content) -> list[dict]:
             return data
 
 
-def _read_csv_from_file(f) -> list[dict]:
+def _read_csv_from_file(f: Any) -> list[dict]:
     """read_csv_from_file will read the csv file, get the csv file
 
     should return a list of dicts with all available headers and data

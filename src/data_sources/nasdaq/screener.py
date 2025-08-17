@@ -1,14 +1,14 @@
 """NASDAQ screener data loader for CSV files."""
 
-from src.data_sources.base.company_data_source import CompanyDataSource
-from src.data_sources.models.company import Company
-from src.data_sources.models.ticker import Ticker
-
 from __future__ import annotations
 
 import csv
 import logging
 from pathlib import Path
+
+from src.data_sources.base.company_data_source import CompanyDataSource
+from src.data_sources.models.company import Company
+from src.data_sources.models.ticker import Ticker
 
 
 class ScreenerHeaders:
@@ -25,7 +25,7 @@ class ScreenerHeaders:
 class NasdaqScreenerLoader:
     """NASDAQ screener CSV file loader and parser."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the screener loader."""
         self.logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class NasdaqScreenerLoader:
                     raise ValueError(f"data in the csv is not found: {file_path}")
 
                 # Validate required headers exist
-                self._validate_headers(csv_reader.fieldnames, file_path)
+                self._validate_headers(list(csv_reader.fieldnames), file_path)
 
                 for row_num, row in enumerate(
                     csv_reader, start=2
@@ -96,7 +96,7 @@ class NasdaqScreenerLoader:
         if not directory_path.exists():
             raise FileNotFoundError(f"Screener directory not found: {directory_path}")
 
-        all_companies = []
+        all_companies: list[Company] = []
 
         # Find all screener files matching the pattern
         screener_files = list(directory_path.glob("nasdaq_screener_*.csv"))
@@ -204,7 +204,7 @@ class NasdaqScreenerLoader:
 class NasdaqScreenerSource(CompanyDataSource):
     """Convert NASDAQ screener files into a data source."""
 
-    def __init__(self, screener_dir: str = None):
+    def __init__(self, screener_dir: str | None = None):
         """Initialize NASDAQ screener source.
 
         Args:
@@ -225,6 +225,8 @@ class NasdaqScreenerSource(CompanyDataSource):
         Returns:
             List of Company objects from screener files
         """
+        if self.screener_dir is None:
+            raise ValueError("Screener directory must be provided")
         return self.loader.load_directory(self.screener_dir)
 
 

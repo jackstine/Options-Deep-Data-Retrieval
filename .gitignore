@@ -15,9 +15,11 @@ __pycache__
 
 # ai resources
 .claude/*
-# symlink points to ../.claude, so that we can work in worktrees
-!.claude/claude_link 
+# symlink points to ../.claude/commands, so that we can work in worktrees
+!.claude/commands
 /agents/
 /prompts/
+# include the ai working space, but nothing in it.
+ai-working/*
 
 

@@ -9,6 +9,9 @@ authors = [
 requires-python = ">=3.13.5"
 dependencies = [
     "sqlalchemy[mypy]>=2.0.43",
+    "python-dotenv>=1.0.0",
+    "alembic>=1.13.0",
+    "faker>=30.0.0",
 ]
 
 [dependency-groups]
@@ -16,6 +19,7 @@ dev = [
     "isort>=6.0.1",
     "mypy>=1.17.1",
     "ruff>=0.12.8",
+    "types-requests>=2.32.4.20250809",
 ]
 
 # Ruff configuration - unified linting and formatting
@@ -113,7 +117,7 @@ line_length = 88
 known_first_party = ["src"]
 src_paths = ["src"]
 known_third_party = ["fastapi", "pydantic", "sqlalchemy", "pytest", "requests"]
-sections = ["FIRSTPARTY", "FUTURE",  "STDLIB", "THIRDPARTY",  "LOCALFOLDER"]
+sections = ["FUTURE", "FIRSTPARTY",  "STDLIB", "THIRDPARTY",  "LOCALFOLDER"]
 include_trailing_comma = true
 force_grid_wrap = 0
 use_parentheses = true

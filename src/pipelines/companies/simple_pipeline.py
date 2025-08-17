@@ -1,5 +1,10 @@
 """Company ingestion pipeline."""
 
+from __future__ import annotations
+
+import logging
+from datetime import date
+
 from src.data_sources.base.company_data_source import CompanyDataSource
 from src.data_sources.models.company import Company
 from src.data_sources.models.ticker import Ticker as TickerDataModel
@@ -10,21 +15,16 @@ from src.repos.equities.companies.company_repository import CompanyRepository
 from src.repos.equities.tickers.ticker_history_repository import TickerHistoryRepository
 from src.repos.equities.tickers.ticker_repository import TickerRepository
 
-from __future__ import annotations
-
-from datetime import date
-import logging
-
 
 class CompanyPipeline:
     """Company ingestion pipeline with comprehensive database synchronization."""
 
     def __init__(
         self,
-        company_repo: CompanyRepository = None,
-        ticker_repo: TickerRepository = None,
-        ticker_history_repo: TickerHistoryRepository = None,
-        logger: logging.Logger = None,
+        company_repo: CompanyRepository | None = None,
+        ticker_repo: TickerRepository | None = None,
+        ticker_history_repo: TickerHistoryRepository | None = None,
+        logger: logging.Logger | None = None,
     ):
         """Initialize the pipeline with repositories and logger."""
         self.company_repo = company_repo or CompanyRepository()
@@ -95,7 +95,7 @@ class CompanyPipeline:
 
     def run_comprehensive_sync(
         self, sources: list[CompanyDataSource]
-    ) -> dict[str, int]:
+    ) -> dict[str, int | set[str]]:
         """Run comprehensive synchronization including unused ticker detection.
 
         Args:
@@ -105,10 +105,14 @@ class CompanyPipeline:
             Dictionary with comprehensive results including unused tickers
         """
         # First run normal ingestion
-        results = self.run_ingestion(sources)
+        results: dict[str, int | set[str]] = dict(self.run_ingestion(sources))
 
         # Add unused ticker detection
-        if results["inserted"] > 0 or results["updated"] > 0:
+        inserted_count = results.get("inserted", 0)
+        updated_count = results.get("updated", 0)
+        if (isinstance(inserted_count, int) and inserted_count > 0) or (
+            isinstance(updated_count, int) and updated_count > 0
+        ):
             try:
                 # Get screener symbols from sources
                 screener_symbols = set()
@@ -249,6 +253,8 @@ class CompanyPipeline:
                     f"Updating {len(companies_to_update)} existing companies..."
                 )
                 for company in companies_to_update:
+                    if company.ticker is None:
+                        continue
                     ticker_symbol = company.ticker.symbol
                     try:
                         if self.company_repo.update_company(ticker_symbol, company):
@@ -268,17 +274,21 @@ class CompanyPipeline:
             existing_companies_with_new_tickers = []
 
             for ticker_company in new_ticker_companies:
-                ticker_symbol = (
+                ticker_symbol_for_new: str | None = (
                     ticker_company.ticker.symbol if ticker_company.ticker else None
                 )
                 new_company_tickers = {
                     c.ticker.symbol for c in new_companies if c.ticker
                 }
 
-                if ticker_symbol and ticker_symbol not in new_company_tickers:
+                if (
+                    ticker_symbol_for_new
+                    and ticker_symbol_for_new not in new_company_tickers
+                ):
                     # This might be an existing company with a new ticker symbol
+                    assert ticker_symbol_for_new is not None  # Type guard for mypy
                     existing_company = self.company_repo.get_company_by_ticker(
-                        ticker_symbol
+                        ticker_symbol_for_new
                     )
                     if existing_company:
                         existing_companies_with_new_tickers.append(existing_company)

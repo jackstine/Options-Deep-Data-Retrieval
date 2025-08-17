@@ -2,21 +2,32 @@
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, fields
 from datetime import date
-import logging
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Protocol, TypeVar
 
 from sqlalchemy import create_engine, func, inspect, or_, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.types import String, Text
 
+# Protocols for type safety
+class DataModelProtocol(Protocol):
+    """Protocol for data model classes."""
+    def to_dict(self) -> dict[str, Any]: ...
+
+class DBModelProtocol(Protocol):
+    """Protocol for SQLAlchemy model classes."""
+    def to_data_model(self) -> Any: ...
+    @classmethod
+    def from_data_model(cls, data_model: Any) -> Any: ...
+
 # Type variables for generic repository
-TDataModel = TypeVar("TDataModel")  # Data model type (e.g., Company)
-TDBModel = TypeVar("TDBModel")  # SQLAlchemy model type (e.g., CompanyTable)
+TDataModel = TypeVar("TDataModel", bound=DataModelProtocol)  # Data model type (e.g., Company)
+TDBModel = TypeVar("TDBModel", bound=DBModelProtocol)  # SQLAlchemy model type (e.g., CompanyTable)
 
 
 @dataclass
@@ -32,7 +43,7 @@ class QueryOptions:
     # Advanced filtering
     date_range: tuple[date, date] | None = None
     text_search: str | None = None  # For full-text search
-    text_search_fields: list[str] = None  # Specify which fields to search
+    text_search_fields: list[str] | None = None  # Specify which fields to search
     text_search_operator: str = "ilike"  # 'ilike', 'like', 'match', 'fts'
 
     # Relationship loading
@@ -75,10 +86,10 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
         if hasattr(filter_model, "to_dict"):
             model_dict = filter_model.to_dict()
         else:
-            # Fallback for dataclasses
+            # Fallback for dataclasses - use type ignore for complex generic constraint
             model_dict = {
                 field.name: getattr(filter_model, field.name)
-                for field in fields(filter_model)
+                for field in fields(filter_model)  # type: ignore[arg-type]
             }
 
         for field_name, value in model_dict.items():
@@ -100,16 +111,20 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
         return True
 
     def _apply_text_search(
-        self, stmt, text_query: str, search_fields: list[str] = None
-    ):
+        self, stmt: Any, text_query: str, search_fields: list[str] | None = None
+    ) -> Any:
         """Apply text search across specified fields."""
         if not search_fields:
             # Default searchable fields based on column types
-            search_fields = [
-                col.name
-                for col in inspect(self._db_model_class).columns
-                if isinstance(col.type, (String, Text))
-            ]
+            inspector = inspect(self._db_model_class)
+            if inspector is not None and hasattr(inspector, 'columns'):
+                search_fields = [
+                    col.name
+                    for col in inspector.columns
+                    if isinstance(col.type, (String, Text))
+                ]
+            else:
+                search_fields = []
 
         search_conditions = []
         for field in search_fields:
@@ -233,7 +248,7 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
                 count = result.scalar()
 
                 self._logger.debug(f"Count query returned {count} records")
-                return count
+                return count or 0
 
         except SQLAlchemyError as e:
             self._logger.error(f"Database error in count(): {e}")
@@ -257,7 +272,7 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
 
                 result = db_model.to_data_model()
                 self._logger.info(f"Inserted record with ID {result.id}")
-                return result
+                return result  # type: ignore[no-any-return]
 
         except SQLAlchemyError as e:
             self._logger.error(f"Database error in insert(): {e}")

@@ -1,8 +1,5 @@
 """SQLAlchemy Company table for database operations."""
 
-from src.data_sources.models.company import Company as CompanyDataModel
-from src.database.equities.base import Base
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -11,6 +8,9 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Boolean, DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+
+from src.data_sources.models.company import Company as CompanyDataModel
+from src.database.equities.base import Base
 
 # Import for relationship type hint
 if TYPE_CHECKING:

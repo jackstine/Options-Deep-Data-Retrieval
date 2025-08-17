@@ -1,16 +1,17 @@
 """Mock implementation of NASDAQ screener data sources for testing."""
 
-from src.data_sources.base.company_data_source import CompanyDataSource
-from src.data_sources.models.company import Company
-from src.data_sources.models.test_providers import StockMarketProvider
-from src.data_sources.models.ticker import Ticker
-
 from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 from faker import Faker
+
+from src.data_sources.base.company_data_source import CompanyDataSource
+from src.data_sources.models.company import Company
+from src.data_sources.models.test_providers import StockMarketProvider
+from src.data_sources.models.ticker import Ticker
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class NasdaqScreenerLoaderMock:
         self.should_fail = False
         self.error_message = "Mock loader error"
 
-    def _create_fake_company(self, **overrides) -> Company:
+    def _create_fake_company(self, **overrides: Any) -> Company:
         """Create a realistic Company with Faker data for NASDAQ."""
         ticker_symbol = self.fake.stock_ticker()
 
@@ -179,7 +180,9 @@ class NasdaqScreenerSourceMock(CompanyDataSource):
         if not self._is_available:
             raise ConnectionError("Mock: NASDAQ screener source is not available")
 
-        return self.loader.load_directory(self.screener_dir)
+        # Use current directory as default if None provided for mock
+        directory = self.screener_dir or "."
+        return self.loader.load_directory(directory)
 
     def is_available(self) -> bool:
         """Check if the mock data source is available."""

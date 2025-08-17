@@ -1,10 +1,10 @@
 """Simple interface for company data sources."""
 
-from src.data_sources.models.company import Company
-
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+
+from src.data_sources.models.company import Company
 
 
 class CompanyDataSource(ABC):
