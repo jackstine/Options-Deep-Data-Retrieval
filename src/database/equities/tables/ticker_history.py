@@ -5,14 +5,14 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
+
 from src.data_sources.models.ticker_history import (
     TickerHistory as TickerHistoryDataModel,
 )
 from src.database.equities.base import Base
-
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.sql import func
 
 # Import for relationship type hint
 if TYPE_CHECKING:

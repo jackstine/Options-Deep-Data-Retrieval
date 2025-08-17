@@ -31,9 +31,10 @@ type-check:
 	uv run mypy src/
 
 # sort imports using isort
-PHONY: sort-imports
-sort-imports:
-	uv run isort src/ tests/
+# ruff will sort the packages
+# PHONY: sort-imports
+# sort-imports:
+# 	uv run isort src/ tests/
 
 # run complete linting suite with fixes
 PHONY: lint-all
@@ -63,5 +64,4 @@ PHONY: lint-fix
 lint-fix:
 	uv run ruff check --fix .
 	uv run ruff format .
-	uv run isort src/ tests/
 	@echo "✅ Auto-fixable issues resolved!"

@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import logging
 
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+
 from src.config.configuration import CONFIG
 from src.data_sources.models.company import Company as CompanyDataModel
 from src.data_sources.models.ticker import Ticker
 from src.database.equities.tables.company import Company as CompanyTable
 from src.repos.base_repository import BaseRepository
-
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger(__name__)
 

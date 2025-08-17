@@ -109,6 +109,7 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 # isort configuration - import sorting
+# I don't think we need to have isort, because it appears that ruff already will sort the packages.
 [tool.isort]
 float_to_top = true
 profile = "black"

@@ -1,12 +1,12 @@
+import sys
 from logging.config import fileConfig
 from pathlib import Path
-import sys
-
-from src.config.configuration import CONFIG
-from src.database.algorithms.base import Base
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+from src.config.configuration import CONFIG
+from src.database.algorithms.base import Base
 
 # Add the src directory to the Python path
 # this assumes that the file is located at "src/database/algorithms/migrations/env.py" or any other 4 depths of levels

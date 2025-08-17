@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import date
 import logging
+from datetime import date
 
 from src.data_sources.base.company_data_source import CompanyDataSource
 from src.data_sources.models.company import Company

@@ -1,11 +1,11 @@
 """SQLAlchemy base configuration for Equities database."""
 
-from src.config.configuration import CONFIG
-
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
+
+from src.config.configuration import CONFIG
 
 # This is the primary database for this configuration.
 DATABASE = "equities"

@@ -10,8 +10,8 @@ Usage:
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from src.data_sources.nasdaq.screener import NasdaqScreenerSource
 from src.pipelines.companies.simple_pipeline import CompanyPipeline

@@ -1,11 +1,11 @@
 """SQLAlchemy base configuration for Algorithms database."""
 
-from src.config.configuration import CONFIG
-
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
+
+from src.config.configuration import CONFIG
 
 # Create the declarative base for algorithms tables
 Base = declarative_base()
