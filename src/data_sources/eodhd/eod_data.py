@@ -9,7 +9,7 @@ from typing import Any
 import requests
 
 from src.config.configuration import CONFIG
-from src.data_sources.models.historical_eod_pricing import HistoricalEndOfDayPricing
+from src.models.historical_eod_pricing import HistoricalEndOfDayPricing
 
 logger = logging.getLogger(__name__)
 
