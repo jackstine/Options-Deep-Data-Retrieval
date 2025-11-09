@@ -217,6 +217,22 @@ class ConfigurationManager:
             )
         return api_key
 
+    def get_eodhd_api_key(self) -> str:
+        """Get EODHD API key from environment variable.
+
+        Returns:
+            EODHD API key
+
+        Raises:
+            ValueError: If EODHD API key environment variable is not set
+        """
+        api_key = os.getenv(ENV_VARS.EODHD_API_KEY)
+        if api_key is None:
+            raise ValueError(
+                f"EODHD API key environment variable {ENV_VARS.EODHD_API_KEY} is not set"
+            )
+        return api_key
+
     def _get_database_password(self) -> str:
         """Get database password from environment variable.
 

@@ -25,6 +25,9 @@ class Company:
     description: str | None = None
     active: bool = True
     source: str = ""
+    currency: str | None = None  #not in the DB
+    type: str | None = None  #not in the DB
+    isin: str | None = None  #not in the DB
 
     def to_dict(self) -> dict[str, Any]:
         """Convert company to dictionary for serialization."""
@@ -40,35 +43,49 @@ class Company:
             "description": self.description,
             "active": self.active,
             "source": self.source,
+            "currency": self.currency,
+            "type": self.type,
+            "isin": self.isin,
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Company:
-        """Create Company instance from dictionary."""
+        """Create Company instance from dictionary.
+
+        Supports both snake_case and EODHD API PascalCase format.
+        """
         # Handle ticker deserialization
         ticker = None
         ticker_data = data.get("ticker")
-        if ticker_data:
-            from src.models.ticker import Ticker
 
+        # Handle EODHD API format (Code field)
+        if not ticker_data and "Code" in data:
+            from src.models.ticker import Ticker
+            ticker = Ticker(symbol=data["Code"], company_id=data.get("id", 0))
+        elif ticker_data:
+            from src.models.ticker import Ticker
             if isinstance(ticker_data, dict):
                 ticker = Ticker.from_dict(ticker_data)
             elif isinstance(ticker_data, str):
                 # Handle legacy string ticker format
                 ticker = Ticker(symbol=ticker_data, company_id=data.get("id", 0))
 
+        # Support both snake_case and PascalCase for field names
         return cls(
             id=data.get("id"),
-            company_name=data["company_name"],
-            exchange=data["exchange"],
+            company_name=data.get("company_name") or data.get("Name", ""),
+            exchange=data.get("exchange") or data.get("Exchange", ""),
             ticker=ticker,
             sector=data.get("sector"),
             industry=data.get("industry"),
-            country=data.get("country"),
+            country=data.get("country") or data.get("Country"),
             market_cap=data.get("market_cap"),
             description=data.get("description"),
             active=data.get("active", True),
             source=data.get("source", ""),
+            currency=data.get("currency") or data.get("Currency"),
+            type=data.get("type") or data.get("Type"),
+            isin=data.get("isin") or data.get("Isin"),
         )
 
     def print(self) -> None:
@@ -85,6 +102,12 @@ class Company:
             print(f"  Industry: {self.industry}")
         if self.country:
             print(f"  Country: {self.country}")
+        if self.currency:
+            print(f"  Currency: {self.currency}")
+        if self.type:
+            print(f"  Type: {self.type}")
+        if self.isin:
+            print(f"  ISIN: {self.isin}")
         if self.market_cap:
             print(f"  Market Cap: ${self.market_cap:,}")
         print(f"  Active: {'Yes' if self.active else 'No'}")
