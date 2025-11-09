@@ -21,7 +21,9 @@ class TickerRepository(BaseRepository[TickerDataModel, TickerDBModel]):
     def __init__(self) -> None:
         """Initialize ticker repository."""
         super().__init__(
-            config_getter=CONFIG.get_equities_config, db_model_class=TickerDBModel
+            config_getter=CONFIG.get_equities_config,
+            data_model_class=TickerDataModel,
+            db_model_class=TickerDBModel,
         )
 
     def _create_id_filter(self, id: int) -> TickerDataModel:

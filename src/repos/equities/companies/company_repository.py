@@ -22,7 +22,9 @@ class CompanyRepository(BaseRepository[CompanyDataModel, CompanyTable]):
     def __init__(self) -> None:
         """Initialize company repository."""
         super().__init__(
-            config_getter=CONFIG.get_equities_config, db_model_class=CompanyTable
+            config_getter=CONFIG.get_equities_config,
+            data_model_class=CompanyDataModel,
+            db_model_class=CompanyTable,
         )
 
     def _create_id_filter(self, id: int) -> CompanyDataModel:

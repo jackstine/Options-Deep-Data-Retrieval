@@ -9,7 +9,6 @@ from sqlalchemy import Boolean, DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from src.data_sources.models.company import Company as CompanyDataModel
 from src.database.equities.base import Base
 
 # Import for relationship type hint
@@ -65,60 +64,3 @@ class Company(Base):
     def __repr__(self) -> str:
         """String representation of Company."""
         return f"<Company(id={self.id}, name='{self.company_name}')>"
-
-    def to_data_model(self) -> CompanyDataModel:
-        """Convert SQLAlchemy model to data model.
-
-        Returns:
-            CompanyDataModel instance
-        """
-        return CompanyDataModel(
-            id=self.id,
-            company_name=self.company_name,
-            exchange=self.exchange,
-            sector=self.sector,
-            industry=self.industry,
-            country=self.country,
-            market_cap=self.market_cap,
-            description=self.description,
-            active=self.active,
-            source=self.source,
-        )
-
-    @classmethod
-    def from_data_model(cls, company_data: CompanyDataModel) -> Company:
-        """Create SQLAlchemy model from data model.
-
-        Args:
-            company_data: CompanyDataModel instance
-
-        Returns:
-            Company SQLAlchemy model instance
-        """
-        return cls(
-            company_name=company_data.company_name,
-            exchange=company_data.exchange,
-            sector=company_data.sector,
-            industry=company_data.industry,
-            country=company_data.country,
-            market_cap=company_data.market_cap,
-            description=company_data.description,
-            active=company_data.active,
-            source=company_data.source,
-        )
-
-    def update_from_data_model(self, company_data: CompanyDataModel) -> None:
-        """Update existing SQLAlchemy model from data model.
-
-        Args:
-            company_data: CompanyDataModel instance with updated data
-        """
-        self.company_name = company_data.company_name
-        self.exchange = company_data.exchange
-        self.sector = company_data.sector
-        self.industry = company_data.industry
-        self.country = company_data.country
-        self.market_cap = company_data.market_cap
-        self.description = company_data.description
-        self.active = company_data.active
-        self.source = company_data.source

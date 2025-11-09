@@ -19,12 +19,13 @@ from sqlalchemy.types import String, Text
 class DataModelProtocol(Protocol):
     """Protocol for data model classes."""
     def to_dict(self) -> dict[str, Any]: ...
+    def to_db_model(self) -> Any: ...
+    @classmethod
+    def from_db_model(cls, db_model: Any) -> Any: ...
 
 class DBModelProtocol(Protocol):
     """Protocol for SQLAlchemy model classes."""
-    def to_data_model(self) -> Any: ...
-    @classmethod
-    def from_data_model(cls, data_model: Any) -> Any: ...
+    pass  # No conversion methods needed - pure ORM
 
 # Type variables for generic repository
 TDataModel = TypeVar("TDataModel", bound=DataModelProtocol)  # Data model type (e.g., Company)
@@ -60,16 +61,23 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
         TDBModel: The corresponding SQLAlchemy model type
     """
 
-    def __init__(self, config_getter: Callable, db_model_class: type[TDBModel]) -> None:
+    def __init__(
+        self,
+        config_getter: Callable,
+        data_model_class: type[TDataModel],
+        db_model_class: type[TDBModel],
+    ) -> None:
         """Initialize repository with database connection.
 
         Args:
             config_getter: Function to get database config (e.g., CONFIG.get_equities_config)
+            data_model_class: Data model class for this repository
             db_model_class: SQLAlchemy model class for this repository
         """
         self._config = config_getter()
         self._engine = create_engine(self._config.database.get_connection_string())
         self._SessionLocal = sessionmaker(bind=self._engine)
+        self._data_model_class = data_model_class
         self._db_model_class = db_model_class
         self._logger = logging.getLogger(self.__class__.__name__)
 
@@ -203,8 +211,10 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
                 result = session.execute(query)
                 db_models = result.scalars().all()
 
-                # Convert to data models
-                data_models = [db_model.to_data_model() for db_model in db_models]
+                # Convert to data models using data model's from_db_model()
+                data_models = [
+                    self._data_model_class.from_db_model(db_model) for db_model in db_models
+                ]
 
                 self._logger.info(f"Retrieved {len(data_models)} records")
                 return data_models
@@ -266,12 +276,14 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
         """
         try:
             with self._SessionLocal() as session:
-                db_model = self._db_model_class.from_data_model(data_model)
+                # Convert data model to database model using data model's to_db_model()
+                db_model = data_model.to_db_model()
                 session.add(db_model)
                 session.commit()
                 session.refresh(db_model)
 
-                result = db_model.to_data_model()
+                # Convert back using data model's from_db_model()
+                result = self._data_model_class.from_db_model(db_model)
                 self._logger.info(f"Inserted record with ID {result.id}")
                 return result  # type: ignore[no-any-return]
 
@@ -294,9 +306,8 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
 
         try:
             with self._SessionLocal() as session:
-                db_models = [
-                    self._db_model_class.from_data_model(dm) for dm in data_models
-                ]
+                # Convert data models to database models using data model's to_db_model()
+                db_models = [dm.to_db_model() for dm in data_models]
                 session.add_all(db_models)
                 session.commit()
 

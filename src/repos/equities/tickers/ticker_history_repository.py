@@ -29,6 +29,7 @@ class TickerHistoryRepository(
         """Initialize ticker history repository."""
         super().__init__(
             config_getter=CONFIG.get_equities_config,
+            data_model_class=TickerHistoryDataModel,
             db_model_class=TickerHistoryDBModel,
         )
 

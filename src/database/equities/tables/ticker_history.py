@@ -9,9 +9,6 @@ from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from src.data_sources.models.ticker_history import (
-    TickerHistory as TickerHistoryDataModel,
-)
 from src.database.equities.base import Base
 
 # Import for relationship type hint
@@ -61,55 +58,6 @@ class TickerHistory(Base):
     def __repr__(self) -> str:
         """String representation of TickerHistory."""
         return f"<TickerHistory(id={self.id}, symbol='{self.symbol}', company_id={self.company_id}, valid_from='{self.valid_from}', valid_to='{self.valid_to}')>"
-
-    def to_data_model(self) -> TickerHistoryDataModel:
-        """Convert SQLAlchemy model to data model.
-
-        Returns:
-            TickerHistoryDataModel instance
-        """
-        return TickerHistoryDataModel(
-            id=self.id,
-            symbol=self.symbol,
-            company_id=self.company_id,
-            valid_from=self.valid_from,
-            valid_to=self.valid_to,
-            active=self.active,
-        )
-
-    @classmethod
-    def from_data_model(
-        cls, ticker_history_data: TickerHistoryDataModel
-    ) -> TickerHistory:
-        """Create SQLAlchemy model from data model.
-
-        Args:
-            ticker_history_data: TickerHistoryDataModel instance
-
-        Returns:
-            TickerHistory SQLAlchemy model instance
-        """
-        return cls(
-            symbol=ticker_history_data.symbol,
-            company_id=ticker_history_data.company_id,
-            valid_from=ticker_history_data.valid_from,
-            valid_to=ticker_history_data.valid_to,
-            active=ticker_history_data.active,
-        )
-
-    def update_from_data_model(
-        self, ticker_history_data: TickerHistoryDataModel
-    ) -> None:
-        """Update existing SQLAlchemy model from data model.
-
-        Args:
-            ticker_history_data: TickerHistoryDataModel instance with updated data
-        """
-        self.symbol = ticker_history_data.symbol
-        self.company_id = ticker_history_data.company_id
-        self.valid_from = ticker_history_data.valid_from
-        self.valid_to = ticker_history_data.valid_to
-        self.active = ticker_history_data.active
 
     def is_valid_on_date(self, check_date: date) -> bool:
         """Check if ticker was valid on a specific date.
