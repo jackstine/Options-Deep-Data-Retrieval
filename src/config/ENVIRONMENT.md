@@ -4,14 +4,60 @@ This document describes all environment variables used in the Options Deep stock
 
 ## Environment Variables
 
-- `ENVIRONMENT` - Specifies which environment configuration to load (local, dev, prod)
+- `OPTIONS_DEEP_ENV` - Selects which .env file to load (local, dev, qa, prod). If not set, defaults to `.env`
+- `ENVIRONMENT` - Specifies which environment configuration to load (local, dev, qa, prod)
 - `OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD` - Database password for PostgreSQL connection
 - `NASDAQ_API_KEY` - API key for accessing NASDAQ company data
 
-## Environment Configuration Files
+## Environment File Selection
 
-Static configuration (non-sensitive data) is stored in JSON files located in `src/config/environment_configs/`. The configuration supports multiple databases with the following structure:
+The application uses `OPTIONS_DEEP_ENV` to determine which environment file to load:
 
+| OPTIONS_DEEP_ENV | File Loaded | Use Case |
+|------------------|-------------|----------|
+| Not set (default) | `.env` | Default configuration |
+| `local` | `.env.local` | Local development |
+| `dev` | `.env.dev` | Development server |
+| `qa` | `.env.qa` | QA/Testing environment |
+| `prod` | `.env.prod` | Production environment |
+
+### Example Usage
+```bash
+# Use default .env file
+python src/cmd/my_script.py
+
+# Use local environment file
+export OPTIONS_DEEP_ENV=local
+python src/cmd/my_script.py
+
+# Use production environment file
+export OPTIONS_DEEP_ENV=prod
+python src/cmd/my_script.py
+```
+
+## Configuration Architecture
+
+Configuration is split into two parts for security and flexibility:
+
+### 1. Environment Variables (.env files) - Secrets
+Contains sensitive information that should NEVER be committed to version control:
+- Database passwords
+- API keys
+- Sensitive credentials
+
+Located in project root: `.env`, `.env.local`, `.env.dev`, `.env.qa`, `.env.prod`
+
+### 2. JSON Configuration Files - Settings
+Contains non-sensitive configuration stored in version control:
+- Database hostnames, ports, database names
+- Application settings
+- Feature flags
+
+Located in: `src/config/environment_configs/local.json`, `dev.json`, `qa.json`, `prod.json`
+
+## Environment Configuration Files Structure
+
+Example JSON structure (`src/config/environment_configs/local.json`):
 ```json
 {
   "databases": {
@@ -19,7 +65,7 @@ Static configuration (non-sensitive data) is stored in JSON files located in `sr
       "host": "localhost",
       "port": 5432,
       "database": "equities-local",
-      "username": "postgres"
+      "username": "e_user"
     },
     "algorithm": {
       "host": "localhost",
@@ -34,19 +80,81 @@ Static configuration (non-sensitive data) is stored in JSON files located in `sr
 ## Setting Up Environment Variables
 
 ### Local Development
-Create a `.env` file in the project root:
-```bash
-ENVIRONMENT=local
-OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD=postgres
-NASDAQ_API_KEY=your_nasdaq_api_key_here
+
+1. Copy the example file:
+   ```bash
+   cp env.example .env.local
+   ```
+
+2. Edit `.env.local` and fill in your values:
+   ```bash
+   ENVIRONMENT=local
+   OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD=your_local_password
+   NASDAQ_API_KEY=your_nasdaq_api_key
+   ```
+
+3. Set the environment selector:
+   ```bash
+   export OPTIONS_DEEP_ENV=local
+   ```
+
+4. Run your application:
+   ```bash
+   python src/cmd/your_script.py
+   ```
+
+### Development/QA/Production Environments
+
+1. Copy the example file and customize for your environment:
+   ```bash
+   # For dev
+   cp env.example .env.dev
+
+   # For qa
+   cp env.example .env.qa
+
+   # For prod
+   cp env.example .env.prod
+   ```
+
+2. Edit the file and fill in environment-specific values
+
+3. Set the environment selector in your deployment configuration:
+   ```bash
+   export OPTIONS_DEEP_ENV=prod
+   ```
+
+## Accessing Environment Variables in Code
+
+The application provides type-safe access to environment variables through the `CONFIG` singleton:
+
+```python
+from src.config.configuration import CONFIG
+
+# Get environment name
+env = CONFIG.get_environment()  # Returns: "local", "dev", "qa", or "prod"
+
+# Get database password
+password = CONFIG.get_database_password()
+
+# Get NASDAQ API key
+api_key = CONFIG.get_nasdaq_api_key()
+
+# Get database config (combines env vars + JSON config)
+db_config = CONFIG.get_equities_config()
 ```
 
-### Development/Production
-Set environment variables in your deployment environment:
-```bash
-export ENVIRONMENT=dev
-export OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD=your_secure_dev_password
-export NASDAQ_API_KEY=your_nasdaq_api_key_here
+## Type Safety
+
+Environment variables are defined with TypedDict for type safety:
+
+```python
+from src.config.models.environment_variables import EnvironmentVariables, ENV_VARS
+
+# ENV_VARS provides constants for IDE autocomplete
+ENV_VARS.OP_ENVIRONMENT
+ENV_VARS.DB_PASSWORD
+ENV_VARS.NASDAQ_API_KEY
 ```
 
 ## Security Best Practices
@@ -61,41 +169,76 @@ export NASDAQ_API_KEY=your_nasdaq_api_key_here
 
 ```
 src/config/
-├── environment_configs/     # Static configuration files
-│   ├── local.json          # Local development settings
-│   ├── dev.json            # Development environment settings
-│   └── prod.json           # Production environment settings
-├── models/                 # Configuration models
-│   ├── database.py         # Database configuration model
-│   ├── equities.py         # Equities configuration model
-│   └── algorithm.py        # Algorithm configuration model
-├── configuration.py        # Main configuration manager
-├── environment.py          # Environment variables management
-└── ENVIRONMENT.md          # This documentation file
+├── environment_configs/            # Static configuration files (in git)
+│   ├── local.json                 # Local development settings
+│   ├── dev.json                   # Development environment settings
+│   ├── qa.json                    # QA environment settings
+│   └── prod.json                  # Production environment settings
+├── models/                        # Configuration models
+│   ├── database.py                # Database configuration model
+│   ├── equities.py                # Equities configuration model
+│   ├── algorithm.py               # Algorithm configuration model
+│   └── environment_variables.py   # TypedDict for env vars (NEW)
+├── configuration.py               # Main configuration manager
+└── ENVIRONMENT.md                 # This documentation file
+
+Project root:
+├── .env                           # Default env file (gitignored)
+├── .env.local                     # Local env file (gitignored)
+├── .env.dev                       # Dev env file (gitignored)
+├── .env.qa                        # QA env file (gitignored)
+├── .env.prod                      # Prod env file (gitignored)
+└── env.example                    # Example env file (in git)
 ```
 
 ## Adding New Environment Variables
 
 When adding new environment variables:
 
-1. **Document here**: Add the variable to this file using the format `- VARIABLE_NAME - description`
-2. **Update configuration.py**: Add loading logic if needed
-3. **Add to .env.example**: Provide example values
-4. **Update deployment**: Ensure the variable is set in all environments
-5. **Security review**: Determine if the variable contains sensitive data
+1. **Add to TypedDict**: Update `src/config/models/environment_variables.py`
+2. **Add to ENV_VARS constants**: For IDE autocomplete
+3. **Update ConfigurationManager**: Add getter method in `configuration.py`
+4. **Add to validation**: Update `_load_and_validate_env_vars()` if required
+5. **Document here**: Add the variable to this file
+6. **Update example file**: Add to `env.example` file
+7. **Update deployment**: Ensure the variable is set in all environments
+8. **Security review**: Determine if the variable contains sensitive data
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Missing environment variable**: Check that all required variables are set
-2. **Wrong environment**: Verify `ENVIRONMENT` variable matches your intended environment
-3. **Config file not found**: Ensure the environment config JSON file exists
-4. **Database connection fails**: Verify database credentials and network connectivity
+1. **Missing environment variable**
+   - Error: `ValueError: Missing required environment variables: ...`
+   - Solution: Ensure all required variables are set in your `.env.*` file
+
+2. **Wrong environment file**
+   - Error: `FileNotFoundError: Environment file not found: ...`
+   - Solution: Check that `OPTIONS_DEEP_ENV` matches an existing `.env.*` file
+
+3. **Invalid OPTIONS_DEEP_ENV value**
+   - Error: `ValueError: Invalid OPTIONS_DEEP_ENV value: ...`
+   - Solution: Use one of: local, dev, qa, prod
+
+4. **Config file not found**
+   - Error: `Config file not found: src/config/environment_configs/...`
+   - Solution: Ensure the corresponding JSON config file exists
+
+5. **Database connection fails**
+   - Verify database credentials in `.env.*` file
+   - Check database host/port in `environment_configs/*.json`
+   - Verify network connectivity
 
 ### Debugging
 
-Enable debug logging to see which configuration is being loaded:
+Check which environment file is being loaded:
+```python
+import os
+print(f"OPTIONS_DEEP_ENV: {os.getenv('OPTIONS_DEEP_ENV', 'not set')}")
+print(f"ENVIRONMENT: {os.getenv('ENVIRONMENT', 'not set')}")
+```
+
+Enable debug logging:
 ```python
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -103,4 +246,4 @@ logging.basicConfig(level=logging.DEBUG)
 
 ### Validation
 
-The application will validate environment variables on startup and provide clear error messages for missing or invalid configurations.
+The application validates all required environment variables on startup (fail-fast approach) and provides clear error messages for missing or invalid configurations. This ensures problems are caught immediately rather than during runtime.

@@ -5,7 +5,7 @@ from typing import Any
 
 import requests
 
-import src.config.environment as en
+from src.config.configuration import CONFIG
 from src.data_sources.base.company_data_source import CompanyDataSource
 from src.data_sources.models.company import Company
 
@@ -39,7 +39,7 @@ class NasdaqCompanySource(CompanyDataSource):
     def is_available(self) -> bool:
         """Check if NASDAQ API is available."""
         try:
-            api_key = en.ENVIRONMENT_VARIABLES.get_nasdaq_api_key()
+            api_key = CONFIG.get_nasdaq_api_key()
             return api_key is not None
         except Exception:
             return False
@@ -51,7 +51,7 @@ class NasdaqCompanySource(CompanyDataSource):
           "exchange": "NASDAQ",
           "company_name": "ARIAD Pharmaceuticals Inc."
         """
-        api_key = en.ENVIRONMENT_VARIABLES.get_nasdaq_api_key()
+        api_key = CONFIG.get_nasdaq_api_key()
         url = f"https://data.nasdaq.com/api/v3/datatables/QUOTEMEDIA/TICKERS?api_key={api_key}&qopts.export=true"
         response = requests.get(url)
         if response.status_code == 200:
