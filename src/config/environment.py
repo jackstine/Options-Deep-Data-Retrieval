@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 @dataclass
 class EnvironmentVariables:
     _NASDAQ_API_KEY: str = "NASDAQ_API_KEY"
+    _EODHD_API_KEY: str = "EODHD_API_KEY"
 
     def __post_init__(self) -> None:
         # need to load the environment variables from the .env file.
@@ -20,6 +21,11 @@ class EnvironmentVariables:
     def get_nasdaq_api_key(cls) -> str:
         """Get the Nasdaq API Key"""
         return cls._get_value(cls._NASDAQ_API_KEY)
+
+    @classmethod
+    def get_eodhd_api_key(cls) -> str:
+        """Get the EODHD API Key"""
+        return cls._get_value(cls._EODHD_API_KEY)
 
     @staticmethod
     def _get_value(key: str) -> str:
