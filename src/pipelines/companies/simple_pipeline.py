@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date
+from typing import TypedDict
 
 from src.data_sources.base.company_data_source import CompanyDataSource
 from src.data_sources.models.company import Company
@@ -14,6 +15,30 @@ from src.data_sources.models.ticker_history import (
 from src.repos.equities.companies.company_repository import CompanyRepository
 from src.repos.equities.tickers.ticker_history_repository import TickerHistoryRepository
 from src.repos.equities.tickers.ticker_repository import TickerRepository
+
+
+class CompanyIngestionResult(TypedDict):
+    """Result of company ingestion process."""
+
+    inserted: int
+    updated: int
+    skipped: int
+    errors: int
+    tickers_inserted: int
+    ticker_histories_inserted: int
+
+
+class ComprehensiveSyncResult(TypedDict):
+    """Result of comprehensive company synchronization process."""
+
+    inserted: int
+    updated: int
+    skipped: int
+    errors: int
+    tickers_inserted: int
+    ticker_histories_inserted: int
+    unused_tickers: set[str]
+    unused_ticker_count: int
 
 
 class CompanyPipeline:
@@ -32,23 +57,16 @@ class CompanyPipeline:
         self.ticker_history_repo = ticker_history_repo or TickerHistoryRepository()
         self.logger = logger or logging.getLogger(__name__)
 
-    def run_ingestion(self, sources: list[CompanyDataSource]) -> dict[str, int]:
+    def run_ingestion(self, sources: list[CompanyDataSource]) -> CompanyIngestionResult:
         """Run ingestion from the given data sources.
 
         Args:
             sources: List of data sources to get companies from
 
         Returns:
-            Dictionary with results: {
-                "inserted": 5,
-                "updated": 3,
-                "skipped": 2,
-                "errors": 0,
-                "tickers_inserted": 5,
-                "ticker_histories_inserted": 5
-            }
+            CompanyIngestionResult with ingestion details
         """
-        results = {
+        results: CompanyIngestionResult = {
             "inserted": 0,
             "updated": 0,
             "skipped": 0,
@@ -95,24 +113,25 @@ class CompanyPipeline:
 
     def run_comprehensive_sync(
         self, sources: list[CompanyDataSource]
-    ) -> dict[str, int | set[str]]:
+    ) -> ComprehensiveSyncResult:
         """Run comprehensive synchronization including unused ticker detection.
 
         Args:
             sources: List of data sources to get companies from
 
         Returns:
-            Dictionary with comprehensive results including unused tickers
+            ComprehensiveSyncResult with comprehensive sync details
         """
         # First run normal ingestion
-        results: dict[str, int | set[str]] = dict(self.run_ingestion(sources))
+        ingestion_results = self.run_ingestion(sources)
+        results: ComprehensiveSyncResult = {
+            **ingestion_results,
+            "unused_tickers": set(),
+            "unused_ticker_count": 0,
+        }
 
         # Add unused ticker detection
-        inserted_count = results.get("inserted", 0)
-        updated_count = results.get("updated", 0)
-        if (isinstance(inserted_count, int) and inserted_count > 0) or (
-            isinstance(updated_count, int) and updated_count > 0
-        ):
+        if results["inserted"] > 0 or results["updated"] > 0:
             try:
                 # Get screener symbols from sources
                 screener_symbols = set()
@@ -171,9 +190,9 @@ class CompanyPipeline:
 
     def _comprehensive_sync_to_database(
         self, companies: list[Company]
-    ) -> dict[str, int]:
+    ) -> CompanyIngestionResult:
         """Comprehensive database synchronization with bulk operations and ticker management."""
-        results = {
+        results: CompanyIngestionResult = {
             "inserted": 0,
             "updated": 0,
             "skipped": 0,
