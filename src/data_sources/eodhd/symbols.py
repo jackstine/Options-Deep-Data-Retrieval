@@ -8,12 +8,13 @@ from typing import Any
 import requests
 
 from src.config.configuration import CONFIG
+from src.data_sources.base.company_data_source import CompanyDataSource
 from src.models.company import Company
 
 logger = logging.getLogger(__name__)
 
 
-class EodhdSymbolsSource:
+class EodhdSymbolsSource(CompanyDataSource):
     """EODHD data source for retrieving US stock symbols (active and delisted)."""
 
     BASE_URL = "https://eodhd.com/api"
@@ -50,6 +51,16 @@ class EodhdSymbolsSource:
             return True
         except Exception:
             return False
+
+    def get_companies(self) -> list[Company]:
+        """Get active companies from EODHD API.
+
+        Implements the CompanyDataSource interface by returning only active symbols.
+
+        Returns:
+            List of Company instances with active symbol information
+        """
+        return self.get_active_symbols()
 
     def get_delisted_symbols(self) -> list[Company]:
         """Get delisted US stock symbols from EODHD API.
@@ -128,21 +139,6 @@ class EodhdSymbolsSource:
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to fetch active symbols: {e}")
             raise
-
-    def get_all_us_symbols(self) -> dict[str, list[Company]]:
-        """Get all US symbols (both active and delisted).
-
-        Convenience method that fetches both active and delisted symbols
-        and returns them in a categorized dictionary.
-
-        Returns:
-            Dictionary with 'active' and 'delisted' keys, each containing
-            a list of Company instances
-        """
-        return {
-            "active": self.get_active_symbols(),
-            "delisted": self.get_delisted_symbols(),
-        }
 
 
 if __name__ == "__main__":
