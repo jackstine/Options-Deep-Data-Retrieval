@@ -25,6 +25,10 @@ This document contains critical information about working with this codebase. Fo
     - Document with docstrings
     - Use f-strings for formatting
 
+
+## TypeDicts
+Do not return `dict[str, int]`  but instead return TypeDict classes that define the attributes please.
+
 ## Development Philosophy
 
 - **Simplicity**: Write simple, straightforward code
@@ -73,3 +77,5 @@ This document contains critical information about working with this codebase. Fo
 - test data is created in the @tests folder
 - tests utilize `*_mock.py` files to mock out the data from `repos` and `data_sources`
 
+
+ 
