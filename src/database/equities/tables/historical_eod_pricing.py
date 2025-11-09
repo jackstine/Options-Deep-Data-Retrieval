@@ -3,15 +3,11 @@
 from __future__ import annotations
 
 from datetime import date as date_type
-from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, Date, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.data_sources.models.historical_eod_pricing import (
-    HistoricalEndOfDayPricing as HistoricalEodPricingDataModel,
-)
 from src.database.equities.base import Base
 
 # Import for relationship type hint
@@ -64,60 +60,3 @@ class HistoricalEodPricing(Base):
     def __repr__(self) -> str:
         """String representation of HistoricalEodPricing."""
         return f"<HistoricalEodPricing(id={self.id}, ticker_id={self.ticker_id}, date={self.date})>"
-
-    def to_data_model(self) -> HistoricalEodPricingDataModel:
-        """Convert SQLAlchemy model to data model.
-
-        Returns:
-            HistoricalEodPricingDataModel instance with prices as Decimals
-        """
-        return HistoricalEodPricingDataModel(
-            id=self.id,
-            date=self.date,
-            open=Decimal(self.open) / PRICE_MULTIPLIER,
-            high=Decimal(self.high) / PRICE_MULTIPLIER,
-            low=Decimal(self.low) / PRICE_MULTIPLIER,
-            close=Decimal(self.close) / PRICE_MULTIPLIER,
-            adjusted_close=Decimal(self.adjusted_close) / PRICE_MULTIPLIER,
-            volume=self.volume,
-        )
-
-    @classmethod
-    def from_data_model(
-        cls, pricing_data: HistoricalEodPricingDataModel, ticker_id: int
-    ) -> HistoricalEodPricing:
-        """Create SQLAlchemy model from data model.
-
-        Args:
-            pricing_data: HistoricalEodPricingDataModel instance
-            ticker_id: ID of the ticker this pricing data belongs to
-
-        Returns:
-            HistoricalEodPricing SQLAlchemy model instance
-        """
-        return cls(
-            ticker_id=ticker_id,
-            date=pricing_data.date,
-            open=int(pricing_data.open * PRICE_MULTIPLIER),
-            high=int(pricing_data.high * PRICE_MULTIPLIER),
-            low=int(pricing_data.low * PRICE_MULTIPLIER),
-            close=int(pricing_data.close * PRICE_MULTIPLIER),
-            adjusted_close=int(pricing_data.adjusted_close * PRICE_MULTIPLIER),
-            volume=pricing_data.volume,
-        )
-
-    def update_from_data_model(
-        self, pricing_data: HistoricalEodPricingDataModel
-    ) -> None:
-        """Update existing SQLAlchemy model from data model.
-
-        Args:
-            pricing_data: HistoricalEodPricingDataModel instance with updated data
-        """
-        self.date = pricing_data.date
-        self.open = int(pricing_data.open * PRICE_MULTIPLIER)
-        self.high = int(pricing_data.high * PRICE_MULTIPLIER)
-        self.low = int(pricing_data.low * PRICE_MULTIPLIER)
-        self.close = int(pricing_data.close * PRICE_MULTIPLIER)
-        self.adjusted_close = int(pricing_data.adjusted_close * PRICE_MULTIPLIER)
-        self.volume = pricing_data.volume

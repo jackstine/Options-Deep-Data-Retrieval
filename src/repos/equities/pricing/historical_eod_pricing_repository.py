@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.config.configuration import CONFIG
-from src.data_sources.models.historical_eod_pricing import (
+from src.models.historical_eod_pricing import (
     HistoricalEndOfDayPricing as HistoricalEodPricingDataModel,
 )
 from src.database.equities.tables.historical_eod_pricing import (
@@ -30,6 +30,7 @@ class HistoricalEodPricingRepository(
         """Initialize historical EOD pricing repository."""
         super().__init__(
             config_getter=CONFIG.get_equities_config,
+            data_model_class=HistoricalEodPricingDataModel,
             db_model_class=HistoricalEodPricingDBModel,
         )
 
@@ -95,7 +96,10 @@ class HistoricalEodPricingRepository(
                 result = session.execute(query)
                 db_models = result.scalars().all()
 
-                data_models = [db_model.to_data_model() for db_model in db_models]
+                data_models = [
+                    HistoricalEodPricingDataModel.from_db_model(db_model)
+                    for db_model in db_models
+                ]
                 logger.info(
                     f"Retrieved {len(data_models)} pricing records for ticker_id={ticker_id}"
                 )
@@ -147,7 +151,7 @@ class HistoricalEodPricingRepository(
                     logger.debug(
                         f"Found pricing for ticker_id={ticker_id} on {target_date}"
                     )
-                    return db_model.to_data_model()
+                    return HistoricalEodPricingDataModel.from_db_model(db_model)
                 else:
                     logger.debug(
                         f"No pricing found for ticker_id={ticker_id} on {target_date}"
@@ -181,11 +185,12 @@ class HistoricalEodPricingRepository(
 
         try:
             with self._SessionLocal() as session:
+                # Set ticker_id on each pricing data model
+                for pricing in pricing_data:
+                    pricing.ticker_id = ticker_id
+
                 # Convert data models to DB models
-                db_models = [
-                    HistoricalEodPricingDBModel.from_data_model(pricing, ticker_id)
-                    for pricing in pricing_data
-                ]
+                db_models = [pricing.to_db_model() for pricing in pricing_data]
 
                 # Prepare values for upsert
                 values = [
