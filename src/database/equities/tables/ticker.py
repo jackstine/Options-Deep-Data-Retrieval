@@ -9,7 +9,6 @@ from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from src.data_sources.models.ticker import Ticker as TickerDataModel
 from src.database.equities.base import Base
 
 # Import for relationship type hint
@@ -50,35 +49,3 @@ class Ticker(Base):
     def __repr__(self) -> str:
         """String representation of Ticker."""
         return f"<Ticker(id={self.id}, symbol='{self.symbol}', company_id={self.company_id})>"
-
-    def to_data_model(self) -> TickerDataModel:
-        """Convert SQLAlchemy model to data model.
-
-        Returns:
-            TickerDataModel instance
-        """
-        return TickerDataModel(
-            id=self.id, symbol=self.symbol, company_id=self.company_id
-        )
-
-    @classmethod
-    def from_data_model(cls, ticker_data: TickerDataModel) -> Ticker:
-        """Create SQLAlchemy model from data model.
-
-        Args:
-            ticker_data: TickerDataModel instance
-
-        Returns:
-            Ticker SQLAlchemy model instance
-        """
-        return cls(symbol=ticker_data.symbol, company_id=ticker_data.company_id)
-
-    def update_from_data_model(self, ticker_data: TickerDataModel) -> None:
-        """Update existing SQLAlchemy model from data model.
-
-        Args:
-            ticker_data: TickerDataModel instance with updated data
-        """
-        self.symbol = ticker_data.symbol
-        if ticker_data.company_id is not None:
-            self.company_id = ticker_data.company_id

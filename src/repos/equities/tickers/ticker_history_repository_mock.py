@@ -8,8 +8,8 @@ from typing import Any
 
 from faker import Faker
 
-from src.data_sources.models.test_providers import StockMarketProvider
-from src.data_sources.models.ticker_history import (
+from src.models.test_providers import StockMarketProvider
+from src.models.ticker_history import (
     TickerHistory as TickerHistoryDataModel,
 )
 

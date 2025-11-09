@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.config.configuration import CONFIG
-from src.data_sources.models.ticker import Ticker as TickerDataModel
+from src.models.ticker import Ticker as TickerDataModel
 from src.database.equities.tables.ticker import Ticker as TickerDBModel
 from src.repos.base_repository import BaseRepository
 
@@ -21,7 +21,9 @@ class TickerRepository(BaseRepository[TickerDataModel, TickerDBModel]):
     def __init__(self) -> None:
         """Initialize ticker repository."""
         super().__init__(
-            config_getter=CONFIG.get_equities_config, db_model_class=TickerDBModel
+            config_getter=CONFIG.get_equities_config,
+            data_model_class=TickerDataModel,
+            db_model_class=TickerDBModel,
         )
 
     def _create_id_filter(self, id: int) -> TickerDataModel:

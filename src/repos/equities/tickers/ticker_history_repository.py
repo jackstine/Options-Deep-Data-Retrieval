@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.config.configuration import CONFIG
-from src.data_sources.models.ticker_history import (
+from src.models.ticker_history import (
     TickerHistory as TickerHistoryDataModel,
 )
 from src.database.equities.tables.ticker_history import (
@@ -29,6 +29,7 @@ class TickerHistoryRepository(
         """Initialize ticker history repository."""
         super().__init__(
             config_getter=CONFIG.get_equities_config,
+            data_model_class=TickerHistoryDataModel,
             db_model_class=TickerHistoryDBModel,
         )
 

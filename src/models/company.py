@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from src.data_sources.models.ticker import Ticker
+    from src.models.ticker import Ticker
+    from src.database.equities.tables.company import Company as DBCompany
 
 
 @dataclass
@@ -53,16 +54,16 @@ class Company:
 
         Supports both snake_case and EODHD API PascalCase format.
         """
-        from src.data_sources.models.ticker import Ticker
-
         # Handle ticker deserialization
         ticker = None
         ticker_data = data.get("ticker")
 
         # Handle EODHD API format (Code field)
         if not ticker_data and "Code" in data:
+            from src.models.ticker import Ticker
             ticker = Ticker(symbol=data["Code"], company_id=data.get("id", 0))
         elif ticker_data:
+            from src.models.ticker import Ticker
             if isinstance(ticker_data, dict):
                 ticker = Ticker.from_dict(ticker_data)
             elif isinstance(ticker_data, str):
@@ -121,3 +122,62 @@ class Company:
     def __repr__(self) -> str:
         """Detailed string representation of company."""
         return self.__str__()
+
+    def to_db_model(self) -> DBCompany:
+        """Convert data model to SQLAlchemy database model.
+
+        Returns:
+            DBCompany: SQLAlchemy model instance ready for database operations
+        """
+        from src.database.equities.tables.company import Company as DBCompany
+
+        return DBCompany(
+            company_name=self.company_name,
+            exchange=self.exchange,
+            sector=self.sector,
+            industry=self.industry,
+            country=self.country,
+            market_cap=self.market_cap,
+            description=self.description,
+            active=self.active,
+            source=self.source,
+        )
+
+    @classmethod
+    def from_db_model(cls, db_model: DBCompany) -> Company:
+        """Create data model from SQLAlchemy database model.
+
+        Args:
+            db_model: SQLAlchemy Company instance from database
+
+        Returns:
+            Company: Data model instance
+        """
+        return cls(
+            id=db_model.id,
+            company_name=db_model.company_name,
+            exchange=db_model.exchange,
+            sector=db_model.sector,
+            industry=db_model.industry,
+            country=db_model.country,
+            market_cap=db_model.market_cap,
+            description=db_model.description,
+            active=db_model.active,
+            source=db_model.source,
+        )
+
+    def update_db_model(self, db_model: DBCompany) -> None:
+        """Update existing SQLAlchemy database model with data from this model.
+
+        Args:
+            db_model: SQLAlchemy Company instance to update
+        """
+        db_model.company_name = self.company_name
+        db_model.exchange = self.exchange
+        db_model.sector = self.sector
+        db_model.industry = self.industry
+        db_model.country = self.country
+        db_model.market_cap = self.market_cap
+        db_model.description = self.description
+        db_model.active = self.active
+        db_model.source = self.source

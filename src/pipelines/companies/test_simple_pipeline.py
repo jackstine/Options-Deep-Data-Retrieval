@@ -16,9 +16,9 @@ import unittest
 from datetime import date
 from unittest.mock import Mock
 
-from src.data_sources.models.company import Company
-from src.data_sources.models.ticker import Ticker
-from src.data_sources.models.ticker_history import TickerHistory
+from src.models.company import Company
+from src.models.ticker import Ticker
+from src.models.ticker_history import TickerHistory
 from src.pipelines.companies.simple_pipeline import CompanyPipeline
 from src.repos.equities.companies.company_repository_mock import (
     create_company_repository_mock,

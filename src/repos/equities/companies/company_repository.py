@@ -8,8 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.config.configuration import CONFIG
-from src.data_sources.models.company import Company as CompanyDataModel
-from src.data_sources.models.ticker import Ticker
+from src.models.company import Company as CompanyDataModel
+from src.models.ticker import Ticker
 from src.database.equities.tables.company import Company as CompanyTable
 from src.repos.base_repository import BaseRepository
 
@@ -22,7 +22,9 @@ class CompanyRepository(BaseRepository[CompanyDataModel, CompanyTable]):
     def __init__(self) -> None:
         """Initialize company repository."""
         super().__init__(
-            config_getter=CONFIG.get_equities_config, db_model_class=CompanyTable
+            config_getter=CONFIG.get_equities_config,
+            data_model_class=CompanyDataModel,
+            db_model_class=CompanyTable,
         )
 
     def _create_id_filter(self, id: int) -> CompanyDataModel:

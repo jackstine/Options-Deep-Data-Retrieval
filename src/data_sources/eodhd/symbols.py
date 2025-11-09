@@ -8,7 +8,7 @@ from typing import Any
 import requests
 
 from src.config.configuration import CONFIG
-from src.data_sources.models.company import Company
+from src.models.company import Company
 
 logger = logging.getLogger(__name__)
 

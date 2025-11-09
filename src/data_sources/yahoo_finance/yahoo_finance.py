@@ -10,7 +10,7 @@ from typing import Any
 import yfinance as yf  # type: ignore
 
 from src.data_sources.base.base import DataSourceBase
-from src.data_sources.models.stock_quote import StockQuote
+from src.models.stock_quote import StockQuote
 
 logger = logging.getLogger(__name__)
 
