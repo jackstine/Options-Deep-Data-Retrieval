@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from src.data_sources.models.ticker import Ticker
+    from src.models.ticker import Ticker
     from src.database.equities.tables.company import Company as DBCompany
 
 
@@ -49,7 +49,7 @@ class Company:
         ticker = None
         ticker_data = data.get("ticker")
         if ticker_data:
-            from src.data_sources.models.ticker import Ticker
+            from src.models.ticker import Ticker
 
             if isinstance(ticker_data, dict):
                 ticker = Ticker.from_dict(ticker_data)

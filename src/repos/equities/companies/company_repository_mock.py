@@ -7,9 +7,9 @@ from typing import Any
 
 from faker import Faker
 
-from src.data_sources.models.company import Company as CompanyDataModel
-from src.data_sources.models.test_providers import StockMarketProvider
-from src.data_sources.models.ticker import Ticker
+from src.models.company import Company as CompanyDataModel
+from src.models.test_providers import StockMarketProvider
+from src.models.ticker import Ticker
 
 logger = logging.getLogger(__name__)
 

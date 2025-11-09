@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.config.configuration import CONFIG
-from src.data_sources.models.ticker import Ticker as TickerDataModel
+from src.models.ticker import Ticker as TickerDataModel
 from src.database.equities.tables.ticker import Ticker as TickerDBModel
 from src.repos.base_repository import BaseRepository
 

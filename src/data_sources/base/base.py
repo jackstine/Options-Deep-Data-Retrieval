@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from src.data_sources.models.stock_quote import StockQuote
+from src.models.stock_quote import StockQuote
 
 
 class DataSourceBase(ABC):

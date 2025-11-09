@@ -6,9 +6,9 @@ import logging
 from datetime import date
 
 from src.data_sources.base.company_data_source import CompanyDataSource
-from src.data_sources.models.company import Company
-from src.data_sources.models.ticker import Ticker as TickerDataModel
-from src.data_sources.models.ticker_history import (
+from src.models.company import Company
+from src.models.ticker import Ticker as TickerDataModel
+from src.models.ticker_history import (
     TickerHistory as TickerHistoryDataModel,
 )
 from src.repos.equities.companies.company_repository import CompanyRepository

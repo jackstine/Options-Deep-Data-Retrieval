@@ -9,8 +9,8 @@ from decimal import Decimal
 from faker import Faker
 
 from src.data_sources.base.base import DataSourceBase
-from src.data_sources.models.stock_quote import StockQuote
-from src.data_sources.models.test_providers import StockMarketProvider
+from src.models.stock_quote import StockQuote
+from src.models.test_providers import StockMarketProvider
 
 logger = logging.getLogger(__name__)
 

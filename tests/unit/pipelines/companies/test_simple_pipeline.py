@@ -3,8 +3,8 @@
 import logging
 import unittest
 
-from src.data_sources.models.company import Company
-from src.data_sources.models.ticker import Ticker
+from src.models.company import Company
+from src.models.ticker import Ticker
 from src.data_sources.nasdaq.company_mock import create_nasdaq_company_source_mock
 
 # Import our mocks
@@ -325,7 +325,7 @@ class TestCompanyPipeline(unittest.TestCase):
     def test_get_unused_tickers(self):
         """Test unused ticker detection."""
         # Add tickers to repository with specific symbols
-        from src.data_sources.models.ticker import Ticker
+        from src.models.ticker import Ticker
 
         self.mock_ticker_repo.insert(Ticker(symbol="ACTIVE1", company_id=1))
         self.mock_ticker_repo.insert(Ticker(symbol="UNUSED1", company_id=2))

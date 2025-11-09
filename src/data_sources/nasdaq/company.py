@@ -7,7 +7,7 @@ import requests
 
 from src.config.configuration import CONFIG
 from src.data_sources.base.company_data_source import CompanyDataSource
-from src.data_sources.models.company import Company
+from src.models.company import Company
 
 
 class Headers:
@@ -97,7 +97,7 @@ def get_dict_of_stocks() -> list[dict] | None:
 
 def _convert_dict_to_stocks(ds: list[dict]) -> list[Company]:
     """Convert dictionary data to Company objects."""
-    from src.data_sources.models.ticker import Ticker
+    from src.models.ticker import Ticker
 
     companies = []
     for k in ds:

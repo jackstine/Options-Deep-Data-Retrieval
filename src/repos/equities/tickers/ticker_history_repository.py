@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.config.configuration import CONFIG
-from src.data_sources.models.ticker_history import (
+from src.models.ticker_history import (
     TickerHistory as TickerHistoryDataModel,
 )
 from src.database.equities.tables.ticker_history import (

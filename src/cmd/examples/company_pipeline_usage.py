@@ -63,8 +63,8 @@ def example_custom_source():
     import logging
 
     from src.data_sources.base.company_data_source import CompanyDataSource
-    from src.data_sources.models.company import Company
-    from src.data_sources.models.ticker import Ticker
+    from src.models.company import Company
+    from src.models.ticker import Ticker
 
     class MockDataSource(CompanyDataSource):
         """Mock data source for demonstration."""
