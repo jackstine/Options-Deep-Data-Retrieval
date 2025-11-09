@@ -9,12 +9,13 @@ from typing import Any
 import requests
 
 from src.config.configuration import CONFIG
+from src.data_sources.base.historical_data_source import HistoricalDataSource
 from src.models.historical_eod_pricing import HistoricalEndOfDayPricing
 
 logger = logging.getLogger(__name__)
 
 
-class EodhdDataSource:
+class EodhdDataSource(HistoricalDataSource):
     """EODHD data source for retrieving end-of-day historical price data."""
 
     BASE_URL = "https://eodhd.com/api/eod"

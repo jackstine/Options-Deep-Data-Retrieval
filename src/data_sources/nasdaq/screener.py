@@ -229,6 +229,16 @@ class NasdaqScreenerSource(CompanyDataSource):
             raise ValueError("Screener directory must be provided")
         return self.loader.load_directory(self.screener_dir)
 
+    def get_delisted_symbols(self) -> list[Company]:
+        """Get delisted symbols from NASDAQ screener.
+
+        NASDAQ screener files only contain active symbols, so this returns empty list.
+
+        Returns:
+            Empty list (NASDAQ screener doesn't provide delisted symbols)
+        """
+        return []
+
 
 # Backward compatibility functions - delegate to class methods
 def load_screener_file(file_path: str | Path) -> list[Company]:
