@@ -185,7 +185,7 @@ if __name__ == "__main__":
         print(f"Retrieved {len(data)} days of data")
 
         if data:
-            print(f"\nMost recent 3 days:")
+            print("\nMost recent 3 days:")
             for record in data[-3:]:
                 print(
                     f"  {record.date}: "

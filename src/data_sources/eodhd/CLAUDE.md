@@ -1,0 +1,1 @@
+use `https://context7.com/websites/eodhd` context7 when creating new resources and we need to review the API.
