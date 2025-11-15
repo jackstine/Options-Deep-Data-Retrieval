@@ -26,6 +26,7 @@ class Company:
     market_cap: int | None = None
     description: str | None = None
     active: bool = True
+    is_valid_data: bool = True
     source: DataSourceEnum | str = ""
     currency: str | None = None  #not in the DB
     type: str | None = None  #not in the DB
@@ -44,6 +45,7 @@ class Company:
             "market_cap": self.market_cap,
             "description": self.description,
             "active": self.active,
+            "is_valid_data": self.is_valid_data,
             "source": self.source.value if isinstance(self.source, DataSourceEnum) else self.source,
             "currency": self.currency,
             "type": self.type,
@@ -93,6 +95,7 @@ class Company:
             market_cap=data.get("market_cap"),
             description=data.get("description"),
             active=data.get("active", True),
+            is_valid_data=data.get("is_valid_data", True),
             source=source_value,
             currency=data.get("currency") or data.get("Currency"),
             type=data.get("type") or data.get("Type"),
@@ -151,6 +154,7 @@ class Company:
             market_cap=self.market_cap,
             description=self.description,
             active=self.active,
+            is_valid_data=self.is_valid_data,
             source=self.source,
         )
 
@@ -174,6 +178,7 @@ class Company:
             market_cap=db_model.market_cap,
             description=db_model.description,
             active=db_model.active,
+            is_valid_data=db_model.is_valid_data,
             source=db_model.source,  # Already a DataSourceEnum from DB
         )
 
@@ -191,4 +196,5 @@ class Company:
         db_model.market_cap = self.market_cap
         db_model.description = self.description
         db_model.active = self.active
+        db_model.is_valid_data = self.is_valid_data
         db_model.source = self.source

@@ -14,15 +14,15 @@ from src.database.equities.base import Base
 if TYPE_CHECKING:
     from src.database.equities.tables.ticker_history import TickerHistory
 
-# Price multiplier constant: $1.00 = 10,000 (4 decimal places)
-PRICE_MULTIPLIER = 10000
+# Price multiplier constant: $1.00 = 1,000,000 (6 decimal places, penny = 10,000)
+PRICE_MULTIPLIER = 1000000
 
 
 class HistoricalEodPricing(Base):
     """SQLAlchemy model for historical end-of-day pricing data.
 
-    Prices are stored as integers multiplied by 10,000 for precision.
-    Example: $63.68 is stored as 636,800.
+    Prices are stored as integers multiplied by 1,000,000 for precision.
+    Example: $63.68 is stored as 63,680,000.
     """
 
     __tablename__ = "historical_eod_pricing"
@@ -35,7 +35,7 @@ class HistoricalEodPricing(Base):
     # Trading date
     date: Mapped[date_type] = mapped_column(Date, nullable=False, index=True)
 
-    # OHLC prices (stored as BIGINT, multiply by 10,000)
+    # OHLC prices (stored as BIGINT, multiply by 1,000,000)
     open: Mapped[int] = mapped_column(BigInteger, nullable=False)
     high: Mapped[int] = mapped_column(BigInteger, nullable=False)
     low: Mapped[int] = mapped_column(BigInteger, nullable=False)
@@ -51,7 +51,7 @@ class HistoricalEodPricing(Base):
     # Constraints
     __table_args__ = (
         PrimaryKeyConstraint("ticker_id", "date", name="pk_ticker_date"),
-        {"comment": "Historical end-of-day pricing data with prices stored as integers (×10,000)"},
+        {"comment": "Historical end-of-day pricing data with prices stored as integers (×1,000,000)"},
     )
 
     def __repr__(self) -> str:

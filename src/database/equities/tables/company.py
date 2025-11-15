@@ -42,6 +42,11 @@ class Company(Base):
         Boolean, nullable=False, default=True, index=True
     )
 
+    # Data validation status
+    is_valid_data: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, index=True
+    )
+
     # Data source tracking
     source: Mapped[DataSourceEnum] = mapped_column(
         Enum(DataSourceEnum, native_enum=True, name="data_source_enum"),
