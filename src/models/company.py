@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from src.models.ticker import Ticker
     from src.database.equities.tables.company import Company as DBCompany
+    from src.models.ticker import Ticker
 
 
 @dataclass

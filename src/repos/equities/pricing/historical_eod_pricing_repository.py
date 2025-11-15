@@ -10,13 +10,13 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.config.configuration import CONFIG
-from src.models.historical_eod_pricing import (
-    HistoricalEndOfDayPricing as HistoricalEodPricingDataModel,
-)
 from src.database.equities.tables.historical_eod_pricing import (
     HistoricalEodPricing as HistoricalEodPricingDBModel,
 )
-from src.repos.base_repository import BaseRepository, QueryOptions
+from src.models.historical_eod_pricing import (
+    HistoricalEndOfDayPricing as HistoricalEodPricingDataModel,
+)
+from src.repos.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +36,8 @@ class HistoricalEodPricingRepository(
 
     def _create_id_filter(self, id: int) -> HistoricalEodPricingDataModel:
         """Create a HistoricalEodPricing filter model for ID lookups."""
-        from decimal import Decimal
         from datetime import date as date_type
+        from decimal import Decimal
 
         return HistoricalEodPricingDataModel(
             date=date_type(1900, 1, 1),  # Will be ignored

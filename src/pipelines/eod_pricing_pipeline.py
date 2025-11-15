@@ -7,9 +7,6 @@ from datetime import date
 from typing import TypedDict
 
 from src.data_sources.eodhd.eod_data import EodhdDataSource
-from src.models.historical_eod_pricing import (
-    HistoricalEndOfDayPricing as HistoricalEodPricingDataModel,
-)
 from src.repos.equities.pricing.historical_eod_pricing_repository import (
     HistoricalEodPricingRepository,
 )

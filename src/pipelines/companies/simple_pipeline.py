@@ -282,7 +282,7 @@ class CompanyPipeline:
                             exchange="",      # Empty = ignored by base repository
                             market_cap=company.market_cap  # Only this will be updated
                         )
-                        
+
                         if self.company_repo.update_company(ticker_symbol, market_cap_update):
                             results["updated"] += 1
                         else:

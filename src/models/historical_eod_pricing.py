@@ -103,6 +103,8 @@ class HistoricalEndOfDayPricing:
 
         from src.database.equities.tables.historical_eod_pricing import (
             PRICE_MULTIPLIER,
+        )
+        from src.database.equities.tables.historical_eod_pricing import (
             HistoricalEodPricing as DBHistoricalEodPricing,
         )
 

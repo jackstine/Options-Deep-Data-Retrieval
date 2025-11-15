@@ -8,8 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.config.configuration import CONFIG
-from src.models.ticker import Ticker as TickerDataModel
 from src.database.equities.tables.ticker import Ticker as TickerDBModel
+from src.models.ticker import Ticker as TickerDataModel
 from src.repos.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)

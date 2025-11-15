@@ -8,9 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.config.configuration import CONFIG
+from src.database.equities.tables.company import Company as CompanyTable
 from src.models.company import Company as CompanyDataModel
 from src.models.ticker import Ticker
-from src.database.equities.tables.company import Company as CompanyTable
 from src.repos.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
