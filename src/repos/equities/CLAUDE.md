@@ -1,0 +1,1 @@
+all prices should represent pennies as 1/10000 in integer representation, meaning price scaling is ×1,000,000 . So a penny is 10000. A dollar is 1000000.
