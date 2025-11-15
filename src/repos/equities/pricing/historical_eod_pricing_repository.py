@@ -223,7 +223,7 @@ class HistoricalEodPricingRepository(
                     },
                 )
 
-                result = session.execute(stmt)
+                session.execute(stmt)
                 session.commit()
 
                 # PostgreSQL doesn't provide separate insert/update counts easily

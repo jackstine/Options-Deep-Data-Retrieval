@@ -46,7 +46,7 @@ class CompanyRepository(BaseRepository[CompanyDataModel, CompanyTable]):
                 result = session.execute(
                     select(TickerTable.symbol)
                     .join(CompanyTable, TickerTable.company_id == CompanyTable.id)
-                    .where(CompanyTable.active == True)
+                    .where(CompanyTable.active)
                 )
 
                 active_symbols = {row[0] for row in result.fetchall()}

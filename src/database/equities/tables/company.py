@@ -5,11 +5,12 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from src.database.equities.base import Base
+from src.database.equities.enums import DataSourceEnum
 
 # Import for relationship type hint
 if TYPE_CHECKING:
@@ -42,7 +43,10 @@ class Company(Base):
     )
 
     # Data source tracking
-    source: Mapped[str] = mapped_column(String(50), nullable=False)
+    source: Mapped[DataSourceEnum] = mapped_column(
+        Enum(DataSourceEnum, native_enum=True, name="data_source_enum"),
+        nullable=False,
+    )
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(

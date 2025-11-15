@@ -45,20 +45,28 @@ class TickerHistoryRepository(
     def get_active_ticker_history_symbols(self) -> set[str]:
         """Get all currently active ticker symbols from ticker history.
 
+        Filters by:
+        - Date validity (valid_from <= today <= valid_to or valid_to is None)
+        - Company active status (via join with companies table)
+
         Returns:
             Set of currently active ticker symbols
         """
         try:
             with self._SessionLocal() as session:
+                from src.database.equities.tables.company import Company
+
                 today = date.today()
                 result = session.execute(
-                    select(TickerHistoryDBModel.symbol).where(
+                    select(TickerHistoryDBModel.symbol)
+                    .join(Company, TickerHistoryDBModel.company_id == Company.id)
+                    .where(
                         (TickerHistoryDBModel.valid_from <= today)
                         & (
                             (TickerHistoryDBModel.valid_to.is_(None))
                             | (TickerHistoryDBModel.valid_to >= today)
                         )
-                        & (TickerHistoryDBModel.active == True)
+                        & Company.active
                     )
                 )
                 symbols = {row[0] for row in result.fetchall()}
@@ -108,7 +116,6 @@ class TickerHistoryRepository(
         company_id: int,
         valid_from: date | None = None,
         valid_to: date | None = None,
-        active: bool = True,
     ) -> TickerHistoryDataModel:
         """Create a new ticker history record for a company using base repository."""
         if valid_from is None:
@@ -119,21 +126,37 @@ class TickerHistoryRepository(
             company_id=company_id,
             valid_from=valid_from,
             valid_to=valid_to,
-            active=active,
         )
         return self.insert(ticker_history_data)
 
     def get_active_ticker_histories(self) -> list[TickerHistoryDataModel]:
-        """Get all active ticker history records."""
-        active_filter = TickerHistoryDataModel(
-            symbol="", company_id=0, valid_from=date.today(), active=True
-        )
-        return self.get(active_filter)
+        """Get all active ticker history records.
+
+        Returns ticker histories where the associated company is active.
+        """
+        try:
+            with self._SessionLocal() as session:
+                from src.database.equities.tables.company import Company
+
+                result = session.execute(
+                    select(TickerHistoryDBModel)
+                    .join(Company, TickerHistoryDBModel.company_id == Company.id)
+                    .where(Company.active)
+                )
+                db_models = result.scalars().all()
+                return [
+                    TickerHistoryDataModel.from_db_model(db_model)
+                    for db_model in db_models
+                ]
+
+        except SQLAlchemyError as e:
+            logger.error(f"Database error retrieving active ticker histories: {e}")
+            raise
 
     def deactivate_ticker_history(
         self, symbol: str, company_id: int, end_date: date | None = None
     ) -> bool:
-        """Deactivate a ticker history record using base repository update."""
+        """Set the end date for a ticker history record using base repository update."""
         if end_date is None:
             end_date = date.today()
 
@@ -148,7 +171,6 @@ class TickerHistoryRepository(
             company_id=0,  # Will be ignored
             valid_from=date.today(),  # Will be ignored
             valid_to=end_date,  # Will be used to update
-            active=False,  # Will be used to update
         )
 
         return self.update(filter_data, update_data) > 0

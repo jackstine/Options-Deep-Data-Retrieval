@@ -3,12 +3,12 @@
 import logging
 import unittest
 
-from src.models.company import Company
-from src.models.ticker import Ticker
 from src.data_sources.nasdaq.company_mock import create_nasdaq_company_source_mock
 
 # Import our mocks
 from src.data_sources.nasdaq.screener_mock import create_nasdaq_screener_source_mock
+from src.models.company import Company
+from src.models.ticker import Ticker
 from src.pipelines.companies.simple_pipeline import CompanyPipeline
 from src.repos.equities.companies.company_repository_mock import (
     create_company_repository_mock,

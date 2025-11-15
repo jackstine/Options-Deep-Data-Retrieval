@@ -126,11 +126,9 @@ class CompanyPipeline:
         ingestion_results = self.run_ingestion(sources)
         results: ComprehensiveSyncResult = {
             **ingestion_results,
-            "unused_tickers": set(),
-            "unused_ticker_count": 0,
         }
 
-        # Add unused ticker detection
+        # Add unused ticker detection only when there are updates
         if results["inserted"] > 0 or results["updated"] > 0:
             try:
                 # Get screener symbols from sources
@@ -414,7 +412,6 @@ class CompanyPipeline:
                     company_id=company.id,
                     valid_from=today,
                     valid_to=None,  # Open-ended validity
-                    active=True,
                 )
                 ticker_histories.append(ticker_history)
 

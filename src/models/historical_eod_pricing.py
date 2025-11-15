@@ -24,14 +24,12 @@ class HistoricalEndOfDayPricing:
     close: Decimal
     adjusted_close: Decimal
     volume: int
-    id: int | None = None
     ticker_id: int | None = None
     symbol: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         """Convert pricing data to dictionary for serialization."""
         return {
-            "id": self.id,
             "ticker_id": self.ticker_id,
             "symbol": self.symbol,
             "date": self.date.isoformat(),
@@ -59,7 +57,6 @@ class HistoricalEndOfDayPricing:
             pricing_date = date.fromisoformat(pricing_date)
 
         return cls(
-            id=data.get("id"),
             ticker_id=data.get("ticker_id"),
             symbol=data.get("symbol", ""),
             date=pricing_date,
@@ -132,7 +129,6 @@ class HistoricalEndOfDayPricing:
         from src.database.equities.tables.historical_eod_pricing import PRICE_MULTIPLIER
 
         return cls(
-            id=db_model.id,
             ticker_id=db_model.ticker_id,
             symbol="",  # Symbol not stored in DB, must be set separately if needed
             date=db_model.date,

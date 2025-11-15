@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String
+from sqlalchemy import Date, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -35,11 +35,6 @@ class TickerHistory(Base):
         Date, nullable=False, default=date(1900, 1, 1), index=True
     )
     valid_to: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
-
-    # Trading status during this period
-    active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, index=True
-    )
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -78,10 +73,10 @@ class TickerHistory(Base):
         """Check if ticker is currently valid.
 
         Returns:
-            True if ticker is currently valid
+            True if ticker is currently valid and company is active
         """
         today = date.today()
-        return self.is_valid_on_date(today) and self.active
+        return self.is_valid_on_date(today) and self.company.active
 
     def get_validity_period_str(self) -> str:
         """Get human-readable validity period string.

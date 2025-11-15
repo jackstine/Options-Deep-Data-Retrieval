@@ -20,7 +20,6 @@ class TickerHistory:
     company_id: int
     valid_from: date = date(1900, 1, 1)
     valid_to: date | None = None
-    active: bool = True
     id: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -31,7 +30,6 @@ class TickerHistory:
             "company_id": self.company_id,
             "valid_from": self.valid_from.isoformat() if self.valid_from else None,
             "valid_to": self.valid_to.isoformat() if self.valid_to else None,
-            "active": self.active,
         }
 
     @classmethod
@@ -58,7 +56,6 @@ class TickerHistory:
             company_id=data["company_id"],
             valid_from=valid_from,
             valid_to=valid_to,
-            active=data.get("active", True),
         )
 
     def is_valid_on_date(self, check_date: date) -> bool:
@@ -77,13 +74,16 @@ class TickerHistory:
         return True
 
     def is_currently_valid(self) -> bool:
-        """Check if ticker is currently valid.
+        """Check if ticker is currently valid based on date range.
+
+        Note: This only checks temporal validity. To check if the company
+        is active, use the DB model's is_currently_valid() method.
 
         Returns:
-            True if ticker is currently valid
+            True if ticker is currently valid by date
         """
         today = date.today()
-        return self.is_valid_on_date(today) and self.active
+        return self.is_valid_on_date(today)
 
     def get_validity_period_str(self) -> str:
         """Get human-readable validity period string.
@@ -102,7 +102,6 @@ class TickerHistory:
         """Print ticker history information."""
         print(f"\n{self.symbol} (Company ID: {self.company_id})")
         print(f"  Valid Period: {self.get_validity_period_str()}")
-        print(f"  Active: {'Yes' if self.active else 'No'}")
         if self.id:
             print(f"  ID: {self.id}")
 
@@ -129,7 +128,6 @@ class TickerHistory:
             company_id=self.company_id,
             valid_from=self.valid_from,
             valid_to=self.valid_to,
-            active=self.active,
         )
 
     @classmethod
@@ -148,7 +146,6 @@ class TickerHistory:
             company_id=db_model.company_id,
             valid_from=db_model.valid_from,
             valid_to=db_model.valid_to,
-            active=db_model.active,
         )
 
     def update_db_model(self, db_model: DBTickerHistory) -> None:
@@ -161,4 +158,3 @@ class TickerHistory:
         db_model.company_id = self.company_id
         db_model.valid_from = self.valid_from
         db_model.valid_to = self.valid_to
-        db_model.active = self.active

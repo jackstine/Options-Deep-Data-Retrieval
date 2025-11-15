@@ -9,6 +9,7 @@ import requests
 
 from src.config.configuration import CONFIG
 from src.data_sources.base.company_data_source import CompanyDataSource
+from src.database.equities.enums import DataSourceEnum
 from src.models.company import Company
 
 logger = logging.getLogger(__name__)
@@ -90,7 +91,7 @@ class EodhdSymbolsSource(CompanyDataSource):
             us_companies: list[Company] = []
             for symbol in data:
                 if symbol.get("Exchange") in ["US", "NYSE", "NASDAQ", "AMEX"]:
-                    symbol["source"] = "EODHD"
+                    symbol["source"] = DataSourceEnum.EODHD
                     us_companies.append(Company.from_dict(symbol))
 
             logger.info(f"Retrieved {len(us_companies)} delisted US symbols")
@@ -130,7 +131,7 @@ class EodhdSymbolsSource(CompanyDataSource):
             # Convert to Company instances
             companies = []
             for symbol in data:
-                symbol["source"] = "EODHD"
+                symbol["source"] = DataSourceEnum.EODHD
                 companies.append(Company.from_dict(symbol))
 
             logger.info(f"Retrieved {len(companies)} active symbols from {exchange}")

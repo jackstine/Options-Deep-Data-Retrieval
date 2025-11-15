@@ -49,21 +49,18 @@ class TickerHistoryRepositoryMock:
                 "company_id": 1,
                 "valid_from": today - timedelta(days=365 * 10),
                 "valid_to": None,
-                "active": True,
             },
             {
                 "symbol": "MSFT",
                 "company_id": 2,
                 "valid_from": today - timedelta(days=365 * 15),
                 "valid_to": None,
-                "active": True,
             },
             {
                 "symbol": "AMZN",
                 "company_id": 3,
                 "valid_from": today - timedelta(days=365 * 8),
                 "valid_to": None,
-                "active": True,
             },
             # Historical ticker changes
             {
@@ -71,14 +68,12 @@ class TickerHistoryRepositoryMock:
                 "company_id": 6,
                 "valid_from": today - timedelta(days=365 * 5),
                 "valid_to": today - timedelta(days=365),
-                "active": False,
             },
             {
                 "symbol": "META",
                 "company_id": 6,
                 "valid_from": today - timedelta(days=365),
                 "valid_to": None,
-                "active": True,
             },
             # Multiple tickers for same company
             {
@@ -86,29 +81,25 @@ class TickerHistoryRepositoryMock:
                 "company_id": 4,
                 "valid_from": today - timedelta(days=365 * 3),
                 "valid_to": None,
-                "active": True,
             },
             {
                 "symbol": "GOOG",
                 "company_id": 4,
                 "valid_from": today - timedelta(days=365 * 3),
                 "valid_to": None,
-                "active": True,
             },
-            # Some inactive historical entries
+            # Some historical entries
             {
                 "symbol": "NFLX",
                 "company_id": 7,
                 "valid_from": today - timedelta(days=365 * 6),
                 "valid_to": today - timedelta(days=30),
-                "active": False,
             },
             {
                 "symbol": "NFLX",
                 "company_id": 7,
                 "valid_from": today - timedelta(days=30),
                 "valid_to": None,
-                "active": True,
             },
         ]
 
@@ -119,7 +110,6 @@ class TickerHistoryRepositoryMock:
                 company_id=int(history_data["company_id"]),
                 valid_from=history_data["valid_from"],
                 valid_to=history_data.get("valid_to"),
-                active=bool(history_data["active"]),
             )
 
             self._ticker_histories[self._next_id] = history
@@ -148,18 +138,16 @@ class TickerHistoryRepositoryMock:
             "valid_to": None
             if self.fake.boolean(chance_of_getting_true=70)
             else today - timedelta(days=self.fake.random_int(1, 30)),
-            "active": self.fake.boolean(chance_of_getting_true=80),
         }
 
         default_data.update(overrides)
         return TickerHistoryDataModel(**default_data)
 
     def _is_currently_active(self, history: TickerHistoryDataModel) -> bool:
-        """Check if a ticker history is currently active."""
+        """Check if a ticker history is currently valid by date."""
         today = date.today()
         return (
-            history.active
-            and history.valid_from <= today
+            history.valid_from <= today
             and (history.valid_to is None or history.valid_to >= today)
         )
 
@@ -189,11 +177,6 @@ class TickerHistoryRepositoryMock:
                 filter_model.company_id is not None
                 and filter_model.company_id != 0
                 and history.company_id != filter_model.company_id
-            ):
-                match = False
-            if (
-                filter_model.active is not None
-                and history.active != filter_model.active
             ):
                 match = False
 
@@ -310,9 +293,6 @@ class TickerHistoryRepositoryMock:
             if update_data.valid_to is not None:
                 history.valid_to = update_data.valid_to
 
-            if update_data.active is not None:
-                history.active = update_data.active
-
             count += 1
 
         logger.info(f"Mock: Updated {count} ticker histories")
@@ -391,7 +371,6 @@ class TickerHistoryRepositoryMock:
         company_id: int,
         valid_from: date | None = None,
         valid_to: date | None = None,
-        active: bool = True,
     ) -> TickerHistoryDataModel:
         """Create a new ticker history record for a company."""
         if valid_from is None:
@@ -402,7 +381,6 @@ class TickerHistoryRepositoryMock:
             company_id=company_id,
             valid_from=valid_from,
             valid_to=valid_to,
-            active=active,
         )
         return self.insert(ticker_history_data)
 
@@ -417,17 +395,16 @@ class TickerHistoryRepositoryMock:
     def deactivate_ticker_history(
         self, symbol: str, company_id: int, end_date: date | None = None
     ) -> bool:
-        """Deactivate a ticker history record."""
+        """Set the end date for a ticker history record."""
         if end_date is None:
             end_date = date.today()
 
-        # Find matching active records
+        # Find matching records
         matching_histories = []
         for history in self._ticker_histories.values():
             if (
                 history.symbol == symbol
                 and history.company_id == company_id
-                and history.active
                 and (history.valid_to is None or history.valid_to >= end_date)
             ):
                 matching_histories.append(history)
@@ -435,10 +412,9 @@ class TickerHistoryRepositoryMock:
         count = 0
         for history in matching_histories:
             history.valid_to = end_date
-            history.active = False
             count += 1
 
-        logger.info(f"Mock: Deactivated {count} ticker history records for {symbol}")
+        logger.info(f"Mock: Set end date for {count} ticker history records for {symbol}")
         return count > 0
 
     # Utility methods for testing
