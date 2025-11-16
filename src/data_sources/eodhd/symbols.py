@@ -64,42 +64,61 @@ class EodhdSymbolsSource(CompanyDataSource):
         return self.get_active_symbols()
 
     def get_delisted_symbols(self) -> list[Company]:
-        """Get delisted US stock symbols from EODHD API.
+        """Get delisted US Common Stock symbols from EODHD API.
 
-        Uses the EODHD delisted symbols endpoint to retrieve all delisted
-        companies. Filters for US-only symbols.
+        Uses the EODHD exchange-symbol-list endpoint with delisted=1 parameter
+        to retrieve all delisted Common Stock companies from all US exchanges.
 
         Returns:
-            List of Company instances with symbol information
+            List of Company instances with symbol information for Common Stocks
 
         Raises:
             Exception: If API request fails or returns unexpected data
         """
-        url = f"{self.BASE_URL}/delisted-symbols"
-        params = {"api_token": self.api_key, "fmt": "json"}
+        exchanges = ["US"]
+        all_delisted_companies: list[Company] = []
 
-        try:
-            response = requests.get(url, params=params, timeout=self.timeout)
-            response.raise_for_status()
+        for exchange in exchanges:
+            url = f"{self.BASE_URL}/exchange-symbol-list/{exchange}"
+            params = {
+                "api_token": self.api_key,
+                "delisted": "1",
+                "type": "Common Stock",
+                "fmt": "json",
+            }
 
-            data: Any = response.json()
-            if not isinstance(data, list):
-                logger.error(f"Unexpected response format: {type(data)}")
-                return []
+            try:
+                logger.info(f"Fetching delisted symbols from {exchange}...")
+                response = requests.get(url, params=params, timeout=self.timeout)
+                response.raise_for_status()
 
-            # Filter for US symbols only and convert to Company instances
-            us_companies: list[Company] = []
-            for symbol in data:
-                if symbol.get("Exchange") in ["US", "NYSE", "NASDAQ", "AMEX"]:
-                    symbol["source"] = DataSourceEnum.EODHD
-                    us_companies.append(Company.from_dict(symbol))
+                data: Any = response.json()
+                if not isinstance(data, list):
+                    logger.error(
+                        f"Unexpected response format for {exchange}: {type(data)}"
+                    )
+                    continue
 
-            logger.info(f"Retrieved {len(us_companies)} delisted US symbols")
-            return us_companies
+                # Convert to Company instances
+                for symbol in data:
+                    # Ensure Type is Common Stock (double-check API filter)
+                    if symbol.get("Type") == "Common Stock":
+                        symbol["source"] = DataSourceEnum.EODHD
+                        all_delisted_companies.append(Company.from_dict(symbol))
 
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to fetch delisted symbols: {e}")
-            raise
+                logger.info(
+                    f"Retrieved {len(data)} delisted Common Stocks from {exchange}"
+                )
+
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Failed to fetch delisted symbols from {exchange}: {e}")
+                # Continue with other exchanges instead of raising
+                continue
+
+        logger.info(
+            f"Retrieved {len(all_delisted_companies)} total delisted Common Stocks"
+        )
+        return all_delisted_companies
 
     def get_active_symbols(self, exchange: str = "US") -> list[Company]:
         """Get active US stock symbols from EODHD API.
