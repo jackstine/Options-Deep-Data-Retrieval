@@ -14,11 +14,9 @@ from __future__ import annotations
 import logging
 import unittest
 from datetime import date
-from unittest.mock import Mock
 
 from src.models.company import Company
 from src.models.ticker import Ticker
-from src.models.ticker_history import TickerHistory
 from src.pipelines.companies.simple_pipeline import CompanyPipeline
 from src.repos.equities.companies.company_repository_mock import (
     create_company_repository_mock,
@@ -33,17 +31,17 @@ from src.repos.equities.tickers.ticker_repository_mock import (
 
 class MockDataSource:
     """Mock data source for testing pipeline behavior."""
-    
+
     def __init__(self, name: str, companies: list[Company], available: bool = True):
         """Initialize mock data source with companies and availability status."""
         self.name = name
         self._companies = companies
         self._available = available
-    
+
     def is_available(self) -> bool:
         """Check if the data source is available."""
         return self._available
-    
+
     def get_companies(self) -> list[Company]:
         """Get companies from the data source."""
         if not self._available:
@@ -63,7 +61,7 @@ class TestCompanyPipelineMarketCapUpdates(unittest.TestCase):
         self.company_repo = create_company_repository_mock()
         self.ticker_repo = create_ticker_repository_mock()
         self.ticker_history_repo = create_ticker_history_repository_mock()
-        
+
         self.pipeline = CompanyPipeline(
             company_repo=self.company_repo,
             ticker_repo=self.ticker_repo,
@@ -85,16 +83,16 @@ class TestCompanyPipelineMarketCapUpdates(unittest.TestCase):
             ticker=Ticker(symbol="AAPL"),
             market_cap=3500000000000  # New market cap (SHOULD be updated)
         )
-        
+
         source = MockDataSource("test_source", [existing_company])
-        
+
         # Run the ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Verify the update behavior
         self.assertEqual(result["updated"], 1)
         self.assertEqual(result["inserted"], 0)
-        
+
         # Verify that only market_cap was updated by checking the actual company data
         updated_company = self.company_repo.get_company_by_ticker("AAPL")
         self.assertIsNotNone(updated_company)
@@ -118,27 +116,27 @@ class TestCompanyPipelineMarketCapUpdates(unittest.TestCase):
             ),
             Company(
                 company_name="Microsoft Corp Different Name",
-                exchange="NYSE", 
+                exchange="NYSE",
                 ticker=Ticker(symbol="MSFT"),
                 market_cap=3000000000000
             )
         ]
-        
+
         source = MockDataSource("test_source", companies)
-        
+
         # Run the ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Verify both companies were updated
         self.assertEqual(result["updated"], 2)
         self.assertEqual(result["inserted"], 0)
-        
+
         # Verify market caps were updated but names/exchanges preserved
         aapl = self.company_repo.get_company_by_ticker("AAPL")
         self.assertIsNotNone(aapl)
         self.assertEqual(aapl.market_cap, 3500000000000)
         self.assertEqual(aapl.company_name, "Apple Inc.")  # Original preserved
-        
+
         msft = self.company_repo.get_company_by_ticker("MSFT")
         self.assertIsNotNone(msft)
         self.assertEqual(msft.market_cap, 3000000000000)
@@ -157,15 +155,15 @@ class TestCompanyPipelineMarketCapUpdates(unittest.TestCase):
             ticker=Ticker(symbol="AAPL"),
             market_cap=None
         )
-        
+
         source = MockDataSource("test_source", [company])
-        
+
         # Run the ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Verify update occurred
         self.assertEqual(result["updated"], 1)
-        
+
         # Verify that the update was processed and other fields preserved
         updated_company = self.company_repo.get_company_by_ticker("AAPL")
         self.assertIsNotNone(updated_company)
@@ -187,12 +185,12 @@ class TestCompanyPipelineMarketCapUpdates(unittest.TestCase):
             ticker=Ticker(symbol="NEW"),
             market_cap=1000000000
         )
-        
+
         source = MockDataSource("test_source", [new_company])
-        
+
         # Run the ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Should be inserted, not updated
         self.assertEqual(result["updated"], 0)
         self.assertEqual(result["inserted"], 1)
@@ -208,7 +206,7 @@ class TestCompanyPipelineDataSources(unittest.TestCase):
         self.company_repo = create_company_repository_mock()
         self.ticker_repo = create_ticker_repository_mock()
         self.ticker_history_repo = create_ticker_history_repository_mock()
-        
+
         self.pipeline = CompanyPipeline(
             company_repo=self.company_repo,
             ticker_repo=self.ticker_repo,
@@ -226,18 +224,18 @@ class TestCompanyPipelineDataSources(unittest.TestCase):
                 market_cap=1000000
             ),
             Company(
-                company_name="Test Company 2", 
+                company_name="Test Company 2",
                 exchange="NASDAQ",
                 ticker=Ticker(symbol="TEST2"),
                 market_cap=2000000
             )
         ]
-        
+
         source = MockDataSource("test_source", companies)
-        
+
         # Run ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Verify results
         self.assertEqual(result["inserted"], 2)
         self.assertEqual(result["updated"], 0)
@@ -249,10 +247,10 @@ class TestCompanyPipelineDataSources(unittest.TestCase):
         """Test ingestion with unavailable data source."""
         # Create unavailable source
         source = MockDataSource("unavailable_source", [], available=False)
-        
+
         # Run ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # No companies processed but no errors
         self.assertEqual(result["inserted"], 0)
         self.assertEqual(result["updated"], 0)
@@ -262,10 +260,10 @@ class TestCompanyPipelineDataSources(unittest.TestCase):
         """Test ingestion when data source returns empty list."""
         # Create source with no companies
         source = MockDataSource("empty_source", [])
-        
+
         # Run ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Verify empty results
         self.assertEqual(result["inserted"], 0)
         self.assertEqual(result["updated"], 0)
@@ -280,15 +278,15 @@ class TestCompanyPipelineDataSources(unittest.TestCase):
             ticker=Ticker(symbol="TEST"),
             market_cap=1000000
         )
-        
+
         source = MockDataSource("test_source_name", [company])
-        
+
         # Run ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Verify insertion
         self.assertEqual(result["inserted"], 1)
-        
+
         # Verify source was added
         inserted_company = self.company_repo.get_company_by_ticker("TEST")
         self.assertIsNotNone(inserted_company)
@@ -303,7 +301,7 @@ class TestCompanyPipelineDataCleaning(unittest.TestCase):
         self.company_repo = create_company_repository_mock()
         self.ticker_repo = create_ticker_repository_mock()
         self.ticker_history_repo = create_ticker_history_repository_mock()
-        
+
         self.pipeline = CompanyPipeline(
             company_repo=self.company_repo,
             ticker_repo=self.ticker_repo,
@@ -333,16 +331,16 @@ class TestCompanyPipelineDataCleaning(unittest.TestCase):
                 market_cap=3000000
             )
         ]
-        
+
         source = MockDataSource("test_source", companies)
-        
+
         # Run ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Only 1 AAPL should be processed (first occurrence)
         self.assertEqual(result["inserted"], 0)  # MSFT is already in mock data
         self.assertEqual(result["updated"], 2)   # AAPL and MSFT get updated
-        
+
         # Verify first occurrence data was used for AAPL
         aapl = self.company_repo.get_company_by_ticker("AAPL")
         self.assertIsNotNone(aapl)
@@ -371,18 +369,18 @@ class TestCompanyPipelineDataCleaning(unittest.TestCase):
                 market_cap=3000000
             )
         ]
-        
+
         source = MockDataSource("test_source", companies)
-        
+
         # Run ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Verify that only one company was processed (deduplication worked)
         # The cleaning logic normalizes tickers to uppercase for comparison
         # so all three should be treated as duplicates, keeping only the first
         self.assertEqual(result["inserted"], 1)
         self.assertEqual(result["updated"], 0)
-        
+
         # Verify that tickers and histories were created for the single company
         # Note: Due to mock repository ticker lookup issues, we'll just verify the company count
         total_processed = result["inserted"] + result["updated"]
@@ -397,15 +395,15 @@ class TestCompanyPipelineDataCleaning(unittest.TestCase):
             ticker=Ticker(symbol="TEST"),
             market_cap=1000000
         )
-        
+
         source = MockDataSource("test_source", [company])
-        
+
         # Run ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Verify insertion
         self.assertEqual(result["inserted"], 1)
-        
+
         # Verify name was trimmed
         test_company = self.company_repo.get_company_by_ticker("TEST")
         self.assertIsNotNone(test_company)
@@ -420,15 +418,15 @@ class TestCompanyPipelineDataCleaning(unittest.TestCase):
             ticker=Ticker(symbol="TEST"),
             market_cap=1000000
         )
-        
+
         source = MockDataSource("test_source", [company])
-        
+
         # Run ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Verify insertion
         self.assertEqual(result["inserted"], 1)
-        
+
         # Verify exchange was standardized
         test_company = self.company_repo.get_company_by_ticker("TEST")
         self.assertIsNotNone(test_company)
@@ -452,21 +450,21 @@ class TestCompanyPipelineDataCleaning(unittest.TestCase):
             ),
             Company(
                 company_name="Invalid Company 2",
-                exchange="NYSE", 
+                exchange="NYSE",
                 ticker=Ticker(symbol=""),  # Empty ticker symbol
                 market_cap=1000000
             )
         ]
-        
+
         source = MockDataSource("test_source", companies)
-        
+
         # Run ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Only the valid company should be processed
         self.assertEqual(result["inserted"], 1)
         self.assertEqual(result["tickers_inserted"], 1)
-        
+
         # Verify only valid company exists
         valid_company = self.company_repo.get_company_by_ticker("VALID")
         self.assertIsNotNone(valid_company)
@@ -480,7 +478,7 @@ class TestCompanyPipelineTickerManagement(unittest.TestCase):
         self.company_repo = create_company_repository_mock()
         self.ticker_repo = create_ticker_repository_mock()
         self.ticker_history_repo = create_ticker_history_repository_mock()
-        
+
         self.pipeline = CompanyPipeline(
             company_repo=self.company_repo,
             ticker_repo=self.ticker_repo,
@@ -496,22 +494,22 @@ class TestCompanyPipelineTickerManagement(unittest.TestCase):
             ticker=Ticker(symbol="NEWTEST"),
             market_cap=1000000
         )
-        
+
         source = MockDataSource("test_source", [company])
-        
+
         # Run ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Verify ticker creation
         self.assertEqual(result["inserted"], 1)
         self.assertEqual(result["tickers_inserted"], 1)
         self.assertEqual(result["ticker_histories_inserted"], 1)
-        
+
         # Verify ticker was created
         ticker = self.ticker_repo.get_ticker_by_symbol("NEWTEST")
         self.assertIsNotNone(ticker)
         self.assertEqual(ticker.symbol, "NEWTEST")
-        
+
         # Verify company has correct ID linked
         company_with_id = self.company_repo.get_company_by_ticker("NEWTEST")
         self.assertIsNotNone(company_with_id)
@@ -526,28 +524,27 @@ class TestCompanyPipelineTickerManagement(unittest.TestCase):
             ticker=Ticker(symbol="NEWTEST"),
             market_cap=1000000
         )
-        
+
         source = MockDataSource("test_source", [company])
-        
+
         # Run ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Verify ticker history creation
         self.assertEqual(result["ticker_histories_inserted"], 1)
-        
+
         # Verify ticker history was created
         company_with_id = self.company_repo.get_company_by_ticker("NEWTEST")
         self.assertIsNotNone(company_with_id)
-        
+
         # Get all histories for this company and find the one for NEWTEST
         histories = self.ticker_history_repo.get_ticker_history_for_company(company_with_id.id)
         newtest_histories = [h for h in histories if h.symbol == "NEWTEST"]
         self.assertEqual(len(newtest_histories), 1)
-        
+
         history = newtest_histories[0]
         self.assertEqual(history.symbol, "NEWTEST")
         self.assertEqual(history.company_id, company_with_id.id)
-        self.assertTrue(history.active)
         self.assertEqual(history.valid_from, date.today())
         self.assertIsNone(history.valid_to)
 
@@ -560,7 +557,7 @@ class TestCompanyPipelineComprehensiveSync(unittest.TestCase):
         self.company_repo = create_company_repository_mock()
         self.ticker_repo = create_ticker_repository_mock()
         self.ticker_history_repo = create_ticker_history_repository_mock()
-        
+
         self.pipeline = CompanyPipeline(
             company_repo=self.company_repo,
             ticker_repo=self.ticker_repo,
@@ -579,19 +576,19 @@ class TestCompanyPipelineComprehensiveSync(unittest.TestCase):
                 market_cap=3000000000000
             )
         ]
-        
+
         source = MockDataSource("test_source", companies)
-        
+
         # Run comprehensive sync
         result = self.pipeline.run_comprehensive_sync([source])
-        
+
         # Verify unused ticker detection
         self.assertIn("unused_tickers", result)
         self.assertIn("unused_ticker_count", result)
-        
+
         unused_tickers = result["unused_tickers"]
         self.assertIsInstance(unused_tickers, set)
-        
+
         # Should find tickers that exist in repo but not in source
         # Mock ticker repo has: AAPL, MSFT, AMZN, GOOGL, GOOG, TSLA, META, NFLX, NVDA
         # Source only has AAPL, so others should be unused
@@ -602,10 +599,10 @@ class TestCompanyPipelineComprehensiveSync(unittest.TestCase):
         """Test that unused ticker detection only runs when there are updates."""
         # Create source with no companies
         source = MockDataSource("empty_source", [])
-        
+
         # Run comprehensive sync
         result = self.pipeline.run_comprehensive_sync([source])
-        
+
         # No unused ticker detection when no inserts/updates
         self.assertNotIn("unused_tickers", result)
         self.assertNotIn("unused_ticker_count", result)
@@ -619,19 +616,19 @@ class TestCompanyPipelineComprehensiveSync(unittest.TestCase):
             ticker=Ticker(symbol="NEWTEST"),
             market_cap=1000000
         )
-        
+
         source = MockDataSource("test_source", [company])
-        
+
         # Run comprehensive sync
         result = self.pipeline.run_comprehensive_sync([source])
-        
+
         # Should have all standard fields plus unused ticker fields
         expected_fields = {
             "inserted", "updated", "skipped", "errors",
             "tickers_inserted", "ticker_histories_inserted",
             "unused_tickers", "unused_ticker_count"
         }
-        
+
         for field in expected_fields:
             self.assertIn(field, result)
 
@@ -644,7 +641,7 @@ class TestCompanyPipelineErrorHandling(unittest.TestCase):
         self.company_repo = create_company_repository_mock()
         self.ticker_repo = create_ticker_repository_mock()
         self.ticker_history_repo = create_ticker_history_repository_mock()
-        
+
         self.pipeline = CompanyPipeline(
             company_repo=self.company_repo,
             ticker_repo=self.ticker_repo,
@@ -660,13 +657,13 @@ class TestCompanyPipelineErrorHandling(unittest.TestCase):
             ticker=Ticker(symbol="GOOD"),
             market_cap=1000000
         )
-        
+
         good_source = MockDataSource("good_source", [good_company])
         failing_source = MockDataSource("failing_source", [], available=False)
-        
+
         # Run ingestion with both sources
         result = self.pipeline.run_ingestion([good_source, failing_source])
-        
+
         # Good source should still be processed
         self.assertEqual(result["inserted"], 1)
         self.assertEqual(result["errors"], 0)  # Unavailable source doesn't count as error
@@ -675,7 +672,7 @@ class TestCompanyPipelineErrorHandling(unittest.TestCase):
         """Test handling of empty company lists."""
         # Run with no sources provided
         result = self.pipeline.run_ingestion([])
-        
+
         # Verify empty results
         self.assertEqual(result["inserted"], 0)
         self.assertEqual(result["updated"], 0)
@@ -686,10 +683,10 @@ class TestCompanyPipelineErrorHandling(unittest.TestCase):
         # Create unavailable sources
         source1 = MockDataSource("unavailable1", [], available=False)
         source2 = MockDataSource("unavailable2", [], available=False)
-        
+
         # Run ingestion
         result = self.pipeline.run_ingestion([source1, source2])
-        
+
         # Verify no processing occurred
         self.assertEqual(result["inserted"], 0)
         self.assertEqual(result["updated"], 0)
@@ -704,7 +701,7 @@ class TestCompanyPipelineIntegration(unittest.TestCase):
         self.company_repo = create_company_repository_mock()
         self.ticker_repo = create_ticker_repository_mock()
         self.ticker_history_repo = create_ticker_history_repository_mock()
-        
+
         self.pipeline = CompanyPipeline(
             company_repo=self.company_repo,
             ticker_repo=self.ticker_repo,
@@ -739,19 +736,19 @@ class TestCompanyPipelineIntegration(unittest.TestCase):
                 market_cap=3000000000000
             )
         ]
-        
+
         source = MockDataSource("integration_test_source", companies)
-        
+
         # Run ingestion
         result = self.pipeline.run_ingestion([source])
-        
+
         # Verify comprehensive results
         self.assertEqual(result["inserted"], 1)  # NEWTEST
         self.assertEqual(result["updated"], 2)   # AAPL and MSFT
         self.assertEqual(result["errors"], 0)
         self.assertEqual(result["tickers_inserted"], 1)     # For NEWTEST
         self.assertEqual(result["ticker_histories_inserted"], 1)  # For NEWTEST
-        
+
         # Verify new company was inserted correctly
         new_company = self.company_repo.get_company_by_ticker("NEWTEST")
         self.assertIsNotNone(new_company)
@@ -760,14 +757,14 @@ class TestCompanyPipelineIntegration(unittest.TestCase):
         self.assertEqual(new_company.market_cap, 1000000000)
         self.assertEqual(new_company.sector, "Technology")
         self.assertEqual(new_company.source, "integration_test_source")
-        
+
         # Verify existing companies were updated (market_cap only)
         aapl = self.company_repo.get_company_by_ticker("AAPL")
         self.assertIsNotNone(aapl)
         self.assertEqual(aapl.market_cap, 3500000000000)
         self.assertEqual(aapl.company_name, "Apple Inc.")  # Original preserved
         self.assertEqual(aapl.exchange, "NASDAQ")  # Original preserved
-        
+
         msft = self.company_repo.get_company_by_ticker("MSFT")
         self.assertIsNotNone(msft)
         self.assertEqual(msft.market_cap, 3000000000000)
@@ -790,12 +787,12 @@ class TestCompanyPipelineIntegration(unittest.TestCase):
                 market_cap=1000000000
             )
         ]
-        
+
         source = MockDataSource("comprehensive_test_source", companies)
-        
+
         # Run comprehensive sync
         result = self.pipeline.run_comprehensive_sync([source])
-        
+
         # Verify all expected fields present
         self.assertEqual(result["inserted"], 1)  # NEWCO
         self.assertEqual(result["updated"], 1)   # AAPL
@@ -804,12 +801,12 @@ class TestCompanyPipelineIntegration(unittest.TestCase):
         self.assertEqual(result["ticker_histories_inserted"], 1)
         self.assertIn("unused_tickers", result)
         self.assertIn("unused_ticker_count", result)
-        
+
         # Verify unused tickers were detected
         unused_tickers = result["unused_tickers"]
         self.assertIsInstance(unused_tickers, set)
         self.assertGreater(len(unused_tickers), 0)
-        
+
         # Should include tickers that exist in mock data but not in our source
         expected_unused = {"MSFT", "AMZN"}  # These exist in mock but not in our source
         self.assertTrue(expected_unused.issubset(unused_tickers))
@@ -818,6 +815,6 @@ class TestCompanyPipelineIntegration(unittest.TestCase):
 if __name__ == "__main__":
     # Configure logging for tests
     logging.basicConfig(level=logging.INFO)
-    
+
     # Run the tests
     unittest.main(verbosity=2)

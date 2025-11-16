@@ -1,4 +1,9 @@
-"""EOD pricing data ingestion pipeline."""
+"""EOD pricing data ingestion pipeline.
+
+Note: This pipeline works with ACTIVE tickers from the ticker table.
+It uses ticker.ticker_history_id for pricing operations since historical_eod_pricing
+references ticker_history (not ticker) to support both active and delisted symbols.
+"""
 
 from __future__ import annotations
 
@@ -7,9 +12,6 @@ from datetime import date
 from typing import TypedDict
 
 from src.data_sources.eodhd.eod_data import EodhdDataSource
-from src.models.historical_eod_pricing import (
-    HistoricalEndOfDayPricing as HistoricalEodPricingDataModel,
-)
 from src.repos.equities.pricing.historical_eod_pricing_repository import (
     HistoricalEodPricingRepository,
 )
@@ -19,7 +21,7 @@ from src.repos.equities.tickers.ticker_repository import TickerRepository
 class TickerPricingResult(TypedDict):
     """Result of ingesting pricing data for a single ticker."""
 
-    ticker_id: int
+    ticker_history_id: int  # Changed from ticker_id to ticker_history_id
     ticker_symbol: str
     upserted: int
     errors: int
@@ -65,6 +67,8 @@ class EodPricingPipeline:
     ) -> TickerPricingResult:
         """Ingest EOD pricing data for a single ticker.
 
+        Note: Uses ticker.ticker_history_id for pricing operations.
+
         Args:
             ticker_symbol: Ticker symbol (e.g., "AAPL")
             from_date: Start date for pricing data (None = all available)
@@ -74,7 +78,7 @@ class EodPricingPipeline:
             TickerPricingResult with ingestion details
         """
         results: TickerPricingResult = {
-            "ticker_id": 0,
+            "ticker_history_id": 0,
             "ticker_symbol": ticker_symbol,
             "upserted": 0,
             "errors": 0,
@@ -87,12 +91,14 @@ class EodPricingPipeline:
             self.logger.info(f"Looking up ticker: {ticker_symbol}")
             ticker = self.ticker_repo.get_ticker_by_symbol(ticker_symbol)
 
-            if not ticker or ticker.id is None:
-                self.logger.error(f"Ticker not found in database: {ticker_symbol}")
+            if not ticker or ticker.ticker_history_id is None:
+                self.logger.error(
+                    f"Ticker not found or missing ticker_history_id: {ticker_symbol}"
+                )
                 results["errors"] = 1
                 return results
 
-            results["ticker_id"] = ticker.id
+            results["ticker_history_id"] = ticker.ticker_history_id
 
             # 2. Fetch pricing data from EODHD
             self.logger.info(
@@ -123,10 +129,10 @@ class EodPricingPipeline:
                 results["from_date"] = str(min(dates))
                 results["to_date"] = str(max(dates))
 
-            # 3. Upsert pricing data to database
+            # 3. Upsert pricing data to database using ticker_history_id
             self.logger.info(f"Upserting {len(pricing_data)} pricing records...")
             upsert_results = self.pricing_repo.bulk_upsert_pricing(
-                ticker.id, pricing_data
+                ticker.ticker_history_id, pricing_data
             )
 
             results["upserted"] = upsert_results["inserted"] + upsert_results["updated"]
@@ -229,6 +235,8 @@ class EodPricingPipeline:
     ) -> TickerPricingResult:
         """Backfill pricing data from a target date to the latest available date in DB.
 
+        Note: Uses ticker.ticker_history_id for pricing operations.
+
         Args:
             ticker_symbol: Ticker symbol
             target_date: Date to start backfilling from
@@ -237,7 +245,7 @@ class EodPricingPipeline:
             TickerPricingResult with backfill details
         """
         results: TickerPricingResult = {
-            "ticker_id": 0,
+            "ticker_history_id": 0,
             "ticker_symbol": ticker_symbol,
             "upserted": 0,
             "errors": 0,
@@ -248,13 +256,15 @@ class EodPricingPipeline:
         try:
             # Get ticker
             ticker = self.ticker_repo.get_ticker_by_symbol(ticker_symbol)
-            if not ticker or ticker.id is None:
-                self.logger.error(f"Ticker not found: {ticker_symbol}")
+            if not ticker or ticker.ticker_history_id is None:
+                self.logger.error(
+                    f"Ticker not found or missing ticker_history_id: {ticker_symbol}"
+                )
                 results["errors"] = 1
                 return results
 
-            # Get latest pricing date from database
-            latest_pricing = self.pricing_repo.get_latest_pricing(ticker.id)
+            # Get latest pricing date from database using ticker_history_id
+            latest_pricing = self.pricing_repo.get_latest_pricing(ticker.ticker_history_id)
 
             if latest_pricing:
                 to_date = latest_pricing.date

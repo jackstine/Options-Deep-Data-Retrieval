@@ -33,7 +33,24 @@ alembic.ini             # Alembic configuration file
 
 ## Prerequisites
 
-### 1. Environment Variables Required
+### 1. Working Directory - IMPORTANT!
+
+**⚠️ CRITICAL: Always run Alembic commands from the project root directory!**
+
+```bash
+# You must be in this directory:
+cd /Users/jake/Projects/OptionsDeep/AI/Options-Deep-root/python_1
+
+# NOT in subdirectories like:
+# ❌ cd src/database/equities  # WRONG - .env file won't be found
+```
+
+**Why this matters:**
+- The configuration manager looks for `.env` in the project root
+- Running from subdirectories will fail with `FileNotFoundError: Environment file not found`
+- Always use the `-c` flag to specify the alembic.ini location while staying in project root
+
+### 2. Environment Variables Required
 
 Set these environment variables before running migrations:
 
@@ -43,7 +60,7 @@ ENVIRONMENT=local                                    # or dev, prod
 OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD=your_password  # Database password
 ```
 
-### 2. Database Must Exist
+### 3. Database Must Exist
 
 Ensure the target database exists before running migrations:
 
@@ -53,7 +70,7 @@ CREATE DATABASE "equities-local";
 CREATE DATABASE "algorithms-local";
 ```
 
-### 3. Install Dependencies
+### 4. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
@@ -64,12 +81,14 @@ pip install -r requirements.txt
 
 ### Step 1: Check Current Migration Status
 
+**Remember: Run from project root!**
+
 ```bash
-# Check which migrations have been applied
-alembic current
+# Check which migrations have been applied (for equities database)
+alembic -c src/database/equities/alembic.ini current
 
 # View migration history
-alembic history --verbose
+alembic -c src/database/equities/alembic.ini history --verbose
 ```
 
 ### Step 2: Generate Migration (After Model Changes)
@@ -78,12 +97,12 @@ When you modify SQLAlchemy models in `src/database/tables/`, generate a migratio
 
 ```bash
 # Auto-generate migration from model changes
-alembic revision --autogenerate -m "Descriptive message about changes"
+alembic -c src/database/equities/alembic.ini revision --autogenerate -m "Descriptive message about changes"
 
 # Example:
-alembic revision --autogenerate -m "Create companies table"
-alembic revision --autogenerate -m "Add indexes to companies table"
-alembic revision --autogenerate -m "Add stock_prices table"
+alembic -c src/database/equities/alembic.ini revision --autogenerate -m "Create companies table"
+alembic -c src/database/equities/alembic.ini revision --autogenerate -m "Add indexes to companies table"
+alembic -c src/database/equities/alembic.ini revision --autogenerate -m "Add stock_prices table"
 ```
 
 **What this does:**
@@ -120,14 +139,14 @@ def downgrade() -> None:
 
 ```bash
 # Apply all pending migrations
-alembic upgrade head
+alembic -c src/database/equities/alembic.ini upgrade head
 
 # Apply specific number of migrations
-alembic upgrade +1    # Apply next migration
-alembic upgrade +2    # Apply next 2 migrations
+alembic -c src/database/equities/alembic.ini upgrade +1    # Apply next migration
+alembic -c src/database/equities/alembic.ini upgrade +2    # Apply next 2 migrations
 
 # Apply to specific migration (using revision ID)
-alembic upgrade ae1027a6acf   # Apply to specific revision
+alembic -c src/database/equities/alembic.ini upgrade ae1027a6acf   # Apply to specific revision
 ```
 
 #### Understanding Revision IDs
@@ -144,30 +163,30 @@ When you generate a migration with `alembic revision --autogenerate`, Alembic cr
 
 ```bash
 # View all migration history with revision IDs
-alembic history --verbose
+alembic -c src/database/equities/alembic.ini history --verbose
 
 # Example output:
 # Rev: ae1027a6acf (head)
 # Parent: <base>
 # Path: /path/to/versions/ae1027a6acf_create_companies_table.py
-# 
+#
 #     Create companies table
-# 
-# Rev: b4f2e8c9d12 
+#
+# Rev: b4f2e8c9d12
 # Parent: ae1027a6acf
 # Path: /path/to/versions/b4f2e8c9d12_add_stock_prices_table.py
-# 
+#
 #     Add stock_prices table
 
 # Show just the revision IDs
-alembic history
+alembic -c src/database/equities/alembic.ini history
 
 # Example output:
-# ae1027a6acf -> b4f2e8c9d12 (head), Add stock_prices table  
+# ae1027a6acf -> b4f2e8c9d12 (head), Add stock_prices table
 # <base> -> ae1027a6acf, Create companies table
 
 # Check current applied revision
-alembic current
+alembic -c src/database/equities/alembic.ini current
 # Output: ae1027a6acf (head)
 ```
 
@@ -206,28 +225,28 @@ def downgrade() -> None:
 **Using revision IDs in commands:**
 ```bash
 # You can use full or partial revision IDs
-alembic upgrade ae1027a6acf        # Full revision ID
-alembic upgrade ae1027            # Partial ID (must be unique)
-alembic downgrade ae1027a6acf     # Downgrade to specific revision
+alembic -c src/database/equities/alembic.ini upgrade ae1027a6acf        # Full revision ID
+alembic -c src/database/equities/alembic.ini upgrade ae1027            # Partial ID (must be unique)
+alembic -c src/database/equities/alembic.ini downgrade ae1027a6acf     # Downgrade to specific revision
 
 # Special revision references
-alembic upgrade head              # Latest migration
-alembic downgrade base            # Back to empty database
-alembic upgrade head~1            # One before latest
-alembic upgrade head~2            # Two before latest
+alembic -c src/database/equities/alembic.ini upgrade head              # Latest migration
+alembic -c src/database/equities/alembic.ini downgrade base            # Back to empty database
+alembic -c src/database/equities/alembic.ini upgrade head~1            # One before latest
+alembic -c src/database/equities/alembic.ini upgrade head~2            # Two before latest
 ```
 
 ### Step 5: Rollback (if needed)
 
 ```bash
 # Rollback one migration
-alembic downgrade -1
+alembic -c src/database/equities/alembic.ini downgrade -1
 
 # Rollback to specific migration (using revision ID from 'alembic history')
-alembic downgrade ae1027a6acf
+alembic -c src/database/equities/alembic.ini downgrade ae1027a6acf
 
 # Rollback to base (empty database)
-alembic downgrade base
+alembic -c src/database/equities/alembic.ini downgrade base
 ```
 
 ## Database Selection
@@ -244,17 +263,17 @@ To migrate a different database, you would need to modify the configuration in `
 
 ### Local Development
 ```bash
-ENVIRONMENT=local alembic upgrade head
+ENVIRONMENT=local alembic -c src/database/equities/alembic.ini upgrade head
 ```
 
 ### Development Environment
 ```bash
-ENVIRONMENT=dev alembic upgrade head
+ENVIRONMENT=dev alembic -c src/database/equities/alembic.ini upgrade head
 ```
 
 ### Production Environment
 ```bash
-ENVIRONMENT=prod alembic upgrade head
+ENVIRONMENT=prod alembic -c src/database/equities/alembic.ini upgrade head
 ```
 
 ## Common Migration Scenarios
@@ -262,18 +281,19 @@ ENVIRONMENT=prod alembic upgrade head
 ### 1. Creating Your First Migration (Companies Table)
 
 ```bash
-# 1. Ensure environment variables are set
+# 1. Ensure you're in project root and environment variables are set
+cd /Users/jake/Projects/OptionsDeep/AI/Options-Deep-root/python_1
 export ENVIRONMENT=local
 export OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD=postgres
 
 # 2. Generate initial migration
-alembic revision --autogenerate -m "Create companies table"
+alembic -c src/database/equities/alembic.ini revision --autogenerate -m "Create companies table"
 
 # 3. Apply migration
-alembic upgrade head
+alembic -c src/database/equities/alembic.ini upgrade head
 
 # 4. Verify table was created
-alembic current
+alembic -c src/database/equities/alembic.ini current
 ```
 
 ### 2. Adding New Columns
@@ -285,10 +305,10 @@ class Company(Base):
     stock_symbol_type = Column(String(20), nullable=True)  # New column
 
 # 2. Generate migration
-alembic revision --autogenerate -m "Add stock_symbol_type to companies"
+alembic -c src/database/equities/alembic.ini revision --autogenerate -m "Add stock_symbol_type to companies"
 
 # 3. Apply migration
-alembic upgrade head
+alembic -c src/database/equities/alembic.ini upgrade head
 ```
 
 ### 3. Creating New Tables
@@ -304,10 +324,10 @@ class StockPrice(Base):
 from src.database.tables.stock_price import StockPrice
 
 # 3. Generate migration
-alembic revision --autogenerate -m "Create stock_prices table"
+alembic -c src/database/equities/alembic.ini revision --autogenerate -m "Create stock_prices table"
 
 # 4. Apply migration
-alembic upgrade head
+alembic -c src/database/equities/alembic.ini upgrade head
 ```
 
 ### 4. Dropping Tables/Columns
@@ -315,11 +335,11 @@ alembic upgrade head
 ```bash
 # 1. Remove from SQLAlchemy model
 # 2. Generate migration
-alembic revision --autogenerate -m "Remove deprecated_table"
+alembic -c src/database/equities/alembic.ini revision --autogenerate -m "Remove deprecated_table"
 
 # 3. Review carefully - dropping data!
 # 4. Apply migration
-alembic upgrade head
+alembic -c src/database/equities/alembic.ini upgrade head
 ```
 
 ## Troubleshooting
@@ -329,16 +349,16 @@ alembic upgrade head
 #### 1. "Target database is not up to date"
 ```bash
 # Check current migration status
-alembic current
+alembic -c src/database/equities/alembic.ini current
 
 # Apply pending migrations
-alembic upgrade head
+alembic -c src/database/equities/alembic.ini upgrade head
 ```
 
 #### 2. "Can't locate revision identified by 'abc123'"
 ```bash
 # Check migration history
-alembic history
+alembic -c src/database/equities/alembic.ini history
 
 # Ensure you're in correct environment
 echo $ENVIRONMENT
@@ -381,9 +401,9 @@ alembic revision --autogenerate -m "update stuff"
 #### 3. Test Rollbacks
 ```bash
 # Test that your migration can be rolled back
-alembic upgrade head
-alembic downgrade -1
-alembic upgrade head
+alembic -c src/database/equities/alembic.ini upgrade head
+alembic -c src/database/equities/alembic.ini downgrade -1
+alembic -c src/database/equities/alembic.ini upgrade head
 ```
 
 #### 4. Backup Before Production Migrations
@@ -425,22 +445,26 @@ def save_to_database(self, companies: List[Company]) -> bool:
 
 ## Quick Reference
 
+**⚠️ IMPORTANT: Always run from project root directory!**
+
 ```bash
-# Common Alembic commands
-alembic current                    # Show current migration
-alembic history                    # Show migration history
-alembic upgrade head              # Apply all pending migrations
-alembic downgrade -1              # Rollback one migration
-alembic revision --autogenerate   # Generate new migration
-alembic stamp head                # Mark database as up-to-date without running migrations
+# First: Navigate to project root
+cd /Users/jake/Projects/OptionsDeep/AI/Options-Deep-root/python_1
 
-# Environment setup
+# Set environment variables
 export ENVIRONMENT=local
-export OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD=postgres
+export OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD=your_password
 
-# Project-specific
-cd /path/to/Options-Deep           # Must be in project root
-alembic -c alembic.ini current     # Use specific config file
+# Common Alembic commands (for equities database)
+alembic -c src/database/equities/alembic.ini current                              # Show current migration
+alembic -c src/database/equities/alembic.ini history                              # Show migration history
+alembic -c src/database/equities/alembic.ini upgrade head                         # Apply all pending migrations
+alembic -c src/database/equities/alembic.ini downgrade -1                         # Rollback one migration
+alembic -c src/database/equities/alembic.ini revision --autogenerate -m "message" # Generate new migration
+alembic -c src/database/equities/alembic.ini stamp head                           # Mark database as up-to-date without running migrations
+
+# For algorithms database, use:
+# alembic -c src/database/algorithms/alembic.ini <command>
 ```
 
 This tutorial covers the complete Alembic workflow for our Options Deep project. Follow these steps to safely manage database schema changes across all environments.

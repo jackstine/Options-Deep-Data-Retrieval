@@ -13,6 +13,10 @@ dependencies = [
     "alembic>=1.13.0",
     "faker>=30.0.0",
     "requests>=2.32.0",
+    "pandas-market-calendars>=4.0.0",
+    "pandas>=2.0.0",
+    "matplotlib>=3.8.0",
+    "seaborn>=0.13.0",
 ]
 
 [dependency-groups]
@@ -21,6 +25,8 @@ dev = [
     "mypy>=1.17.1",
     "ruff>=0.12.8",
     "types-requests>=2.32.4.20250809",
+    "pandas-stubs>=2.0.0",
+    "types-seaborn>=0.13.0",
 ]
 
 # Ruff configuration - unified linting and formatting
@@ -66,6 +72,8 @@ ignore = [
 "tests/*" = ["D", "ANN"]
 # Examples can be more relaxed
 "src/cmd/examples/*" = ["D", "ANN", "T201"]  # Allow print statements
+# Command scripts can use print statements
+"src/cmd/*" = ["T201"]
 # Scripts can use print statements
 "scripts/*" = ["T201"]
 # __init__.py files can have unused imports

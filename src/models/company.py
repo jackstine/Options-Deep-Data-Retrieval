@@ -5,9 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from src.database.equities.enums import DataSourceEnum
+
 if TYPE_CHECKING:
-    from src.models.ticker import Ticker
     from src.database.equities.tables.company import Company as DBCompany
+    from src.models.ticker import Ticker
 
 
 @dataclass
@@ -24,7 +26,8 @@ class Company:
     market_cap: int | None = None
     description: str | None = None
     active: bool = True
-    source: str = ""
+    is_valid_data: bool = True
+    source: DataSourceEnum | str = ""
     currency: str | None = None  #not in the DB
     type: str | None = None  #not in the DB
     isin: str | None = None  #not in the DB
@@ -42,7 +45,8 @@ class Company:
             "market_cap": self.market_cap,
             "description": self.description,
             "active": self.active,
-            "source": self.source,
+            "is_valid_data": self.is_valid_data,
+            "source": self.source.value if isinstance(self.source, DataSourceEnum) else self.source,
             "currency": self.currency,
             "type": self.type,
             "isin": self.isin,
@@ -70,6 +74,15 @@ class Company:
                 # Handle legacy string ticker format
                 ticker = Ticker(symbol=ticker_data, company_id=data.get("id", 0))
 
+        # Handle source field - convert string to enum if possible
+        source_value = data.get("source", "")
+        if isinstance(source_value, str) and source_value:
+            try:
+                source_value = DataSourceEnum(source_value)
+            except ValueError:
+                # Keep as string if not a valid enum value
+                pass
+
         # Support both snake_case and PascalCase for field names
         return cls(
             id=data.get("id"),
@@ -82,7 +95,8 @@ class Company:
             market_cap=data.get("market_cap"),
             description=data.get("description"),
             active=data.get("active", True),
-            source=data.get("source", ""),
+            is_valid_data=data.get("is_valid_data", True),
+            source=source_value,
             currency=data.get("currency") or data.get("Currency"),
             type=data.get("type") or data.get("Type"),
             isin=data.get("isin") or data.get("Isin"),
@@ -140,6 +154,7 @@ class Company:
             market_cap=self.market_cap,
             description=self.description,
             active=self.active,
+            is_valid_data=self.is_valid_data,
             source=self.source,
         )
 
@@ -163,7 +178,8 @@ class Company:
             market_cap=db_model.market_cap,
             description=db_model.description,
             active=db_model.active,
-            source=db_model.source,
+            is_valid_data=db_model.is_valid_data,
+            source=db_model.source,  # Already a DataSourceEnum from DB
         )
 
     def update_db_model(self, db_model: DBCompany) -> None:
@@ -180,4 +196,5 @@ class Company:
         db_model.market_cap = self.market_cap
         db_model.description = self.description
         db_model.active = self.active
+        db_model.is_valid_data = self.is_valid_data
         db_model.source = self.source

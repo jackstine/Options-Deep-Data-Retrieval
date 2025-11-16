@@ -18,10 +18,19 @@ class CompanyDataSource(ABC):
 
     @abstractmethod
     def get_companies(self) -> list[Company]:
-        """Get companies from this data source.
+        """Get active companies from this data source.
 
         Returns:
-            List of Company objects
+            List of Company objects for active/currently trading companies
+        """
+        pass
+
+    @abstractmethod
+    def get_delisted_symbols(self) -> list[Company]:
+        """Get delisted/inactive companies from this data source.
+
+        Returns:
+            List of Company objects for delisted/inactive companies
         """
         pass
 

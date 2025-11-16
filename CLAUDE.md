@@ -78,4 +78,8 @@ Do not return `dict[str, int]`  but instead return TypeDict classes that define 
 - tests utilize `*_mock.py` files to mock out the data from `repos` and `data_sources`
 
 
- 
+## Environment Variables
+- when adding environment variables you ***MUST*** ensure that you do the following
+   - that you add them to `src/config/models/environment_variables.py`
+   - that access to the environment variables goes through `src/config/configuration.py`
+   - you update the `src/config/ENVIRONMENT.md` with a summary of the variable

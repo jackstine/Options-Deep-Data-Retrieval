@@ -8,9 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.config.configuration import CONFIG
+from src.database.equities.tables.company import Company as CompanyTable
 from src.models.company import Company as CompanyDataModel
 from src.models.ticker import Ticker
-from src.database.equities.tables.company import Company as CompanyTable
 from src.repos.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class CompanyRepository(BaseRepository[CompanyDataModel, CompanyTable]):
                 result = session.execute(
                     select(TickerTable.symbol)
                     .join(CompanyTable, TickerTable.company_id == CompanyTable.id)
-                    .where(CompanyTable.active == True)
+                    .where(CompanyTable.active)
                 )
 
                 active_symbols = {row[0] for row in result.fetchall()}

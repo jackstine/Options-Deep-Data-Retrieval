@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String
+from sqlalchemy import Date, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -14,10 +14,17 @@ from src.database.equities.base import Base
 # Import for relationship type hint
 if TYPE_CHECKING:
     from src.database.equities.tables.company import Company
+    from src.database.equities.tables.ticker import Ticker
 
 
 class TickerHistory(Base):
-    """SQLAlchemy model for historical ticker symbol data with temporal tracking."""
+    """SQLAlchemy model for historical ticker symbol data with temporal tracking.
+
+    Note: This table tracks ALL ticker symbols (both active and delisted).
+    - Active symbols: Have a corresponding record in the 'ticker' table
+    - Delisted symbols: Do NOT have a record in the 'ticker' table
+    The ticker.ticker_history_id creates a one-to-one relationship for active symbols.
+    """
 
     __tablename__ = "ticker_history"
 
@@ -36,11 +43,6 @@ class TickerHistory(Base):
     )
     valid_to: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
 
-    # Trading status during this period
-    active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, index=True
-    )
-
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -54,6 +56,10 @@ class TickerHistory(Base):
 
     # Relationships
     company: Mapped[Company] = relationship("Company", back_populates="ticker_history")
+    # Back-reference to ticker (None for delisted symbols that don't have an active ticker record)
+    ticker: Mapped[Ticker | None] = relationship(
+        "Ticker", back_populates="ticker_history", uselist=False
+    )
 
     def __repr__(self) -> str:
         """String representation of TickerHistory."""
@@ -78,10 +84,10 @@ class TickerHistory(Base):
         """Check if ticker is currently valid.
 
         Returns:
-            True if ticker is currently valid
+            True if ticker is currently valid and company is active
         """
         today = date.today()
-        return self.is_valid_on_date(today) and self.active
+        return self.is_valid_on_date(today) and self.company.active
 
     def get_validity_period_str(self) -> str:
         """Get human-readable validity period string.

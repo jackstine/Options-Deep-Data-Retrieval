@@ -2,17 +2,16 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
+# Add the project root to the Python path BEFORE importing src modules
+# this assumes that the file is located at "src/database/equities/migrations/env.py" (5 levels deep from project root)
+project_root = Path(__file__).parent.parent.parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from src.config.configuration import CONFIG
 from src.database.equities.base import Base
-
-# Add the src directory to the Python path
-# this assumes that the file is located at "src/database/equities/migrations/env.py" or any other 4 depths of levels
-src_path = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(src_path))
-
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
