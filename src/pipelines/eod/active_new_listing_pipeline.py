@@ -402,8 +402,11 @@ class ActiveNewListingPipeline:
 
                 # 1. Insert/update company
                 existing_company = self.company_repo.get_company_by_ticker(symbol)
+                company_id : int
                 if existing_company:
                     self.company_repo.update_company(symbol, company)
+                    if existing_company.id is None:
+                        raise ValueError("id of existing company cannot be None")
                     company_id = existing_company.id
                 else:
                     # Insert company - need to get ID
@@ -413,20 +416,11 @@ class ActiveNewListingPipeline:
                     company_db = self.company_repo.get_company_by_ticker(symbol)
                     if not company_db:
                         raise ValueError(f"Failed to retrieve company after insert: {symbol}")
+                    if company_db.id is None:
+                        raise ValueError("id of company db cannot be None")
                     company_id = company_db.id
 
-                # 2. Insert ticker
-                existing_ticker = self.ticker_repo.get_ticker_by_symbol(symbol)
-                if not existing_ticker:
-                    ticker_db = self.ticker_repo.create_ticker_for_company(
-                        symbol, company_id
-                    )
-                    ticker_id = ticker_db.id
-                    result["tickers_inserted"] += 1
-                else:
-                    ticker_id = existing_ticker.id
-
-                # 3. Insert ticker history with start date from EOD data
+                # 2. Insert ticker_history FIRST (required for ticker FK)
                 ticker_history = TickerHistory(
                     symbol=symbol,
                     company_id=company_id,
@@ -438,28 +432,40 @@ class ActiveNewListingPipeline:
                 )
                 result["ticker_histories_inserted"] += inserted_histories
 
-                # Get the ticker history ID
+                # Get the ticker_history_id (required for ticker FK constraint)
                 ticker_histories = self.ticker_history_repo.get_ticker_history_by_symbol(
                     symbol
                 )
-                if ticker_histories:
-                    ticker_history_id = ticker_histories[0].id
+                if not ticker_histories:
+                    raise ValueError(f"Failed to retrieve ticker_history after insert: {symbol}")
 
-                    # 4. Insert ticker history stats
-                    ticker_stats = TickerHistoryStats(
-                        ticker_history_id=ticker_history_id,
-                        data_coverage_pct=stats["data_coverage_pct"],
-                        min_price=stats["min_price"],
-                        max_price=stats["max_price"],
+                ticker_history_id = ticker_histories[0].id
+
+                # 3. Insert ticker with ticker_history_id
+                existing_ticker = self.ticker_repo.get_ticker_by_symbol(symbol)
+                if not existing_ticker:
+                    self.ticker_repo.create_ticker_for_company(
+                        symbol, company_id, ticker_history_id
                     )
-                    self.stats_repo.upsert_stats(ticker_stats)
+                    result["tickers_inserted"] += 1
+                else:
+                    self.logger.info(f"Ticker {symbol} already exists, skipping insert")
 
-                # 5. Bulk insert EOD pricing data
+                # 4. Insert ticker_history_stats
+                ticker_stats = TickerHistoryStats(
+                    ticker_history_id=ticker_history_id,
+                    data_coverage_pct=stats["data_coverage_pct"],
+                    min_price=stats["min_price"],
+                    max_price=stats["max_price"],
+                )
+                self.stats_repo.upsert_stats(ticker_stats)
+
+                # 5. Bulk insert EOD pricing data (uses ticker_history_id, not ticker_id)
                 for record in eod_data:
-                    record.ticker_id = ticker_id
+                    record.ticker_history_id = ticker_history_id
 
                 pricing_result = self.pricing_repo.bulk_upsert_pricing(
-                    ticker_id, eod_data
+                    ticker_history_id, eod_data
                 )
                 result["pricing_records_inserted"] += pricing_result.get("inserted", 0)
 

@@ -71,10 +71,24 @@ class TickerRepository(BaseRepository[TickerDataModel, TickerDBModel]):
         return self.get()  # Uses base repository get() method
 
     def create_ticker_for_company(
-        self, symbol: str, company_id: int
+        self, symbol: str, company_id: int, ticker_history_id: int
     ) -> TickerDataModel:
-        """Create a new ticker for a company using base repository."""
-        ticker_data = TickerDataModel(symbol=symbol, company_id=company_id)
+        """Create a new ticker for a company using base repository.
+
+        Args:
+            symbol: Ticker symbol
+            company_id: ID of the company
+            ticker_history_id: ID of the ticker_history record (required FK)
+
+        Returns:
+            Created TickerDataModel with database ID
+
+        Raises:
+            ValueError: If ticker_history_id is None when converting to DB model
+        """
+        ticker_data = TickerDataModel(
+            symbol=symbol, company_id=company_id, ticker_history_id=ticker_history_id
+        )
         return self.insert(ticker_data)
 
     def update_ticker_company(self, symbol: str, new_company_id: int) -> bool:
