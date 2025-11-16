@@ -14,10 +14,16 @@ from src.database.equities.base import Base
 # Import for relationship type hint
 if TYPE_CHECKING:
     from src.database.equities.tables.company import Company
+    from src.database.equities.tables.ticker_history import TickerHistory
 
 
 class Ticker(Base):
-    """SQLAlchemy model for currently active ticker symbols."""
+    """SQLAlchemy model for currently active ticker symbols.
+
+    Note: This table contains ONLY currently active/trading symbols.
+    For delisted or historical symbols, see the ticker_history table.
+    Every active ticker must have a corresponding ticker_history record.
+    """
 
     __tablename__ = "tickers"
 
@@ -30,6 +36,11 @@ class Ticker(Base):
     )
     company_id: Mapped[int] = mapped_column(
         ForeignKey("companies.id"), nullable=False, index=True
+    )
+
+    # Link to ticker_history record (required for all active tickers)
+    ticker_history_id: Mapped[int] = mapped_column(
+        ForeignKey("ticker_history.id"), nullable=False, index=True
     )
 
     # Timestamps
@@ -45,7 +56,10 @@ class Ticker(Base):
 
     # Relationships
     company: Mapped[Company] = relationship("Company", back_populates="tickers")
+    ticker_history: Mapped[TickerHistory] = relationship(
+        "TickerHistory", back_populates="ticker"
+    )
 
     def __repr__(self) -> str:
         """String representation of Ticker."""
-        return f"<Ticker(id={self.id}, symbol='{self.symbol}', company_id={self.company_id})>"
+        return f"<Ticker(id={self.id}, symbol='{self.symbol}', company_id={self.company_id}, ticker_history_id={self.ticker_history_id})>"

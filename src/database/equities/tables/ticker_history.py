@@ -14,10 +14,17 @@ from src.database.equities.base import Base
 # Import for relationship type hint
 if TYPE_CHECKING:
     from src.database.equities.tables.company import Company
+    from src.database.equities.tables.ticker import Ticker
 
 
 class TickerHistory(Base):
-    """SQLAlchemy model for historical ticker symbol data with temporal tracking."""
+    """SQLAlchemy model for historical ticker symbol data with temporal tracking.
+
+    Note: This table tracks ALL ticker symbols (both active and delisted).
+    - Active symbols: Have a corresponding record in the 'ticker' table
+    - Delisted symbols: Do NOT have a record in the 'ticker' table
+    The ticker.ticker_history_id creates a one-to-one relationship for active symbols.
+    """
 
     __tablename__ = "ticker_history"
 
@@ -49,6 +56,10 @@ class TickerHistory(Base):
 
     # Relationships
     company: Mapped[Company] = relationship("Company", back_populates="ticker_history")
+    # Back-reference to ticker (None for delisted symbols that don't have an active ticker record)
+    ticker: Mapped[Ticker | None] = relationship(
+        "Ticker", back_populates="ticker_history", uselist=False
+    )
 
     def __repr__(self) -> str:
         """String representation of TickerHistory."""

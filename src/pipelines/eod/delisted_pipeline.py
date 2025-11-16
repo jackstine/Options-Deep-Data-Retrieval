@@ -265,15 +265,11 @@ class DelistedCompanyPipeline:
             if not company_id:
                 raise Exception(f"Failed to get company_id for {symbol}")
 
-            # Create or get ticker
-            existing_ticker = self.ticker_repo.get_ticker_by_symbol(symbol)
-            if existing_ticker:
-                ticker_id = existing_ticker.id
-            else:
-                new_ticker = self.ticker_repo.create_ticker_for_company(symbol, company_id)
-                ticker_id = new_ticker.id
+            # NOTE: We do NOT create ticker records for delisted companies
+            # The ticker table is only for currently active/trading symbols
+            # Delisted companies only get ticker_history records
 
-            # Create ticker history with valid_to = max EOD date
+            # Create ticker_history with valid_to = max EOD date
             ticker_history = TickerHistory(
                 symbol=symbol,
                 company_id=company_id,
@@ -312,14 +308,14 @@ class DelistedCompanyPipeline:
             self.ticker_history_stats_repo.upsert_stats(stats)
             result["stats_upserted"] = True
 
-            # Bulk insert pricing data
-            if ticker_id:
-                for eod in eod_data:
-                    eod.ticker_id = ticker_id
+            # Bulk insert pricing data using ticker_history_id
+            # NOTE: historical_eod_pricing uses ticker_history_id to support both active and delisted symbols
+            for eod in eod_data:
+                eod.ticker_history_id = ticker_history_id
 
-                pricing_result = self.pricing_repo.bulk_upsert_pricing(ticker_id, eod_data)
-                result["pricing_inserted"] = pricing_result.get("inserted", 0)
-                result["pricing_updated"] = pricing_result.get("updated", 0)
+            pricing_result = self.pricing_repo.bulk_upsert_pricing(ticker_history_id, eod_data)
+            result["pricing_inserted"] = pricing_result.get("inserted", 0)
+            result["pricing_updated"] = pricing_result.get("updated", 0)
 
             result["success"] = True
             return result

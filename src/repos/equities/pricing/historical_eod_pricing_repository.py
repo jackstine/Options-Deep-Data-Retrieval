@@ -1,4 +1,9 @@
-"""Historical EOD pricing repository for database operations."""
+"""Historical EOD pricing repository for database operations.
+
+Note: This repository uses ticker_history_id (not ticker_id) to support both
+active and delisted symbols. The ticker_history table tracks all symbols,
+while the ticker table only contains currently active symbols.
+"""
 
 from __future__ import annotations
 
@@ -24,7 +29,11 @@ logger = logging.getLogger(__name__)
 class HistoricalEodPricingRepository(
     BaseRepository[HistoricalEodPricingDataModel, HistoricalEodPricingDBModel]
 ):
-    """Repository for historical EOD pricing database operations."""
+    """Repository for historical EOD pricing database operations.
+
+    Note: Uses ticker_history_id to reference ticker_history table, supporting
+    both active and delisted symbols.
+    """
 
     def __init__(self) -> None:
         """Initialize historical EOD pricing repository."""
@@ -54,15 +63,15 @@ class HistoricalEodPricingRepository(
 
     def get_pricing_by_ticker(
         self,
-        ticker_id: int,
+        ticker_history_id: int,
         from_date: date | None = None,
         to_date: date | None = None,
         limit: int | None = None,
     ) -> list[HistoricalEodPricingDataModel]:
-        """Get pricing data for a ticker within a date range.
+        """Get pricing data for a ticker_history within a date range.
 
         Args:
-            ticker_id: ID of the ticker
+            ticker_history_id: ID of the ticker_history record
             from_date: Start date (inclusive), None for no lower bound
             to_date: End date (inclusive), None for no upper bound
             limit: Maximum number of records to return
@@ -73,7 +82,7 @@ class HistoricalEodPricingRepository(
         try:
             with self._SessionLocal() as session:
                 query = select(HistoricalEodPricingDBModel).where(
-                    HistoricalEodPricingDBModel.ticker_id == ticker_id
+                    HistoricalEodPricingDBModel.ticker_history_id == ticker_history_id
                 )
 
                 # Apply date filters
@@ -101,7 +110,7 @@ class HistoricalEodPricingRepository(
                     for db_model in db_models
                 ]
                 logger.info(
-                    f"Retrieved {len(data_models)} pricing records for ticker_id={ticker_id}"
+                    f"Retrieved {len(data_models)} pricing records for ticker_history_id={ticker_history_id}"
                 )
                 return data_models
 
@@ -110,26 +119,26 @@ class HistoricalEodPricingRepository(
             raise
 
     def get_latest_pricing(
-        self, ticker_id: int
+        self, ticker_history_id: int
     ) -> HistoricalEodPricingDataModel | None:
-        """Get the most recent pricing data for a ticker.
+        """Get the most recent pricing data for a ticker_history.
 
         Args:
-            ticker_id: ID of the ticker
+            ticker_history_id: ID of the ticker_history record
 
         Returns:
             Most recent pricing data model, or None if no data exists
         """
-        results = self.get_pricing_by_ticker(ticker_id, limit=1)
+        results = self.get_pricing_by_ticker(ticker_history_id, limit=1)
         return results[0] if results else None
 
     def get_pricing_for_date(
-        self, ticker_id: int, target_date: date
+        self, ticker_history_id: int, target_date: date
     ) -> HistoricalEodPricingDataModel | None:
-        """Get pricing data for a specific ticker and date.
+        """Get pricing data for a specific ticker_history and date.
 
         Args:
-            ticker_id: ID of the ticker
+            ticker_history_id: ID of the ticker_history record
             target_date: The specific date
 
         Returns:
@@ -139,7 +148,7 @@ class HistoricalEodPricingRepository(
             with self._SessionLocal() as session:
                 query = select(HistoricalEodPricingDBModel).where(
                     and_(
-                        HistoricalEodPricingDBModel.ticker_id == ticker_id,
+                        HistoricalEodPricingDBModel.ticker_history_id == ticker_history_id,
                         HistoricalEodPricingDBModel.date == target_date,
                     )
                 )
@@ -149,12 +158,12 @@ class HistoricalEodPricingRepository(
 
                 if db_model:
                     logger.debug(
-                        f"Found pricing for ticker_id={ticker_id} on {target_date}"
+                        f"Found pricing for ticker_history_id={ticker_history_id} on {target_date}"
                     )
                     return HistoricalEodPricingDataModel.from_db_model(db_model)
                 else:
                     logger.debug(
-                        f"No pricing found for ticker_id={ticker_id} on {target_date}"
+                        f"No pricing found for ticker_history_id={ticker_history_id} on {target_date}"
                     )
                     return None
 
@@ -164,16 +173,16 @@ class HistoricalEodPricingRepository(
 
     def bulk_upsert_pricing(
         self,
-        ticker_id: int,
+        ticker_history_id: int,
         pricing_data: list[HistoricalEodPricingDataModel],
     ) -> dict[str, int]:
-        """Bulk insert or update pricing data for a ticker.
+        """Bulk insert or update pricing data for a ticker_history.
 
         Uses PostgreSQL's ON CONFLICT DO UPDATE to handle duplicates.
-        If a record with the same ticker_id and date exists, it will be updated.
+        If a record with the same ticker_history_id and date exists, it will be updated.
 
         Args:
-            ticker_id: ID of the ticker
+            ticker_history_id: ID of the ticker_history record
             pricing_data: List of pricing data models to upsert
 
         Returns:
@@ -185,9 +194,9 @@ class HistoricalEodPricingRepository(
 
         try:
             with self._SessionLocal() as session:
-                # Set ticker_id on each pricing data model
+                # Set ticker_history_id on each pricing data model
                 for pricing in pricing_data:
-                    pricing.ticker_id = ticker_id
+                    pricing.ticker_history_id = ticker_history_id
 
                 # Convert data models to DB models
                 db_models = [pricing.to_db_model() for pricing in pricing_data]
@@ -195,7 +204,7 @@ class HistoricalEodPricingRepository(
                 # Prepare values for upsert
                 values = [
                     {
-                        "ticker_id": db_model.ticker_id,
+                        "ticker_history_id": db_model.ticker_history_id,
                         "date": db_model.date,
                         "open": db_model.open,
                         "high": db_model.high,
@@ -210,9 +219,9 @@ class HistoricalEodPricingRepository(
                 # Create upsert statement
                 stmt = insert(HistoricalEodPricingDBModel).values(values)
 
-                # On conflict, update all fields except ticker_id and date
+                # On conflict, update all fields except ticker_history_id and date
                 stmt = stmt.on_conflict_do_update(
-                    constraint="uq_ticker_date",
+                    constraint="pk_ticker_history_date",
                     set_={
                         "open": stmt.excluded.open,
                         "high": stmt.excluded.high,
@@ -229,7 +238,7 @@ class HistoricalEodPricingRepository(
                 # PostgreSQL doesn't provide separate insert/update counts easily
                 # So we'll just return the total as inserted
                 total = len(pricing_data)
-                logger.info(f"Upserted {total} pricing records for ticker_id={ticker_id}")
+                logger.info(f"Upserted {total} pricing records for ticker_history_id={ticker_history_id}")
 
                 return {"inserted": total, "updated": 0}
 
@@ -238,12 +247,12 @@ class HistoricalEodPricingRepository(
             raise
 
     def delete_pricing_by_ticker(
-        self, ticker_id: int, from_date: date | None = None, to_date: date | None = None
+        self, ticker_history_id: int, from_date: date | None = None, to_date: date | None = None
     ) -> int:
-        """Delete pricing data for a ticker within an optional date range.
+        """Delete pricing data for a ticker_history within an optional date range.
 
         Args:
-            ticker_id: ID of the ticker
+            ticker_history_id: ID of the ticker_history record
             from_date: Start date (inclusive), None for no lower bound
             to_date: End date (inclusive), None for no upper bound
 
@@ -253,7 +262,7 @@ class HistoricalEodPricingRepository(
         try:
             with self._SessionLocal() as session:
                 query = delete(HistoricalEodPricingDBModel).where(
-                    HistoricalEodPricingDBModel.ticker_id == ticker_id
+                    HistoricalEodPricingDBModel.ticker_history_id == ticker_history_id
                 )
 
                 # Apply date filters
@@ -271,7 +280,7 @@ class HistoricalEodPricingRepository(
 
                 deleted_count = result.rowcount
                 logger.info(
-                    f"Deleted {deleted_count} pricing records for ticker_id={ticker_id}"
+                    f"Deleted {deleted_count} pricing records for ticker_history_id={ticker_history_id}"
                 )
                 return deleted_count
 
@@ -279,11 +288,11 @@ class HistoricalEodPricingRepository(
             logger.error(f"Database error in delete_pricing_by_ticker: {e}")
             raise
 
-    def get_date_range_for_ticker(self, ticker_id: int) -> tuple[date | None, date | None]:
-        """Get the min and max dates available for a ticker.
+    def get_date_range_for_ticker(self, ticker_history_id: int) -> tuple[date | None, date | None]:
+        """Get the min and max dates available for a ticker_history.
 
         Args:
-            ticker_id: ID of the ticker
+            ticker_history_id: ID of the ticker_history record
 
         Returns:
             Tuple of (earliest_date, latest_date), or (None, None) if no data
@@ -295,13 +304,13 @@ class HistoricalEodPricingRepository(
                 query = select(
                     func.min(HistoricalEodPricingDBModel.date),
                     func.max(HistoricalEodPricingDBModel.date),
-                ).where(HistoricalEodPricingDBModel.ticker_id == ticker_id)
+                ).where(HistoricalEodPricingDBModel.ticker_history_id == ticker_history_id)
 
                 result = session.execute(query)
                 min_date, max_date = result.one()
 
                 logger.debug(
-                    f"Date range for ticker_id={ticker_id}: {min_date} to {max_date}"
+                    f"Date range for ticker_history_id={ticker_history_id}: {min_date} to {max_date}"
                 )
                 return (min_date, max_date)
 

@@ -23,12 +23,16 @@ class HistoricalEodPricing(Base):
 
     Prices are stored as integers multiplied by 1,000,000 for precision.
     Example: $63.68 is stored as 63,680,000.
+
+    Note: This table references ticker_history (not ticker) to support both
+    active and delisted symbols. The ticker table only contains currently
+    active trading symbols, while ticker_history tracks all historical symbols.
     """
 
     __tablename__ = "historical_eod_pricing"
 
-    # Foreign key to ticker history
-    ticker_id: Mapped[int] = mapped_column(
+    # Foreign key to ticker_history table (supports both active and delisted symbols)
+    ticker_history_id: Mapped[int] = mapped_column(
         ForeignKey("ticker_history.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
@@ -50,10 +54,10 @@ class HistoricalEodPricing(Base):
 
     # Constraints
     __table_args__ = (
-        PrimaryKeyConstraint("ticker_id", "date", name="pk_ticker_date"),
+        PrimaryKeyConstraint("ticker_history_id", "date", name="pk_ticker_history_date"),
         {"comment": "Historical end-of-day pricing data with prices stored as integers (×1,000,000)"},
     )
 
     def __repr__(self) -> str:
         """String representation of HistoricalEodPricing."""
-        return f"<HistoricalEodPricing(ticker_id={self.ticker_id}, date={self.date})>"
+        return f"<HistoricalEodPricing(ticker_history_id={self.ticker_history_id}, date={self.date})>"
