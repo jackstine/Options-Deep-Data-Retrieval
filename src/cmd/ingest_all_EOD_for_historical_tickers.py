@@ -54,7 +54,7 @@ def main() -> int:
         total_symbols = len(unique_symbols)
 
         print(f"Found {total_symbols:,} unique ticker symbols to process")
-        print(f"This includes both active and delisted tickers\n")
+        print("This includes both active and delisted tickers\n")
 
         # Tracking variables
         successful_count = 0
