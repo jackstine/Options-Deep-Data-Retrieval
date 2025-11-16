@@ -1,1 +1,1 @@
-"""EOD data pipelines."""
+"""EOD (End-of-Day) data pipelines."""
