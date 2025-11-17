@@ -1,0 +1,1 @@
+ensure that pipelines that include data sources, that they must use the files in @src/data_sources/base and are not allowed to use any specfic data source type.
