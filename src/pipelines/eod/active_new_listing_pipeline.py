@@ -305,11 +305,14 @@ class ActiveNewListingPipeline:
 
         self.logger.info(f"Generated failed companies report at {report_path}")
 
-    def run_ingestion(self, from_date: date | None = None) -> IngestionResult:
+    def run_ingestion(
+        self, from_date: date | None = None, test_limit: int | None = None
+    ) -> IngestionResult:
         """Run the active company ingestion pipeline.
 
         Args:
             from_date: Optional start date for EOD data (defaults to 1 year ago)
+            test_limit: Optional limit on number of companies to process (for testing)
 
         Returns:
             IngestionResult with counts and status
@@ -336,6 +339,15 @@ class ActiveNewListingPipeline:
         self.logger.info(
             f"Filtered to {len(common_stock_companies)} common stock companies"
         )
+
+        # Apply test limit if provided
+        if test_limit is not None and test_limit > 0:
+            original_count = len(common_stock_companies)
+            common_stock_companies = common_stock_companies[:test_limit]
+            self.logger.info(
+                f"TEST LIMIT APPLIED: Processing only {len(common_stock_companies)} "
+                f"companies (limited from {original_count})"
+            )
 
         result: IngestionResult = {
             "total_companies": len(all_companies),

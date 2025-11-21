@@ -12,7 +12,6 @@ from src.data_sources.base.historical_data_source import HistoricalDataSource
 from src.models.company import Company
 from src.models.historical_eod_pricing import HistoricalEndOfDayPricing
 from src.models.ticker import Ticker
-from src.models.ticker_history import TickerHistory
 from src.models.ticker_history_stats import TickerHistoryStats
 from src.repos.equities.companies.company_repository import CompanyRepository
 from src.repos.equities.pricing.historical_eod_pricing_repository import (
@@ -215,7 +214,7 @@ class DelistedCompanyPipeline:
                     self.company_repo.update_company(symbol, company)
                     result["company_updated"] = True
                 else:
-                    self.company_repo.bulk_insert_companies([company])
+                    self.company_repo.insert(company)
                     result["company_inserted"] = True
 
                 return result
@@ -240,7 +239,7 @@ class DelistedCompanyPipeline:
                     self.company_repo.update_company(symbol, company)
                     result["company_updated"] = True
                 else:
-                    self.company_repo.bulk_insert_companies([company])
+                    self.company_repo.insert(company)
                     result["company_inserted"] = True
 
                 return result
@@ -256,11 +255,10 @@ class DelistedCompanyPipeline:
                 result["company_updated"] = True
                 company_id = existing_company.id
             else:
-                inserted_company = self.company_repo.bulk_insert_companies([company])
+                # Use insert() instead of bulk_insert to get the ID back
+                inserted_company = self.company_repo.insert(company)
                 result["company_inserted"] = True
-                # Retrieve the inserted company to get its ID
-                company_record = self.company_repo.get_company_by_ticker(symbol)
-                company_id = company_record.id if company_record else None
+                company_id = inserted_company.id
 
             if not company_id:
                 raise Exception(f"Failed to get company_id for {symbol}")
@@ -268,14 +266,6 @@ class DelistedCompanyPipeline:
             # NOTE: We do NOT create ticker records for delisted companies
             # The ticker table is only for currently active/trading symbols
             # Delisted companies only get ticker_history records
-
-            # Create ticker_history with valid_to = max EOD date
-            ticker_history = TickerHistory(
-                symbol=symbol,
-                company_id=company_id,
-                valid_from=metrics["start_date"],
-                valid_to=metrics["end_date"],
-            )
 
             # Check if ticker history already exists
             existing_histories = self.ticker_history_repo.get_ticker_history_for_company(company_id)
@@ -286,14 +276,17 @@ class DelistedCompanyPipeline:
                     break
 
             if matching_history:
-                ticker_history.id = matching_history.id
                 ticker_history_id = matching_history.id
             else:
-                created_histories = self.ticker_history_repo.bulk_insert_ticker_histories([ticker_history])
+                # Create ticker_history with valid_to = max EOD date
+                created_history = self.ticker_history_repo.create_ticker_history_for_company(
+                    symbol=symbol,
+                    company_id=company_id,
+                    valid_from=metrics["start_date"],
+                    valid_to=metrics["end_date"],
+                )
                 result["ticker_history_created"] = True
-                # Retrieve to get ID
-                histories = self.ticker_history_repo.get_ticker_history_for_company(company_id)
-                ticker_history_id = histories[-1].id if histories else None
+                ticker_history_id = created_history.id
 
             if not ticker_history_id:
                 raise Exception(f"Failed to get ticker_history_id for {symbol}")
@@ -337,7 +330,7 @@ class DelistedCompanyPipeline:
                     self.company_repo.update_company(symbol, company)
                     result["company_updated"] = True
                 else:
-                    self.company_repo.bulk_insert_companies([company])
+                    self.company_repo.insert(company)
                     result["company_inserted"] = True
             except Exception as insert_error:
                 self.logger.error(f"Failed to insert company {symbol} after error: {insert_error}")

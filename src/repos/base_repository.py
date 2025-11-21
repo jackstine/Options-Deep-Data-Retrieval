@@ -88,7 +88,7 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
             filter_model: Data model instance with filter values
 
         Returns:
-            Dictionary of field_name -> value for non-empty fields
+            Dictionary of field_name -> value for non-empty fields that exist in DB
         """
         conditions = {}
 
@@ -102,7 +102,8 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
             }
 
         for field_name, value in model_dict.items():
-            if self._is_valid_filter_value(value):
+            # Only include fields that exist in the database model
+            if hasattr(self._db_model_class, field_name) and self._is_valid_filter_value(value):
                 conditions[field_name] = value
 
         return conditions
