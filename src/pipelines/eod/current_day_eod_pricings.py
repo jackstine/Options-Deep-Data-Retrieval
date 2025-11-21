@@ -80,12 +80,14 @@ class DailyEodIngestionPipeline:
         self,
         exchange: str = "US",
         filter_common_stock: bool = True,
+        test_limit: int | None = None,
     ) -> DailyEodIngestionResult:
         """Run the daily EOD ingestion process.
 
         Args:
             exchange: Exchange code to fetch data for (default: "US")
             filter_common_stock: Filter for Common Stock only (default: True)
+            test_limit: Optional limit on number of symbols to process (for testing)
 
         Returns:
             DailyEodIngestionResult with counts of processed records
@@ -100,6 +102,17 @@ class DailyEodIngestionPipeline:
                 filter_common_stock=filter_common_stock,
             )
             self.logger.info(f"Retrieved {len(eod_data)} symbols from API")
+
+            # Apply test limit if provided
+            if test_limit is not None and test_limit > 0:
+                original_count = len(eod_data)
+                # Limit to first N symbols in dictionary
+                limited_symbols = list(eod_data.keys())[:test_limit]
+                eod_data = {symbol: eod_data[symbol] for symbol in limited_symbols}
+                self.logger.info(
+                    f"TEST LIMIT APPLIED: Processing only {len(eod_data)} "
+                    f"symbols (limited from {original_count})"
+                )
 
             # Step 2: Get all ticker symbols from database
             self.logger.info("Fetching ticker symbols from database")

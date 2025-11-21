@@ -25,6 +25,7 @@ import logging
 import sys
 from datetime import date, timedelta
 
+from src.config.configuration import CONFIG
 from src.data_sources.eodhd.eod_data import EodhdDataSource
 from src.data_sources.eodhd.symbols import EodhdSymbolsSource
 from src.pipelines.eod.active_new_listing_pipeline import ActiveNewListingPipeline
@@ -90,6 +91,11 @@ def main() -> int:
         logger.info("EODHD Active Company Ingestion")
         logger.info("=" * 80)
 
+        # Get test limit from environment
+        test_limit = CONFIG.get_test_limits()
+        if test_limit:
+            logger.info(f"TEST LIMIT ENABLED: Will process max {test_limit} companies")
+
         # Initialize data sources
         logger.info("Initializing EODHD data sources...")
         company_source = EodhdSymbolsSource()
@@ -113,7 +119,7 @@ def main() -> int:
 
         # Run ingestion
         logger.info("Starting ingestion process...")
-        result = pipeline.run_ingestion(from_date=from_date)
+        result = pipeline.run_ingestion(from_date=from_date, test_limit=test_limit)
 
         # Display results
         logger.info("=" * 80)
