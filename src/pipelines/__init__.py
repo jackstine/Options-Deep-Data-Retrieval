@@ -1,6 +1,6 @@
 """Pipelines for data ingestion and processing."""
 
-from src.pipelines.companies.simple_pipeline import (
+from src.pipelines.companies.new_company_pipeline import (
     CompanyIngestionResult,
     CompanyPipeline,
     ComprehensiveSyncResult,

@@ -9,7 +9,7 @@ from src.data_sources.nasdaq.company_mock import create_nasdaq_company_source_mo
 from src.data_sources.nasdaq.screener_mock import create_nasdaq_screener_source_mock
 from src.models.company import Company
 from src.models.ticker import Ticker
-from src.pipelines.companies.simple_pipeline import CompanyPipeline
+from src.pipelines.companies.new_company_pipeline import CompanyPipeline
 from src.repos.equities.companies.company_repository_mock import (
     create_company_repository_mock,
 )
@@ -40,7 +40,7 @@ class TestCompanyPipeline(unittest.TestCase):
         self.pipeline.ticker_history_repo = self.mock_ticker_history_repo
 
         # Set up logging to capture messages
-        self.logger = logging.getLogger("src.pipelines.companies.simple_pipeline")
+        self.logger = logging.getLogger("src.pipelines.companies.new_company_pipeline")
         self.logger.setLevel(logging.DEBUG)
 
     def tearDown(self):

@@ -1,7 +1,7 @@
 # Simple Pipeline Explanation
 
 ## Overview
-The `src/pipelines/companies/simple_pipeline.py` implements a comprehensive company ingestion pipeline that synchronizes company data from external sources to the database.
+The `src/pipelines/companies/new_company_pipeline.py` implements a comprehensive company ingestion pipeline that synchronizes company data from external sources to the database.
 
 ## Core Functionality
 
