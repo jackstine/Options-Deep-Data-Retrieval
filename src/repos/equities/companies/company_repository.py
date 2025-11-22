@@ -104,6 +104,17 @@ class CompanyRepository(BaseRepository[CompanyDataModel, CompanyTable]):
             logger.error(f"Database error retrieving company by ticker {ticker}: {e}")
             raise
 
+    def bulk_insert_companies(self, companies: list[CompanyDataModel]) -> list[CompanyDataModel]:
+        """Bulk insert companies and return them with populated IDs.
+
+        Args:
+            companies: List of company data models to insert
+
+        Returns:
+            List of company data models with populated IDs and timestamps
+        """
+        return self.insert_many_returning(companies)
+
     def update_company(self, ticker: str, company_data: CompanyDataModel) -> bool:
         """Update company by ticker symbol.
 

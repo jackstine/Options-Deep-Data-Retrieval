@@ -6,6 +6,7 @@ import logging
 from datetime import date
 from typing import TypedDict
 
+from src.config.configuration import CONFIG
 from src.data_sources.base.company_data_source import CompanyDataSource
 from src.models.company import Company
 from src.models.ticker import Ticker as TickerDataModel
@@ -86,11 +87,6 @@ class CompanyPipeline:
                 self.logger.info(f"Getting companies from {source.name}")
                 companies = source.get_companies()
 
-                # Add source info to each company (if the company model supports it)
-                for company in companies:
-                    if hasattr(company, "source"):
-                        company.source = source.name
-
                 all_companies.extend(companies)
                 self.logger.info(f"Got {len(companies)} companies from {source.name}")
 
@@ -101,6 +97,12 @@ class CompanyPipeline:
         if not all_companies:
             self.logger.warning("No companies found from any source")
             return results
+
+        # Apply test limits if configured
+        test_limit = CONFIG.get_test_limits()
+        if test_limit is not None:
+            self.logger.info(f"Applying test limit: {test_limit} companies")
+            all_companies = all_companies[:test_limit]
 
         # Step 2: Clean and validate data
         clean_companies = self._clean_companies(all_companies)
@@ -218,51 +220,39 @@ class CompanyPipeline:
             # 1. Insert new companies using bulk operations
             if new_companies:
                 self.logger.info(f"Inserting {len(new_companies)} new companies...")
-                companies_inserted = self.company_repo.bulk_insert_companies(
+                inserted_companies_with_ids = self.company_repo.bulk_insert_companies(
                     new_companies
                 )
-                results["inserted"] = companies_inserted
+                results["inserted"] = len(inserted_companies_with_ids)
 
-                if companies_inserted > 0:
-                    # Get the newly inserted companies with their database IDs
-                    inserted_companies_with_ids = []
-                    for company in new_companies:
-                        if company.ticker:
-                            ticker_symbol = company.ticker.symbol
-                            db_company = self.company_repo.get_company_by_ticker(
-                                ticker_symbol
-                            )
-                            if db_company:
-                                inserted_companies_with_ids.append(db_company)
-
+                if inserted_companies_with_ids:
                     # Create tickers for new companies
-                    if inserted_companies_with_ids:
-                        tickers_to_insert = self._create_tickers_for_companies(
+                    tickers_to_insert = self._create_tickers_for_companies(
+                        inserted_companies_with_ids
+                    )
+                    if tickers_to_insert:
+                        self.logger.info(
+                            f"Inserting {len(tickers_to_insert)} new tickers..."
+                        )
+                        results["tickers_inserted"] = (
+                            self.ticker_repo.bulk_insert_tickers(tickers_to_insert)
+                        )
+
+                    # Create ticker histories for new companies
+                    ticker_histories_to_insert = (
+                        self._create_ticker_histories_for_companies(
                             inserted_companies_with_ids
                         )
-                        if tickers_to_insert:
-                            self.logger.info(
-                                f"Inserting {len(tickers_to_insert)} new tickers..."
-                            )
-                            results["tickers_inserted"] = (
-                                self.ticker_repo.bulk_insert_tickers(tickers_to_insert)
-                            )
-
-                        # Create ticker histories for new companies
-                        ticker_histories_to_insert = (
-                            self._create_ticker_histories_for_companies(
-                                inserted_companies_with_ids
+                    )
+                    if ticker_histories_to_insert:
+                        self.logger.info(
+                            f"Inserting {len(ticker_histories_to_insert)} new ticker histories..."
+                        )
+                        results["ticker_histories_inserted"] = (
+                            self.ticker_history_repo.bulk_insert_ticker_histories(
+                                ticker_histories_to_insert
                             )
                         )
-                        if ticker_histories_to_insert:
-                            self.logger.info(
-                                f"Inserting {len(ticker_histories_to_insert)} new ticker histories..."
-                            )
-                            results["ticker_histories_inserted"] = (
-                                self.ticker_history_repo.bulk_insert_ticker_histories(
-                                    ticker_histories_to_insert
-                                )
-                            )
 
             # 2. Update existing companies
             if companies_to_update:
