@@ -107,13 +107,23 @@ class CompanyRepository(BaseRepository[CompanyDataModel, CompanyTable]):
     def bulk_insert_companies(self, companies: list[CompanyDataModel]) -> list[CompanyDataModel]:
         """Bulk insert companies and return them with populated IDs.
 
+        Also updates the input companies list with database-generated IDs,
+        preserving any additional fields (like ticker) from the data source.
+
         Args:
             companies: List of company data models to insert
 
         Returns:
             List of company data models with populated IDs and timestamps
         """
-        return self.insert_many_returning(companies)
+        inserted_companies = self.insert_many_returning(companies)
+
+        # Update original companies with database-generated IDs
+        # This preserves ticker info from data source while adding IDs from DB
+        for original, inserted in zip(companies, inserted_companies):
+            original.id = inserted.id
+
+        return inserted_companies
 
     def update_company(self, ticker: str, company_data: CompanyDataModel) -> bool:
         """Update company by ticker symbol.

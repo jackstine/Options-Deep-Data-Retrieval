@@ -226,9 +226,8 @@ class CompanyPipeline:
                 results["inserted"] = len(inserted_companies_with_ids)
 
                 if inserted_companies_with_ids:
-                    # Create tickers for new companies
                     tickers_to_insert = self._create_tickers_for_companies(
-                        inserted_companies_with_ids
+                        new_companies
                     )
                     if tickers_to_insert:
                         self.logger.info(
@@ -241,7 +240,7 @@ class CompanyPipeline:
                     # Create ticker histories for new companies
                     ticker_histories_to_insert = (
                         self._create_ticker_histories_for_companies(
-                            inserted_companies_with_ids
+                            new_companies
                         )
                     )
                     if ticker_histories_to_insert:
