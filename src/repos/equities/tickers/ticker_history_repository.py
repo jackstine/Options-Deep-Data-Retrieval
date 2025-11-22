@@ -102,9 +102,16 @@ class TickerHistoryRepository(
 
     def bulk_insert_ticker_histories(
         self, ticker_histories: list[TickerHistoryDataModel]
-    ) -> int:
-        """Bulk insert ticker histories using base repository."""
-        return self.insert_many(ticker_histories)
+    ) -> list[TickerHistoryDataModel]:
+        """Bulk insert ticker histories and return them with populated IDs.
+
+        Args:
+            ticker_histories: List of ticker history data models to insert
+
+        Returns:
+            List of ticker history data models with populated IDs and timestamps
+        """
+        return self.insert_many_returning(ticker_histories)
 
     def get_all_ticker_histories(self) -> list[TickerHistoryDataModel]:
         """Retrieve all ticker histories from the database using base repository."""

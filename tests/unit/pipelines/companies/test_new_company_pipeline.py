@@ -262,14 +262,24 @@ class TestCompanyPipeline(unittest.TestCase):
             ),
         ]
 
-        tickers = self.pipeline._create_tickers_for_companies(companies)
+        # Create mapping of company_id to ticker_history_id
+        company_to_history_id = {
+            1: 100,  # company_id 1 -> ticker_history_id 100
+            2: 200,  # company_id 2 -> ticker_history_id 200
+        }
+
+        tickers = self.pipeline._create_tickers_for_companies(
+            companies, company_to_history_id
+        )
 
         # Should create ticker for each company
         self.assertEqual(len(tickers), 2)
         self.assertEqual(tickers[0].symbol, "TEST1")
         self.assertEqual(tickers[0].company_id, 1)
+        self.assertEqual(tickers[0].ticker_history_id, 100)
         self.assertEqual(tickers[1].symbol, "TEST2")
         self.assertEqual(tickers[1].company_id, 2)
+        self.assertEqual(tickers[1].ticker_history_id, 200)
 
     def test_create_ticker_histories_for_companies(self):
         """Test ticker history creation for companies."""
