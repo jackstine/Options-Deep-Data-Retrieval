@@ -38,7 +38,7 @@ import logging
 import sys
 
 from src.data_sources.eodhd.symbols import EodhdSymbolsSource
-from src.pipelines.companies.simple_pipeline import CompanyPipeline
+from src.pipelines.companies.new_company_pipeline import CompanyPipeline
 
 
 def setup_logging() -> None:

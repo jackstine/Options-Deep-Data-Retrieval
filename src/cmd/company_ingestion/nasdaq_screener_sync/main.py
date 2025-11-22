@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 from src.data_sources.nasdaq.screener import NasdaqScreenerSource
-from src.pipelines.companies.simple_pipeline import CompanyPipeline
+from src.pipelines.companies.new_company_pipeline import CompanyPipeline
 
 
 def setup_logging() -> None:

@@ -17,7 +17,7 @@ from datetime import date
 
 from src.models.company import Company
 from src.models.ticker import Ticker
-from src.pipelines.companies.simple_pipeline import CompanyPipeline
+from src.pipelines.companies.new_company_pipeline import CompanyPipeline
 from src.repos.equities.companies.company_repository_mock import (
     create_company_repository_mock,
 )

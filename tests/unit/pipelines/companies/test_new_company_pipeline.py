@@ -9,7 +9,7 @@ from src.data_sources.nasdaq.company_mock import create_nasdaq_company_source_mo
 from src.data_sources.nasdaq.screener_mock import create_nasdaq_screener_source_mock
 from src.models.company import Company
 from src.models.ticker import Ticker
-from src.pipelines.companies.simple_pipeline import CompanyPipeline
+from src.pipelines.companies.new_company_pipeline import CompanyPipeline
 from src.repos.equities.companies.company_repository_mock import (
     create_company_repository_mock,
 )
@@ -40,7 +40,7 @@ class TestCompanyPipeline(unittest.TestCase):
         self.pipeline.ticker_history_repo = self.mock_ticker_history_repo
 
         # Set up logging to capture messages
-        self.logger = logging.getLogger("src.pipelines.companies.simple_pipeline")
+        self.logger = logging.getLogger("src.pipelines.companies.new_company_pipeline")
         self.logger.setLevel(logging.DEBUG)
 
     def tearDown(self):
@@ -262,14 +262,24 @@ class TestCompanyPipeline(unittest.TestCase):
             ),
         ]
 
-        tickers = self.pipeline._create_tickers_for_companies(companies)
+        # Create mapping of company_id to ticker_history_id
+        company_to_history_id = {
+            1: 100,  # company_id 1 -> ticker_history_id 100
+            2: 200,  # company_id 2 -> ticker_history_id 200
+        }
+
+        tickers = self.pipeline._create_tickers_for_companies(
+            companies, company_to_history_id
+        )
 
         # Should create ticker for each company
         self.assertEqual(len(tickers), 2)
         self.assertEqual(tickers[0].symbol, "TEST1")
         self.assertEqual(tickers[0].company_id, 1)
+        self.assertEqual(tickers[0].ticker_history_id, 100)
         self.assertEqual(tickers[1].symbol, "TEST2")
         self.assertEqual(tickers[1].company_id, 2)
+        self.assertEqual(tickers[1].ticker_history_id, 200)
 
     def test_create_ticker_histories_for_companies(self):
         """Test ticker history creation for companies."""

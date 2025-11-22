@@ -320,6 +320,45 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
             self._logger.error(f"Database error in insert_many(): {e}")
             raise
 
+    def insert_many_returning(self, data_models: list[TDataModel]) -> list[TDataModel]:
+        """Insert multiple records in bulk and return them with populated IDs.
+
+        Args:
+            data_models: List of data model instances to insert
+
+        Returns:
+            List of data models with populated IDs and timestamps
+        """
+        if not data_models:
+            self._logger.info("No records to insert")
+            return []
+
+        try:
+            with self._SessionLocal() as session:
+                # Convert data models to database models using data model's to_db_model()
+                db_models = [dm.to_db_model() for dm in data_models]
+                session.add_all(db_models)
+                session.flush()  # Flush to get IDs without committing
+
+                # Refresh each model to populate IDs and timestamps
+                for db_model in db_models:
+                    session.refresh(db_model)
+
+                session.commit()
+
+                # Convert back to data models using data model's from_db_model()
+                result_models = [
+                    self._data_model_class.from_db_model(db_model)
+                    for db_model in db_models
+                ]
+
+                self._logger.info(f"Bulk inserted {len(result_models)} records with IDs")
+                return result_models  # type: ignore[return-value]
+
+        except SQLAlchemyError as e:
+            self._logger.error(f"Database error in insert_many_returning(): {e}")
+            raise
+
     def update(self, filter_model: TDataModel, update_data: TDataModel) -> int:
         """Update records matching filter with new data.
 
