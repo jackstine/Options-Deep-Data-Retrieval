@@ -90,16 +90,16 @@ def main() -> int:
         print("\n" + "=" * 70)
         print("NEW ACTIVE COMPANY INGESTION COMPLETED")
         print("=" * 70)
-        print(f"\nCompanies:")
+        print("\nCompanies:")
         print(f"  New companies inserted:   {results['inserted']:>6,}")
         print(f"  Existing updated:         {results['updated']:>6,}")
         print(f"  Skipped:                  {results['skipped']:>6,}")
         print(f"  Errors:                   {results['errors']:>6,}")
 
-        print(f"\nTickers:")
+        print("\nTickers:")
         print(f"  New tickers created:      {results['tickers_inserted']:>6,}")
 
-        print(f"\nTicker Histories:")
+        print("\nTicker Histories:")
         print(f"  New histories created:    {results['ticker_histories_inserted']:>6,}")
 
         print("\n" + "=" * 70)

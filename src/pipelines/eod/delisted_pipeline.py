@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import Any, TypedDict
 
@@ -11,7 +11,6 @@ from src.data_sources.base.company_data_source import CompanyDataSource
 from src.data_sources.base.historical_data_source import HistoricalDataSource
 from src.models.company import Company
 from src.models.historical_eod_pricing import HistoricalEndOfDayPricing
-from src.models.ticker import Ticker
 from src.models.ticker_history_stats import TickerHistoryStats
 from src.repos.equities.companies.company_repository import CompanyRepository
 from src.repos.equities.pricing.historical_eod_pricing_repository import (
