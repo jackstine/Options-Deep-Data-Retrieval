@@ -213,7 +213,6 @@ class DailyEodIngestionPipeline:
                     close=misplaced_pricing.close,
                     adjusted_close=misplaced_pricing.adjusted_close,
                     volume=misplaced_pricing.volume,
-                    source=misplaced_pricing.source,
                 )
 
                 # Group by ticker_history_id
