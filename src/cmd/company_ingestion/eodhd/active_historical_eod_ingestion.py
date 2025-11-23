@@ -129,23 +129,11 @@ def main() -> int:
         logger.info(f"Common stock companies: {result['common_stock_count']}")
         logger.info(f"Companies processed: {result['processed']}")
         logger.info("")
-        logger.info(f"✓ Valid companies: {result['valid_companies']}")
-        logger.info(f"✗ Invalid companies: {result['invalid_companies']}")
-        logger.info("")
         logger.info(f"Companies inserted/updated: {result['companies_inserted']}")
         logger.info(f"Tickers inserted: {result['tickers_inserted']}")
         logger.info(f"Ticker histories inserted: {result['ticker_histories_inserted']}")
         logger.info(f"Pricing records inserted: {result['pricing_records_inserted']}")
         logger.info("")
-
-        if result["failed_symbols"]:
-            logger.info(f"Failed symbols ({len(result['failed_symbols'])}):")
-            for symbol in result["failed_symbols"][:10]:  # Show first 10
-                logger.info(f"  - {symbol}")
-            if len(result["failed_symbols"]) > 10:
-                logger.info(f"  ... and {len(result['failed_symbols']) - 10} more")
-            logger.info("")
-            logger.info("See reports/failed_active_eod_report.md for details")
 
         if result["errors"]:
             logger.warning(f"Errors encountered ({len(result['errors'])}):")

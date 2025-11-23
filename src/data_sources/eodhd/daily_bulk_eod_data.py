@@ -11,6 +11,7 @@ import requests
 
 from src.config.configuration import CONFIG
 from src.data_sources.base.bulk_eod_data_source import BulkEodDataSource
+from src.data_sources.eodhd.symbols import EodhdSymbolsSource
 from src.database.equities.enums import DataSourceEnum
 from src.models.misplaced_eod_pricing import MisplacedEndOfDayPricing
 
@@ -99,10 +100,6 @@ class EodhdDailyBulkEodData(BulkEodDataSource):
             # Convert each record to MisplacedEndOfDayPricing
             pricing_dict: dict[str, MisplacedEndOfDayPricing] = {}
             for record in data:
-                # Filter for Common Stock if requested
-                if filter_common_stock and record.get("type") != "Common Stock":
-                    continue
-
                 try:
                     # Extract symbol (remove .US suffix if present)
                     code = record.get("code", "")
@@ -143,6 +140,32 @@ class EodhdDailyBulkEodData(BulkEodDataSource):
             logger.info(
                 f"Retrieved {len(pricing_dict)} EOD records for exchange {exchange}"
             )
+
+            # Filter for Common Stock if requested
+            if filter_common_stock:
+                logger.info("Filtering for Common Stock symbols...")
+                symbols_source = EodhdSymbolsSource()
+                companies = symbols_source.get_active_symbols()
+
+                # Create mapping of symbol to company
+                symbol_info = {
+                    company.ticker.symbol: company
+                    for company in companies
+                    if company.ticker and company.ticker.symbol
+                }
+
+                # Filter to keep only Common Stock symbols
+                original_count = len(pricing_dict)
+                pricing_dict = {
+                    symbol: pricing
+                    for symbol, pricing in pricing_dict.items()
+                    if symbol in symbol_info and symbol_info[symbol].type == "Common Stock"
+                }
+
+                logger.info(
+                    f"Filtered from {original_count} to {len(pricing_dict)} Common Stock symbols"
+                )
+
             return pricing_dict
 
         except requests.exceptions.RequestException as e:

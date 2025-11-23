@@ -266,7 +266,6 @@ class MisplacedEodPricingRepository(
         """
         try:
             with self._SessionLocal() as session:
-                from sqlalchemy import func
 
                 query = select(MisplacedEodPricingDBModel.symbol).distinct()
                 result = session.execute(query)

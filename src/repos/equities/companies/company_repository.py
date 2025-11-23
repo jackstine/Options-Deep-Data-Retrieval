@@ -120,7 +120,7 @@ class CompanyRepository(BaseRepository[CompanyDataModel, CompanyTable]):
 
         # Update original companies with database-generated IDs
         # This preserves ticker info from data source while adding IDs from DB
-        for original, inserted in zip(companies, inserted_companies):
+        for original, inserted in zip(companies, inserted_companies, strict=False):
             original.id = inserted.id
 
         return inserted_companies
