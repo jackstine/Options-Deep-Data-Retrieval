@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -47,6 +47,17 @@ class TickerHistoryStats(Base):
     max_price: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     average_price: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     median_price: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+    # Data quality flags
+    has_insufficient_coverage: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", index=True
+    )
+    low_suspicious_price: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", index=True
+    )
+    high_suspicious_price: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", index=True
+    )
 
     # Timestamps
     created_at: Mapped[DateTime] = mapped_column(

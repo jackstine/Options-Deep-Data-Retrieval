@@ -27,6 +27,9 @@ class TickerHistoryStats:
     max_price: Decimal | None = None
     average_price: Decimal | None = None
     median_price: Decimal | None = None
+    has_insufficient_coverage: bool = False
+    low_suspicious_price: bool = False
+    high_suspicious_price: bool = False
     id: int | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -41,6 +44,9 @@ class TickerHistoryStats:
             "max_price": float(self.max_price) if self.max_price is not None else None,
             "average_price": float(self.average_price) if self.average_price is not None else None,
             "median_price": float(self.median_price) if self.median_price is not None else None,
+            "has_insufficient_coverage": self.has_insufficient_coverage,
+            "low_suspicious_price": self.low_suspicious_price,
+            "high_suspicious_price": self.high_suspicious_price,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -72,6 +78,9 @@ class TickerHistoryStats:
             max_price=Decimal(str(data["max_price"])) if data.get("max_price") is not None else None,
             average_price=Decimal(str(data["average_price"])) if data.get("average_price") is not None else None,
             median_price=Decimal(str(data["median_price"])) if data.get("median_price") is not None else None,
+            has_insufficient_coverage=data.get("has_insufficient_coverage", False),
+            low_suspicious_price=data.get("low_suspicious_price", False),
+            high_suspicious_price=data.get("high_suspicious_price", False),
             created_at=created_at,
             updated_at=updated_at,
         )
@@ -118,6 +127,9 @@ class TickerHistoryStats:
             max_price=int(self.max_price * PRICE_MULTIPLIER) if self.max_price is not None else None,
             average_price=int(self.average_price * PRICE_MULTIPLIER) if self.average_price is not None else None,
             median_price=int(self.median_price * PRICE_MULTIPLIER) if self.median_price is not None else None,
+            has_insufficient_coverage=self.has_insufficient_coverage,
+            low_suspicious_price=self.low_suspicious_price,
+            high_suspicious_price=self.high_suspicious_price,
         )
 
     @classmethod
@@ -140,6 +152,9 @@ class TickerHistoryStats:
             max_price=Decimal(db_model.max_price) / PRICE_MULTIPLIER if db_model.max_price is not None else None,
             average_price=Decimal(db_model.average_price) / PRICE_MULTIPLIER if db_model.average_price is not None else None,
             median_price=Decimal(db_model.median_price) / PRICE_MULTIPLIER if db_model.median_price is not None else None,
+            has_insufficient_coverage=db_model.has_insufficient_coverage,
+            low_suspicious_price=db_model.low_suspicious_price,
+            high_suspicious_price=db_model.high_suspicious_price,
             created_at=db_model.created_at,
             updated_at=db_model.updated_at,
         )
@@ -159,3 +174,6 @@ class TickerHistoryStats:
         db_model.max_price = int(self.max_price * PRICE_MULTIPLIER) if self.max_price is not None else None
         db_model.average_price = int(self.average_price * PRICE_MULTIPLIER) if self.average_price is not None else None
         db_model.median_price = int(self.median_price * PRICE_MULTIPLIER) if self.median_price is not None else None
+        db_model.has_insufficient_coverage = self.has_insufficient_coverage
+        db_model.low_suspicious_price = self.low_suspicious_price
+        db_model.high_suspicious_price = self.high_suspicious_price
