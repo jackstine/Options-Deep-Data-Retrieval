@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import threading
 from pathlib import Path
 from typing import Any
@@ -23,11 +24,12 @@ class ConfigurationManager:
         """Initialize configuration manager.
 
         Loads environment variables from environment-specific .env files based on
-        the OPTIONS_DEEP_ENV variable. If OPTIONS_DEEP_ENV is not set, loads .env.
+        the OPTIONS_DEEP_ENV variable. OPTIONS_DEEP_ENV is required and must be set.
 
         Raises:
             ValueError: If required environment variables are missing
             FileNotFoundError: If the specified .env file doesn't exist
+            SystemExit: If OPTIONS_DEEP_ENV is not set
         """
         self._load_environment_file()
         self._load_and_validate_env_vars()
@@ -41,23 +43,34 @@ class ConfigurationManager:
         """Load environment variables from the appropriate .env file.
 
         Uses OPTIONS_DEEP_ENV to determine which .env file to load:
-        - Not set: loads .env
-        - 'local': loads .env.local
-        - 'dev': loads .env.dev
-        - 'qa': loads .env.qa
-        - 'prod': loads .env.prod
+        - 'local': loads .local.env
+        - 'dev': loads .dev.env
+        - 'qa': loads .qa.env
+        - 'prod': loads .prod.env
+
+        OPTIONS_DEEP_ENV is required and must be set to one of the above values.
 
         Raises:
             ValueError: If OPTIONS_DEEP_ENV has an invalid value
             FileNotFoundError: If the specified .env file doesn't exist
+            SystemExit: If OPTIONS_DEEP_ENV is not set
         """
         options_deep_env = os.getenv("OPTIONS_DEEP_ENV")
         valid_envs = ["local", "dev", "qa", "prod"]
 
         if options_deep_env is None:
-            env_file = ".env"
+            print("ERROR: OPTIONS_DEEP_ENV environment variable is not set.")
+            print()
+            print("This variable is required to select the correct environment configuration.")
+            print(f"Please set it to one of: {', '.join(valid_envs)}")
+            print()
+            print("Example:")
+            print("  export OPTIONS_DEEP_ENV=local")
+            print()
+            print("For more information, see src/config/ENVIRONMENT.md")
+            sys.exit(1)
         elif options_deep_env.lower() in valid_envs:
-            env_file = f".env.{options_deep_env.lower()}"
+            env_file = f".{options_deep_env.lower()}.env"
         else:
             raise ValueError(
                 f"Invalid OPTIONS_DEEP_ENV value: {options_deep_env}. "
