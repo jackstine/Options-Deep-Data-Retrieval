@@ -13,7 +13,7 @@ Usage:
     python -m src.cmd.company_ingestion.eodhd.active_newcompany_ingestion --from-date 2024-01-01
 
 Examples:
-    # Ingest with default 1 year of data
+    # Ingest with all available historical data (default)
     python -m src.cmd.company_ingestion.eodhd.active_newcompany_ingestion
 
     # Ingest with custom start date
@@ -55,7 +55,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--from-date",
         type=str,
-        help="Start date for EOD data in YYYY-MM-DD format (default: 1 year ago)",
+        help="Start date for EOD data in YYYY-MM-DD format (default: all available history)",
         default=None,
     )
 
@@ -72,21 +72,6 @@ def main() -> int:
     logger = logging.getLogger(__name__)
 
     try:
-        args = parse_args()
-
-        # Parse from_date if provided
-        from_date = None
-        if args.from_date:
-            try:
-                from_date = date.fromisoformat(args.from_date)
-                logger.info(f"Using custom from_date: {from_date}")
-            except ValueError:
-                logger.error(f"Invalid date format: {args.from_date}")
-                return 1
-        else:
-            from_date = date.today() - timedelta(days=365)
-            logger.info(f"Using default from_date: {from_date} (1 year ago)")
-
         logger.info("=" * 80)
         logger.info("EODHD Active Company Ingestion")
         logger.info("=" * 80)
@@ -119,7 +104,7 @@ def main() -> int:
 
         # Run ingestion
         logger.info("Starting ingestion process...")
-        result = pipeline.run_ingestion(from_date=from_date, test_limit=test_limit)
+        result = pipeline.run_ingestion(test_limit=test_limit)
 
         # Display results
         logger.info("=" * 80)
