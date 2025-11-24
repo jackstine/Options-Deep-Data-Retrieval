@@ -1,0 +1,1 @@
+files in the `cmd` directory files never accept arguments.
