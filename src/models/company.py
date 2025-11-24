@@ -27,7 +27,7 @@ class Company:
     description: str | None = None
     active: bool = True
     is_valid_data: bool = True
-    source: DataSourceEnum | str = ""
+    source: DataSourceEnum | str = DataSourceEnum.EODHD
     currency: str | None = None  #not in the DB
     type: str | None = None  #not in the DB
     isin: str | None = None  #not in the DB
@@ -75,7 +75,7 @@ class Company:
                 ticker = Ticker(symbol=ticker_data, company_id=data.get("id", 0))
 
         # Handle source field - convert string to enum if possible
-        source_value = data.get("source", "")
+        source_value = data.get("source") or data.get("Source", "")
         if isinstance(source_value, str) and source_value:
             try:
                 source_value = DataSourceEnum(source_value)

@@ -80,7 +80,7 @@ def write_failure_report(failed_symbols: list[dict], report_path: Path) -> None:
                 f.write(f"### {symbol_info.get('code', 'N/A')} - {symbol_info.get('name', 'Unknown')}\n\n")
                 f.write(f"- **Exchange:** {symbol_info.get('exchange', 'N/A')}\n")
                 f.write(f"- **Error:** {symbol_info.get('error', 'Unknown error')}\n")
-                f.write(f"- **Full Details:**\n\n")
+                f.write("- **Full Details:**\n\n")
                 f.write("```json\n")
                 f.write(json.dumps(symbol_info, indent=2, default=str))
                 f.write("\n```\n\n")
@@ -130,19 +130,19 @@ def main() -> int:
         print("\n" + "=" * 70)
         print("DELISTED COMPANY INGESTION COMPLETED")
         print("=" * 70)
-        print(f"\nCompanies:")
+        print("\nCompanies:")
         print(f"  Total processed:      {results['total_companies']:>6,}")
         print(f"  Inserted:             {results['companies_inserted']:>6,}")
         print(f"  Updated:              {results['companies_updated']:>6,}")
         print(f"  Failed:               {results['failed_companies']:>6,}")
 
-        print(f"\nTicker Histories:")
+        print("\nTicker Histories:")
         print(f"  Created:              {results['ticker_histories_created']:>6,}")
 
-        print(f"\nTicker History Stats:")
+        print("\nTicker History Stats:")
         print(f"  Upserted:             {results['stats_upserted']:>6,}")
 
-        print(f"\nHistorical EOD Pricing:")
+        print("\nHistorical EOD Pricing:")
         print(f"  Records inserted:     {results['pricing_records_inserted']:>6,}")
         print(f"  Records updated:      {results['pricing_records_updated']:>6,}")
 

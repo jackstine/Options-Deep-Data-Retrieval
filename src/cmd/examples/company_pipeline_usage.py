@@ -2,7 +2,7 @@
 """Example usage of the simple company ingestion pipeline."""
 
 from src.data_sources.nasdaq.screener import NasdaqScreenerSource
-from src.pipelines.companies.simple_pipeline import CompanyPipeline
+from src.pipelines.companies.new_company_pipeline import CompanyPipeline
 from src.repos.equities.companies.company_repository import CompanyRepository
 from src.repos.equities.tickers.ticker_history_repository import TickerHistoryRepository
 from src.repos.equities.tickers.ticker_repository import TickerRepository

@@ -88,7 +88,7 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
             filter_model: Data model instance with filter values
 
         Returns:
-            Dictionary of field_name -> value for non-empty fields
+            Dictionary of field_name -> value for non-empty fields that exist in DB
         """
         conditions = {}
 
@@ -102,7 +102,8 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
             }
 
         for field_name, value in model_dict.items():
-            if self._is_valid_filter_value(value):
+            # Only include fields that exist in the database model
+            if hasattr(self._db_model_class, field_name) and self._is_valid_filter_value(value):
                 conditions[field_name] = value
 
         return conditions
@@ -233,6 +234,25 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
         filter_model = self._create_id_filter(id)
         return self.get_one(filter_model)
 
+    def get_limit_offset(
+        self,
+        limit: int,
+        offset: int,
+        filter_model: TDataModel | None = None,
+    ) -> list[TDataModel]:
+        """Get records with pagination using limit and offset.
+
+        Args:
+            limit: Maximum number of records to return
+            offset: Number of records to skip
+            filter_model: Optional data model with filter values
+
+        Returns:
+            List of data model instances
+        """
+        options = QueryOptions(limit=limit, offset=offset)
+        return self.get(filter_model, options)
+
     def count(self, filter_model: TDataModel | None = None) -> int:
         """Count records matching filter.
 
@@ -317,6 +337,45 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
 
         except SQLAlchemyError as e:
             self._logger.error(f"Database error in insert_many(): {e}")
+            raise
+
+    def insert_many_returning(self, data_models: list[TDataModel]) -> list[TDataModel]:
+        """Insert multiple records in bulk and return them with populated IDs.
+
+        Args:
+            data_models: List of data model instances to insert
+
+        Returns:
+            List of data models with populated IDs and timestamps
+        """
+        if not data_models:
+            self._logger.info("No records to insert")
+            return []
+
+        try:
+            with self._SessionLocal() as session:
+                # Convert data models to database models using data model's to_db_model()
+                db_models = [dm.to_db_model() for dm in data_models]
+                session.add_all(db_models)
+                session.flush()  # Flush to get IDs without committing
+
+                # Refresh each model to populate IDs and timestamps
+                for db_model in db_models:
+                    session.refresh(db_model)
+
+                session.commit()
+
+                # Convert back to data models using data model's from_db_model()
+                result_models = [
+                    self._data_model_class.from_db_model(db_model)
+                    for db_model in db_models
+                ]
+
+                self._logger.info(f"Bulk inserted {len(result_models)} records with IDs")
+                return result_models  # type: ignore[return-value]
+
+        except SQLAlchemyError as e:
+            self._logger.error(f"Database error in insert_many_returning(): {e}")
             raise
 
     def update(self, filter_model: TDataModel, update_data: TDataModel) -> int:

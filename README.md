@@ -122,7 +122,7 @@ Options-Deep is a modular, extensible platform designed for sophisticated stock 
 
 1. **Load Sample Data**
    ```python
-   from src.pipelines.companies.simple_pipeline import CompanyPipeline
+   from src.pipelines.companies.new_company_pipeline import CompanyPipeline
    from src.data_sources.nasdaq.screener import load_screener_file
    
    # Load companies from NASDAQ screener
@@ -413,7 +413,7 @@ alembic upgrade head
 
 ```python
 from src.data_sources.nasdaq.screener import load_screener_file
-from src.pipelines.companies.simple_pipeline import CompanyPipeline
+from src.pipelines.companies.new_company_pipeline import CompanyPipeline
 from src.config.configuration import CONFIG
 
 # Load NASDAQ screener data

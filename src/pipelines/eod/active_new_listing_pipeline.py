@@ -1,12 +1,10 @@
-"""Pipeline for ingesting active company listings with EOD data validation."""
+"""Pipeline for ingesting active company listings with EOD data and quality flags."""
 
 from __future__ import annotations
 
-import json
 import logging
 from datetime import date, timedelta
 from decimal import Decimal
-from pathlib import Path
 from typing import TypedDict
 
 from src.data_sources.base.company_data_source import CompanyDataSource
@@ -36,6 +34,8 @@ class CompanyStats(TypedDict):
     exchange: str
     min_price: Decimal | None
     max_price: Decimal | None
+    average_price: Decimal | None
+    median_price: Decimal | None
     missing_days_count: int
     total_trading_days: int
     data_coverage_pct: int  # Basis points (100% = 10000)
@@ -50,23 +50,15 @@ class IngestionResult(TypedDict):
     total_companies: int
     common_stock_count: int
     processed: int
-    valid_companies: int
-    invalid_companies: int
     companies_inserted: int
     tickers_inserted: int
     ticker_histories_inserted: int
     pricing_records_inserted: int
-    failed_symbols: list[str]
     errors: list[str]
 
 
-VALID_EXCHANGES = {"NASDAQ", "NYSE", "NYSE_MKT", "NYSE ARCA", "AMEX"}
-MAX_PRICE_THRESHOLD = Decimal("1000.00")
-MIN_COVERAGE_PCT = 9000  # 90% in basis points
-
-
 class ActiveNewListingPipeline:
-    """Pipeline for ingesting and validating active company listings with EOD data."""
+    """Pipeline for ingesting active company listings with EOD data and quality tracking flags."""
 
     def __init__(
         self,
@@ -119,6 +111,8 @@ class ActiveNewListingPipeline:
                 exchange="",
                 min_price=None,
                 max_price=None,
+                average_price=None,
+                median_price=None,
                 missing_days_count=0,
                 total_trading_days=0,
                 data_coverage_pct=0,
@@ -136,6 +130,19 @@ class ActiveNewListingPipeline:
         prices = [record.close for record in sorted_data]
         min_price = min(prices)
         max_price = max(prices)
+
+        # Calculate average price
+        average_price = sum(prices) / len(prices)
+
+        # Calculate median price
+        sorted_prices = sorted(prices)
+        n = len(sorted_prices)
+        if n % 2 == 0:
+            # Even number of prices - average the two middle values
+            median_price = (sorted_prices[n // 2 - 1] + sorted_prices[n // 2]) / Decimal("2")
+        else:
+            # Odd number of prices - take the middle value
+            median_price = sorted_prices[n // 2]
 
         # Calculate trading days and coverage
         total_trading_days = len(sorted_data)
@@ -161,6 +168,8 @@ class ActiveNewListingPipeline:
             exchange="",
             min_price=min_price,
             max_price=max_price,
+            average_price=average_price,
+            median_price=median_price,
             missing_days_count=missing_days_count,
             total_trading_days=total_trading_days,
             data_coverage_pct=coverage,
@@ -169,147 +178,14 @@ class ActiveNewListingPipeline:
             error=None,
         )
 
-    def _is_valid_data(
-        self, company: Company, stats: CompanyStats
-    ) -> tuple[bool, str | None]:
-        """Validate company data based on exchange, coverage, and price criteria.
-
-        Args:
-            company: Company object with exchange info
-            stats: CompanyStats with calculated metrics
-
-        Returns:
-            Tuple of (is_valid, reason) where reason is None if valid
-        """
-        # Check exchange
-        if company.exchange not in VALID_EXCHANGES:
-            return False, f"Invalid exchange: {company.exchange}"
-
-        # Check coverage
-        if stats["data_coverage_pct"] <= MIN_COVERAGE_PCT:
-            coverage_pct = stats["data_coverage_pct"] / 100.0
-            return False, f"Insufficient coverage: {coverage_pct:.2f}%"
-
-        # Check max price
-        if stats["max_price"] and stats["max_price"] > MAX_PRICE_THRESHOLD:
-            return False, f"Max price too high: ${stats['max_price']:.2f}"
-
-        return True, None
-
-    def _write_failed_company_data(
-        self,
-        company: Company,
-        stats: CompanyStats,
-        eod_data: list[HistoricalEndOfDayPricing],
-        reason: str,
-    ) -> None:
-        """Write failed company data to filesystem.
-
-        Args:
-            company: Company that failed validation
-            stats: Statistics for the company
-            eod_data: EOD pricing data
-            reason: Reason for failure
-        """
-        symbol = company.ticker.symbol if company.ticker else stats["code"]
-        output_dir = Path("src/data_sources/eodhd/data/failed_eod_active") / symbol
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        # Write company info
-        company_file = output_dir / "company.json"
-        company_data = company.to_dict()
-        company_data["validation_failure_reason"] = reason
-        with open(company_file, "w") as f:
-            json.dump(company_data, f, indent=2, default=str)
-
-        # Write stats
-        stats_file = output_dir / "stats.json"
-        with open(stats_file, "w") as f:
-            json.dump(dict(stats), f, indent=2, default=str)
-
-        # Write EOD data
-        eod_file = output_dir / "eod_data.json"
-        eod_records = [record.to_dict() for record in eod_data]
-        with open(eod_file, "w") as f:
-            json.dump(eod_records, f, indent=2, default=str)
-
-        self.logger.info(
-            f"Wrote failed company data for {symbol} to {output_dir}"
-        )
-
-    def _generate_failed_report(
-        self, failed_companies: list[tuple[Company, CompanyStats, str]]
-    ) -> None:
-        """Generate markdown report of failed companies.
-
-        Args:
-            failed_companies: List of tuples (company, stats, reason)
-        """
-        if not failed_companies:
-            self.logger.info("No failed companies to report")
-            return
-
-        report_path = Path("reports/failed_active_eod_report.md")
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-
-        with open(report_path, "w") as f:
-            f.write("# Failed Active EOD Company Report\n\n")
-            f.write(f"Generated: {date.today()}\n\n")
-            f.write(f"Total Failed: {len(failed_companies)}\n\n")
-            f.write("---\n\n")
-
-            # Summary by failure reason
-            f.write("## Failure Reasons Summary\n\n")
-            reason_counts: dict[str, int] = {}
-            for _, _, reason in failed_companies:
-                reason_key = reason.split(":")[0] if ":" in reason else reason
-                reason_counts[reason_key] = reason_counts.get(reason_key, 0) + 1
-
-            for reason, count in sorted(
-                reason_counts.items(), key=lambda x: x[1], reverse=True
-            ):
-                f.write(f"- {reason}: {count}\n")
-
-            f.write("\n---\n\n")
-
-            # Detailed table
-            f.write("## Detailed Failed Companies\n\n")
-            f.write(
-                "| Code | Name | Exchange | Min Price | Max Price | "
-                "Missing Days | Total Days | Coverage % | Start Date | End Date | Error |\n"
-            )
-            f.write(
-                "|------|------|----------|-----------|-----------|"
-                "--------------|------------|------------|------------|----------|-------|\n"
-            )
-
-            for company, stats, reason in failed_companies:
-                symbol = company.ticker.symbol if company.ticker else stats["code"]
-                name = company.company_name or stats["name"]
-                exchange = company.exchange or stats["exchange"]
-                min_price = (
-                    f"${stats['min_price']:.2f}" if stats["min_price"] else "N/A"
-                )
-                max_price = (
-                    f"${stats['max_price']:.2f}" if stats["max_price"] else "N/A"
-                )
-                coverage = stats["data_coverage_pct"] / 100.0
-                start = stats["start_date"] or "N/A"
-                end = stats["end_date"] or "N/A"
-
-                f.write(
-                    f"| {symbol} | {name} | {exchange} | {min_price} | {max_price} | "
-                    f"{stats['missing_days_count']} | {stats['total_trading_days']} | "
-                    f"{coverage:.2f}% | {start} | {end} | {reason} |\n"
-                )
-
-        self.logger.info(f"Generated failed companies report at {report_path}")
-
-    def run_ingestion(self, from_date: date | None = None) -> IngestionResult:
+    def run_ingestion(
+        self, from_date: date | None = None, test_limit: int | None = None
+    ) -> IngestionResult:
         """Run the active company ingestion pipeline.
 
         Args:
             from_date: Optional start date for EOD data (defaults to 1 year ago)
+            test_limit: Optional limit on number of companies to process (for testing)
 
         Returns:
             IngestionResult with counts and status
@@ -337,21 +213,25 @@ class ActiveNewListingPipeline:
             f"Filtered to {len(common_stock_companies)} common stock companies"
         )
 
+        # Apply test limit if provided
+        if test_limit is not None and test_limit > 0:
+            original_count = len(common_stock_companies)
+            common_stock_companies = common_stock_companies[:test_limit]
+            self.logger.info(
+                f"TEST LIMIT APPLIED: Processing only {len(common_stock_companies)} "
+                f"companies (limited from {original_count})"
+            )
+
         result: IngestionResult = {
             "total_companies": len(all_companies),
             "common_stock_count": len(common_stock_companies),
             "processed": 0,
-            "valid_companies": 0,
-            "invalid_companies": 0,
             "companies_inserted": 0,
             "tickers_inserted": 0,
             "ticker_histories_inserted": 0,
             "pricing_records_inserted": 0,
-            "failed_symbols": [],
             "errors": [],
         }
-
-        failed_companies: list[tuple[Company, CompanyStats, str]] = []
 
         for idx, company in enumerate(common_stock_companies, 1):
             symbol = company.ticker.symbol if company.ticker else "UNKNOWN"
@@ -367,16 +247,7 @@ class ActiveNewListingPipeline:
                 )
 
                 if not eod_data:
-                    self.logger.warning(f"No EOD data for {symbol}")
-                    stats = self._calculate_eod_stats(symbol, [])
-                    stats["name"] = company.company_name
-                    stats["exchange"] = company.exchange
-                    failed_companies.append((company, stats, "No EOD data"))
-                    result["invalid_companies"] += 1
-                    result["failed_symbols"].append(symbol)
-                    self._write_failed_company_data(
-                        company, stats, [], "No EOD data"
-                    )
+                    self.logger.warning(f"No EOD data for {symbol}, skipping")
                     continue
 
                 # Calculate statistics
@@ -384,21 +255,13 @@ class ActiveNewListingPipeline:
                 stats["name"] = company.company_name
                 stats["exchange"] = company.exchange
 
-                # Validate data
-                is_valid, reason = self._is_valid_data(company, stats)
+                # Calculate data quality flags
+                has_insufficient_coverage = stats["data_coverage_pct"] < 9000  # < 90%
+                low_suspicious_price = stats["max_price"] is not None and stats["max_price"] <= Decimal("1.00")
+                high_suspicious_price = stats["max_price"] is not None and stats["max_price"] >= Decimal("1000.00")
 
-                if not is_valid:
-                    self.logger.info(f"Invalid data for {symbol}: {reason}")
-                    failed_companies.append((company, stats, reason or "Unknown"))
-                    result["invalid_companies"] += 1
-                    result["failed_symbols"].append(symbol)
-                    self._write_failed_company_data(
-                        company, stats, eod_data, reason or "Validation failed"
-                    )
-                    continue
-
-                # Insert valid company data
-                self.logger.info(f"Inserting valid company {symbol}")
+                # Insert company data (no longer rejecting based on quality flags)
+                self.logger.info(f"Inserting company {symbol}")
 
                 # 1. Insert/update company
                 existing_company = self.company_repo.get_company_by_ticker(symbol)
@@ -411,14 +274,11 @@ class ActiveNewListingPipeline:
                 else:
                     # Insert company - need to get ID
                     inserted = self.company_repo.bulk_insert_companies([company])
-                    result["companies_inserted"] += inserted
-                    # Retrieve to get ID
-                    company_db = self.company_repo.get_company_by_ticker(symbol)
-                    if not company_db:
-                        raise ValueError(f"Failed to retrieve company after insert: {symbol}")
-                    if company_db.id is None:
-                        raise ValueError("id of company db cannot be None")
-                    company_id = company_db.id
+                    result["companies_inserted"] += len(inserted)
+                    # Use the inserted company's ID directly
+                    if not inserted or not inserted[0].id:
+                        raise ValueError(f"Failed to insert company: {symbol}")
+                    company_id = inserted[0].id
 
                 # 2. Insert ticker_history FIRST (required for ticker FK)
                 ticker_history = TickerHistory(
@@ -430,16 +290,12 @@ class ActiveNewListingPipeline:
                 inserted_histories = self.ticker_history_repo.bulk_insert_ticker_histories(
                     [ticker_history]
                 )
-                result["ticker_histories_inserted"] += inserted_histories
+                result["ticker_histories_inserted"] += len(inserted_histories)
 
-                # Get the ticker_history_id (required for ticker FK constraint)
-                ticker_histories = self.ticker_history_repo.get_ticker_history_by_symbol(
-                    symbol
-                )
-                if not ticker_histories:
-                    raise ValueError(f"Failed to retrieve ticker_history after insert: {symbol}")
-
-                ticker_history_id = ticker_histories[0].id
+                # Use the inserted ticker_history's ID directly
+                if not inserted_histories or not inserted_histories[0].id:
+                    raise ValueError(f"Failed to insert ticker_history: {symbol}")
+                ticker_history_id = inserted_histories[0].id
 
                 # 3. Insert ticker with ticker_history_id
                 existing_ticker = self.ticker_repo.get_ticker_by_symbol(symbol)
@@ -451,12 +307,17 @@ class ActiveNewListingPipeline:
                 else:
                     self.logger.info(f"Ticker {symbol} already exists, skipping insert")
 
-                # 4. Insert ticker_history_stats
+                # 4. Insert ticker_history_stats with quality flags
                 ticker_stats = TickerHistoryStats(
                     ticker_history_id=ticker_history_id,
                     data_coverage_pct=stats["data_coverage_pct"],
                     min_price=stats["min_price"],
                     max_price=stats["max_price"],
+                    average_price=stats["average_price"],
+                    median_price=stats["median_price"],
+                    has_insufficient_coverage=has_insufficient_coverage,
+                    low_suspicious_price=low_suspicious_price,
+                    high_suspicious_price=high_suspicious_price,
                 )
                 self.stats_repo.upsert_stats(ticker_stats)
 
@@ -469,17 +330,11 @@ class ActiveNewListingPipeline:
                 )
                 result["pricing_records_inserted"] += pricing_result.get("inserted", 0)
 
-                result["valid_companies"] += 1
                 result["processed"] += 1
 
             except Exception as e:
                 self.logger.exception(f"Error processing {symbol}: {e}")
                 result["errors"].append(f"{symbol}: {str(e)}")
-                result["failed_symbols"].append(symbol)
-
-        # Generate report for failed companies
-        if failed_companies:
-            self._generate_failed_report(failed_companies)
 
         self.logger.info("Active company ingestion pipeline completed")
         return result

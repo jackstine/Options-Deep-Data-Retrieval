@@ -10,7 +10,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from src.config.configuration import CONFIG
 from src.database.equities.tables.company import Company as CompanyTable
 from src.models.company import Company as CompanyDataModel
-from src.models.ticker import Ticker
 from src.repos.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
@@ -70,27 +69,94 @@ class CompanyRepository(BaseRepository[CompanyDataModel, CompanyTable]):
         return self.get(active_filter)
 
     def get_company_by_ticker(self, ticker: str) -> CompanyDataModel | None:
-        """Get company by ticker symbol using base repository."""
-        ticker_filter = CompanyDataModel(
-            ticker=Ticker(symbol=ticker.upper()), company_name="", exchange=""
-        )
-        return self.get_one(ticker_filter)
+        """Get company by ticker symbol.
 
-    def bulk_insert_companies(self, companies: list[CompanyDataModel]) -> int:
-        """Bulk insert companies using base repository."""
-        return self.insert_many(companies)
+        Queries by joining with ticker_history table to find companies
+        associated with the given ticker symbol (active or delisted).
+
+        Args:
+            ticker: Ticker symbol to search for
+
+        Returns:
+            Company data model or None if not found
+        """
+        try:
+            with self._SessionLocal() as session:
+                from src.database.equities.tables.ticker_history import (
+                    TickerHistory as TickerHistoryTable,
+                )
+
+                # Join Company with TickerHistory and filter by symbol
+                result = session.execute(
+                    select(CompanyTable)
+                    .join(TickerHistoryTable, CompanyTable.id == TickerHistoryTable.company_id)
+                    .where(TickerHistoryTable.symbol == ticker.upper())
+                    .limit(1)
+                )
+
+                db_model = result.scalar_one_or_none()
+
+                if db_model:
+                    return CompanyDataModel.from_db_model(db_model)
+                return None
+
+        except SQLAlchemyError as e:
+            logger.error(f"Database error retrieving company by ticker {ticker}: {e}")
+            raise
+
+    def bulk_insert_companies(self, companies: list[CompanyDataModel]) -> list[CompanyDataModel]:
+        """Bulk insert companies and return them with populated IDs.
+
+        Also updates the input companies list with database-generated IDs,
+        preserving any additional fields (like ticker) from the data source.
+
+        Args:
+            companies: List of company data models to insert
+
+        Returns:
+            List of company data models with populated IDs and timestamps
+        """
+        inserted_companies = self.insert_many_returning(companies)
+
+        # Update original companies with database-generated IDs
+        # This preserves ticker info from data source while adding IDs from DB
+        for original, inserted in zip(companies, inserted_companies, strict=False):
+            original.id = inserted.id
+
+        return inserted_companies
 
     def update_company(self, ticker: str, company_data: CompanyDataModel) -> bool:
-        """Update company by ticker using base repository."""
-        ticker_filter = CompanyDataModel(
-            ticker=Ticker(symbol=ticker.upper()), company_name="", exchange=""
-        )
-        return self.update(ticker_filter, company_data) > 0
+        """Update company by ticker symbol.
+
+        Args:
+            ticker: Ticker symbol to find the company
+            company_data: Company data to update
+
+        Returns:
+            True if company was updated, False otherwise
+        """
+        # First find the company by ticker to get its ID
+        existing_company = self.get_company_by_ticker(ticker)
+        if not existing_company or not existing_company.id:
+            return False
+
+        # Update by ID
+        return self.update_by_id(existing_company.id, company_data)
 
     def deactivate_company(self, ticker: str) -> bool:
-        """Deactivate company using base repository update."""
-        ticker_filter = CompanyDataModel(
-            ticker=Ticker(symbol=ticker.upper()), company_name="", exchange=""
-        )
+        """Deactivate company by ticker symbol.
+
+        Args:
+            ticker: Ticker symbol to find the company
+
+        Returns:
+            True if company was deactivated, False otherwise
+        """
+        # First find the company by ticker to get its ID
+        existing_company = self.get_company_by_ticker(ticker)
+        if not existing_company or not existing_company.id:
+            return False
+
+        # Update by ID
         deactivate_data = CompanyDataModel(active=False, company_name="", exchange="")
-        return self.update(ticker_filter, deactivate_data) > 0
+        return self.update_by_id(existing_company.id, deactivate_data)

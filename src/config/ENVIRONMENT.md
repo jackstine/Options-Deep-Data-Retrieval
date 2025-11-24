@@ -4,35 +4,38 @@ This document describes all environment variables used in the Options Deep stock
 
 ## Environment Variables
 
-- `OPTIONS_DEEP_ENV` - Selects which .env file to load (local, dev, qa, prod). If not set, defaults to `.env`
+- `OPTIONS_DEEP_ENV` - **[REQUIRED]** Selects which .env file to load. Must be set to one of: local, dev, qa, prod
 - `ENVIRONMENT` - Specifies which environment configuration to load (local, dev, qa, prod)
 - `OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD` - Database password for PostgreSQL connection
 - `NASDAQ_API_KEY` - API key for accessing NASDAQ company data
+- `EODHD_API_KEY` - API key for accessing EODHD market data
+- `OPTIONS_DEEP_TEST_LIMITS` - (Optional) Limits the number of companies/symbols processed in ingestion pipelines for testing purposes. Set to a positive integer (e.g., `10`, `100`). If not set or invalid, no limit is applied
 
 ## Environment File Selection
 
-The application uses `OPTIONS_DEEP_ENV` to determine which environment file to load:
+The application uses `OPTIONS_DEEP_ENV` to determine which environment file to load. This variable is **required** and must be set.
 
 | OPTIONS_DEEP_ENV | File Loaded | Use Case |
 |------------------|-------------|----------|
-| Not set (default) | `.env` | Default configuration |
-| `local` | `.env.local` | Local development |
-| `dev` | `.env.dev` | Development server |
-| `qa` | `.env.qa` | QA/Testing environment |
-| `prod` | `.env.prod` | Production environment |
+| `local` | `.local.env` | Local development |
+| `dev` | `.dev.env` | Development server |
+| `qa` | `.qa.env` | QA/Testing environment |
+| `prod` | `.prod.env` | Production environment |
 
 ### Example Usage
 ```bash
-# Use default .env file
-python src/cmd/my_script.py
-
-# Use local environment file
+# Use local environment file (REQUIRED - must set OPTIONS_DEEP_ENV)
 export OPTIONS_DEEP_ENV=local
 python src/cmd/my_script.py
 
 # Use production environment file
 export OPTIONS_DEEP_ENV=prod
 python src/cmd/my_script.py
+
+# Limit processing to 10 companies for testing
+export OPTIONS_DEEP_ENV=local
+export OPTIONS_DEEP_TEST_LIMITS=10
+python -m src.cmd.eod.eodhd.eod_ingestion
 ```
 
 ## Configuration Architecture
@@ -45,7 +48,7 @@ Contains sensitive information that should NEVER be committed to version control
 - API keys
 - Sensitive credentials
 
-Located in project root: `.env`, `.env.local`, `.env.dev`, `.env.qa`, `.env.prod`
+Located in project root: `.local.env`, `.dev.env`, `.qa.env`, `.prod.env`
 
 ### 2. JSON Configuration Files - Settings
 Contains non-sensitive configuration stored in version control:
@@ -83,10 +86,10 @@ Example JSON structure (`src/config/environment_configs/local.json`):
 
 1. Copy the example file:
    ```bash
-   cp env.example .env.local
+   cp env.example .local.env
    ```
 
-2. Edit `.env.local` and fill in your values:
+2. Edit `.local.env` and fill in your values:
    ```bash
    ENVIRONMENT=local
    OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD=your_local_password
@@ -108,13 +111,13 @@ Example JSON structure (`src/config/environment_configs/local.json`):
 1. Copy the example file and customize for your environment:
    ```bash
    # For dev
-   cp env.example .env.dev
+   cp env.example .dev.env
 
    # For qa
-   cp env.example .env.qa
+   cp env.example .qa.env
 
    # For prod
-   cp env.example .env.prod
+   cp env.example .prod.env
    ```
 
 2. Edit the file and fill in environment-specific values
@@ -142,6 +145,11 @@ api_key = CONFIG.get_nasdaq_api_key()
 
 # Get database config (combines env vars + JSON config)
 db_config = CONFIG.get_equities_config()
+
+# Get test limits (optional, returns None if not set)
+test_limit = CONFIG.get_test_limits()
+if test_limit:
+    print(f"Processing limited to {test_limit} items")
 ```
 
 ## Type Safety
@@ -183,11 +191,10 @@ src/config/
 └── ENVIRONMENT.md                 # This documentation file
 
 Project root:
-├── .env                           # Default env file (gitignored)
-├── .env.local                     # Local env file (gitignored)
-├── .env.dev                       # Dev env file (gitignored)
-├── .env.qa                        # QA env file (gitignored)
-├── .env.prod                      # Prod env file (gitignored)
+├── .local.env                     # Local env file (gitignored)
+├── .dev.env                       # Dev env file (gitignored)
+├── .qa.env                        # QA env file (gitignored)
+├── .prod.env                      # Prod env file (gitignored)
 └── env.example                    # Example env file (in git)
 ```
 
@@ -208,24 +215,29 @@ When adding new environment variables:
 
 ### Common Issues
 
-1. **Missing environment variable**
+1. **OPTIONS_DEEP_ENV not set**
+   - Error: `ERROR: OPTIONS_DEEP_ENV environment variable is not set.`
+   - Solution: Set OPTIONS_DEEP_ENV to one of: local, dev, qa, prod
+   - Example: `export OPTIONS_DEEP_ENV=local`
+
+2. **Missing environment variable**
    - Error: `ValueError: Missing required environment variables: ...`
-   - Solution: Ensure all required variables are set in your `.env.*` file
+   - Solution: Ensure all required variables are set in your `.{environment}.env` file
 
-2. **Wrong environment file**
+3. **Wrong environment file**
    - Error: `FileNotFoundError: Environment file not found: ...`
-   - Solution: Check that `OPTIONS_DEEP_ENV` matches an existing `.env.*` file
+   - Solution: Check that `OPTIONS_DEEP_ENV` matches an existing `.{environment}.env` file
 
-3. **Invalid OPTIONS_DEEP_ENV value**
+4. **Invalid OPTIONS_DEEP_ENV value**
    - Error: `ValueError: Invalid OPTIONS_DEEP_ENV value: ...`
    - Solution: Use one of: local, dev, qa, prod
 
-4. **Config file not found**
+5. **Config file not found**
    - Error: `Config file not found: src/config/environment_configs/...`
    - Solution: Ensure the corresponding JSON config file exists
 
-5. **Database connection fails**
-   - Verify database credentials in `.env.*` file
+6. **Database connection fails**
+   - Verify database credentials in `.{environment}.env` file
    - Check database host/port in `environment_configs/*.json`
    - Verify network connectivity
 

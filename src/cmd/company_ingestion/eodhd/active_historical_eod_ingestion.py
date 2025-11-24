@@ -25,6 +25,7 @@ import logging
 import sys
 from datetime import date, timedelta
 
+from src.config.configuration import CONFIG
 from src.data_sources.eodhd.eod_data import EodhdDataSource
 from src.data_sources.eodhd.symbols import EodhdSymbolsSource
 from src.pipelines.eod.active_new_listing_pipeline import ActiveNewListingPipeline
@@ -90,6 +91,11 @@ def main() -> int:
         logger.info("EODHD Active Company Ingestion")
         logger.info("=" * 80)
 
+        # Get test limit from environment
+        test_limit = CONFIG.get_test_limits()
+        if test_limit:
+            logger.info(f"TEST LIMIT ENABLED: Will process max {test_limit} companies")
+
         # Initialize data sources
         logger.info("Initializing EODHD data sources...")
         company_source = EodhdSymbolsSource()
@@ -113,7 +119,7 @@ def main() -> int:
 
         # Run ingestion
         logger.info("Starting ingestion process...")
-        result = pipeline.run_ingestion(from_date=from_date)
+        result = pipeline.run_ingestion(from_date=from_date, test_limit=test_limit)
 
         # Display results
         logger.info("=" * 80)
@@ -123,23 +129,11 @@ def main() -> int:
         logger.info(f"Common stock companies: {result['common_stock_count']}")
         logger.info(f"Companies processed: {result['processed']}")
         logger.info("")
-        logger.info(f"✓ Valid companies: {result['valid_companies']}")
-        logger.info(f"✗ Invalid companies: {result['invalid_companies']}")
-        logger.info("")
         logger.info(f"Companies inserted/updated: {result['companies_inserted']}")
         logger.info(f"Tickers inserted: {result['tickers_inserted']}")
         logger.info(f"Ticker histories inserted: {result['ticker_histories_inserted']}")
         logger.info(f"Pricing records inserted: {result['pricing_records_inserted']}")
         logger.info("")
-
-        if result["failed_symbols"]:
-            logger.info(f"Failed symbols ({len(result['failed_symbols'])}):")
-            for symbol in result["failed_symbols"][:10]:  # Show first 10
-                logger.info(f"  - {symbol}")
-            if len(result["failed_symbols"]) > 10:
-                logger.info(f"  ... and {len(result['failed_symbols']) - 10} more")
-            logger.info("")
-            logger.info("See reports/failed_active_eod_report.md for details")
 
         if result["errors"]:
             logger.warning(f"Errors encountered ({len(result['errors'])}):")
