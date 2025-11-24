@@ -234,6 +234,25 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
         filter_model = self._create_id_filter(id)
         return self.get_one(filter_model)
 
+    def get_limit_offset(
+        self,
+        limit: int,
+        offset: int,
+        filter_model: TDataModel | None = None,
+    ) -> list[TDataModel]:
+        """Get records with pagination using limit and offset.
+
+        Args:
+            limit: Maximum number of records to return
+            offset: Number of records to skip
+            filter_model: Optional data model with filter values
+
+        Returns:
+            List of data model instances
+        """
+        options = QueryOptions(limit=limit, offset=offset)
+        return self.get(filter_model, options)
+
     def count(self, filter_model: TDataModel | None = None) -> int:
         """Count records matching filter.
 
