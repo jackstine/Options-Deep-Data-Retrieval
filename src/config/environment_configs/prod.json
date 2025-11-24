@@ -1,16 +1,16 @@
 {
   "databases": {
     "equities": {
-      "host": "prod-db-server.example.com",
-      "port": 5432,
+      "host": "localhost",
+      "port": 5457,
       "database": "equities-prod",
-      "username": "prod_user"
+      "username": "e_user"
     },
     "algorithm": {
       "host": "prod-db-server.example.com",
-      "port": 5432,
+      "port": 5457,
       "database": "algorithms-prod",
-      "username": "prod_user"
+      "username": "e_user"
     }
   }
 }
