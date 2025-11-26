@@ -1,4 +1,4 @@
-"""Services layer for handling cross-repository operations and joins."""
+"""Pricing services for stock price data."""
 
 from src.services.pricing.split_adjusted_pricing_service import (
     SplitAdjustedPricingService,

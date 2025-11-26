@@ -193,7 +193,7 @@ class ActiveNewListingPipeline:
         )
 
     def run_ingestion(
-        self, from_date: date | None = None, test_limit: int | None = None
+        self, test_limit: int | None = None
     ) -> IngestionResult:
         """Run the active company ingestion pipeline.
 
@@ -208,10 +208,6 @@ class ActiveNewListingPipeline:
             raise ValueError("CompanyDataSource is required")
         if not self.historical_source:
             raise ValueError("HistoricalDataSource is required")
-
-        # Default to 1 year of data
-        if from_date is None:
-            from_date = date.today() - timedelta(days=365)
 
         self.logger.info("Starting active company ingestion pipeline")
 
@@ -249,7 +245,6 @@ class ActiveNewListingPipeline:
 
         for idx, company in enumerate(common_stock_companies, 1):
             symbol = company.ticker.symbol if company.ticker else "UNKNOWN"
-
             try:
                 self.logger.info(
                     f"[{idx}/{len(common_stock_companies)}] Processing {symbol}"
@@ -257,7 +252,7 @@ class ActiveNewListingPipeline:
 
                 # Get EOD data
                 eod_data = self.historical_source.get_eod_data(
-                    symbol, from_date=from_date
+                    symbol
                 )
 
                 if not eod_data:
