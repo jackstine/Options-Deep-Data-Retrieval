@@ -16,6 +16,7 @@ from src.models.ticker_history import (
 from src.repos.equities.companies.company_repository import CompanyRepository
 from src.repos.equities.tickers.ticker_history_repository import TickerHistoryRepository
 from src.repos.equities.tickers.ticker_repository import TickerRepository
+from src.services.companies.company_service import CompanyService
 
 
 class CompanyIngestionResult(TypedDict):
@@ -50,12 +51,16 @@ class CompanyPipeline:
         company_repo: CompanyRepository | None = None,
         ticker_repo: TickerRepository | None = None,
         ticker_history_repo: TickerHistoryRepository | None = None,
+        company_service: CompanyService | None = None,
         logger: logging.Logger | None = None,
     ):
         """Initialize the pipeline with repositories and logger."""
         self.company_repo = company_repo or CompanyRepository()
         self.ticker_repo = ticker_repo or TickerRepository()
         self.ticker_history_repo = ticker_history_repo or TickerHistoryRepository()
+        self.company_service = company_service or CompanyService(
+            self.company_repo, self.ticker_history_repo
+        )
         self.logger = logger or logging.getLogger(__name__)
 
     def run_ingestion(self, sources: list[CompanyDataSource]) -> CompanyIngestionResult:
@@ -206,7 +211,7 @@ class CompanyPipeline:
 
         try:
             # Get existing data from database
-            existing_company_symbols = self.company_repo.get_active_company_symbols()
+            existing_company_symbols = self.company_service.get_active_company_symbols()
             existing_ticker_symbols = self.ticker_repo.get_active_ticker_symbols()
 
             # Categorize companies
@@ -279,7 +284,7 @@ class CompanyPipeline:
                             market_cap=company.market_cap  # Only this will be updated
                         )
 
-                        if self.company_repo.update_company(ticker_symbol, market_cap_update):
+                        if self.company_service.update_company(ticker_symbol, market_cap_update):
                             results["updated"] += 1
                         else:
                             results["skipped"] += 1
@@ -309,10 +314,28 @@ class CompanyPipeline:
                 ):
                     # This might be an existing company with a new ticker symbol
                     assert ticker_symbol_for_new is not None  # Type guard for mypy
-                    existing_company = self.company_repo.get_company_by_ticker(
+                    existing_company_data = self.company_service.get_company_by_ticker(
                         ticker_symbol_for_new
                     )
-                    if existing_company:
+                    if existing_company_data:
+                        # Convert enriched TypedDict back to Company model
+                        existing_company = Company(
+                            id=existing_company_data["id"],
+                            company_name=existing_company_data["company_name"],
+                            exchange=existing_company_data["exchange"],
+                            sector=existing_company_data.get("sector"),
+                            industry=existing_company_data.get("industry"),
+                            country=existing_company_data.get("country"),
+                            market_cap=existing_company_data.get("market_cap"),
+                            description=existing_company_data.get("description"),
+                            active=existing_company_data.get("active", True),
+                            is_valid_data=existing_company_data.get("is_valid_data", True),
+                            source=existing_company_data.get("source", "EODHD"),
+                            ticker=TickerDataModel(
+                                symbol=existing_company_data["ticker_symbol"],
+                                company_id=existing_company_data["id"],
+                            ),
+                        )
                         existing_companies_with_new_tickers.append(existing_company)
 
             # Create additional tickers for existing companies with new ticker symbols
