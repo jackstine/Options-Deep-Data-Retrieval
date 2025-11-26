@@ -5,9 +5,6 @@ from __future__ import annotations
 import logging
 from datetime import date
 
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
-
 from src.config.configuration import CONFIG
 from src.database.equities.tables.ticker_history import (
     TickerHistory as TickerHistoryDBModel,
@@ -41,45 +38,6 @@ class TickerHistoryRepository(
             valid_from=date.today(),  # Will be ignored
             id=id,  # Will be used as filter
         )
-
-    def get_active_ticker_history_symbols(self) -> set[str]:
-        """Get all currently active ticker symbols from ticker history.
-
-        Filters by:
-        - Date validity (valid_from <= today <= valid_to or valid_to is None)
-        - Company active status (via join with companies table)
-
-        Returns:
-            Set of currently active ticker symbols
-        """
-        try:
-            with self._SessionLocal() as session:
-                from src.database.equities.tables.company import Company
-
-                today = date.today()
-                result = session.execute(
-                    select(TickerHistoryDBModel.symbol)
-                    .join(Company, TickerHistoryDBModel.company_id == Company.id)
-                    .where(
-                        (TickerHistoryDBModel.valid_from <= today)
-                        & (
-                            (TickerHistoryDBModel.valid_to.is_(None))
-                            | (TickerHistoryDBModel.valid_to >= today)
-                        )
-                        & Company.active
-                    )
-                )
-                symbols = {row[0] for row in result.fetchall()}
-                logger.info(
-                    f"Retrieved {len(symbols)} active ticker history symbols from database"
-                )
-                return symbols
-
-        except SQLAlchemyError as e:
-            logger.error(
-                f"Database error retrieving active ticker history symbols: {e}"
-            )
-            raise
 
     # Domain-specific methods using base repository functionality
     def get_ticker_history_for_company(
@@ -135,30 +93,6 @@ class TickerHistoryRepository(
             valid_to=valid_to,
         )
         return self.insert(ticker_history_data)
-
-    def get_active_ticker_histories(self) -> list[TickerHistoryDataModel]:
-        """Get all active ticker history records.
-
-        Returns ticker histories where the associated company is active.
-        """
-        try:
-            with self._SessionLocal() as session:
-                from src.database.equities.tables.company import Company
-
-                result = session.execute(
-                    select(TickerHistoryDBModel)
-                    .join(Company, TickerHistoryDBModel.company_id == Company.id)
-                    .where(Company.active)
-                )
-                db_models = result.scalars().all()
-                return [
-                    TickerHistoryDataModel.from_db_model(db_model)
-                    for db_model in db_models
-                ]
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error retrieving active ticker histories: {e}")
-            raise
 
     def deactivate_ticker_history(
         self, symbol: str, company_id: int, end_date: date | None = None
