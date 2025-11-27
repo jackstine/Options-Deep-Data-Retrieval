@@ -83,3 +83,20 @@ Do not return `dict[str, int]`  but instead return TypeDict classes that define 
    - that you add them to `src/config/models/environment_variables.py`
    - that access to the environment variables goes through `src/config/configuration.py`
    - you update the `src/config/ENVIRONMENT.md` with a summary of the variable
+
+
+## Static Type Checking
+### Step 1
+please run `python -m mypy <python_file>` to get the static type checking information.
+Use this after writing to files to fix common missing behaviours please.
+### Step 2
+then run `uv run pyright <python_file>` to get more static typing checking information, and fix those issues as well.
+
+## Common Packages
+if you need information on SqlAlchemy please conduct context7 resource `https://context7.com/sqlalchemy/sqlalchemy`
+
+
+## unit testing
+to test a file in this repo,  you will need to set the `OPTIONS_DEEP_ENV=unittest`
+ensure that it is always set to `unittest` this is a ***MUST***.
+`export OPTIONS_DEEP_ENV=unittest && python -m unittest <file> -v`

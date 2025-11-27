@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 from typing import TypedDict
 
@@ -141,7 +141,7 @@ class ActiveNewListingPipeline:
 
         decimal_average_price: Decimal
         if isinstance(average_price, float):
-            decimal_average_price = Decimal.from_float(average_price) 
+            decimal_average_price = Decimal.from_float(average_price)
         elif isinstance(average_price, int):
             decimal_average_price = Decimal(average_price)
         else:
@@ -175,7 +175,7 @@ class ActiveNewListingPipeline:
         else:
             coverage = 0
 
-        
+
         return CompanyStats(
             code=symbol,
             name="",
@@ -277,7 +277,7 @@ class ActiveNewListingPipeline:
                 company_id : int
                 if existing_company_data:
                     self.company_service.update_company(symbol, company)
-                    
+
                     if existing_company_data.company.id is None:
                         raise ValueError("id of existing company cannot be None")
                     company_id = existing_company_data.company.id

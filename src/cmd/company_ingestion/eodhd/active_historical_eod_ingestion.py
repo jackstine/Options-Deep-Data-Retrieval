@@ -23,7 +23,6 @@ Examples:
 import argparse
 import logging
 import sys
-from datetime import date, timedelta
 
 from src.config.configuration import CONFIG
 from src.data_sources.eodhd.eod_data import EodhdDataSource
