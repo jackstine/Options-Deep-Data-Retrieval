@@ -7,6 +7,10 @@ from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
+from src.algorithms.low_highs.constants import EXPIRED_DAYS_OUT
+from src.algorithms.low_highs.derived_data import LowHighDerivedData
+from src.utils.date_utils import days_between, get_year_month
+
 if TYPE_CHECKING:
     from src.database.algorithms.tables.reversals import Reversal as DBReversal
 
@@ -86,6 +90,102 @@ class Reversal:
         if self.highest_price == 0:
             return Decimal("0")
         return (self.highest_price - self.reversal_price) / self.highest_price
+
+    def is_expired(self) -> bool:
+        """Check if pattern was expired when it completed.
+
+        For reversals, check if the pattern took longer than expiration threshold.
+        See EXPIRED_DAYS_OUT in src.algorithms.low_highs.constants for threshold value.
+
+        Returns:
+            bool: True if pattern exceeded expiration period
+        """
+        days_from_ht_to_reversal = days_between(
+            self.high_threshold_date, self.reversal_date
+        )
+        return days_from_ht_to_reversal > EXPIRED_DAYS_OUT
+
+    def get_derived_data(self) -> LowHighDerivedData:
+        """Calculate derived data from the pattern.
+
+        This includes days between key points, status flags, and temporal metadata.
+        Mimics the old repository's get_data() function.
+
+        Returns:
+            LowHighDerivedData: TypedDict with all derived metrics
+        """
+        # Reversal patterns are always complete
+        is_complete = True
+
+        # Calculate days between all combinations of key points
+        days_ls_ht = days_between(self.low_start_date, self.high_threshold_date)
+        days_ls_h = days_between(self.low_start_date, self.highest_date)
+        days_ls_lt = days_between(self.low_start_date, self.low_threshold_date)
+        days_ls_r = days_between(self.low_start_date, self.reversal_date)
+        days_ht_h = days_between(self.high_threshold_date, self.highest_date)
+        days_ht_lt = days_between(self.high_threshold_date, self.low_threshold_date)
+        days_ht_r = days_between(self.high_threshold_date, self.reversal_date)
+        days_h_lt = days_between(self.highest_date, self.low_threshold_date)
+        days_h_r = days_between(self.highest_date, self.reversal_date)
+        days_lt_r = days_between(self.low_threshold_date, self.reversal_date)
+
+        # Temporal metadata for high threshold
+        ht_year = self.high_threshold_date.year
+        ht_year_month = get_year_month(self.high_threshold_date)
+        ht_month = self.high_threshold_date.month
+
+        # Temporal metadata for reversal
+        r_year = self.reversal_date.year
+        r_year_month = get_year_month(self.reversal_date)
+        r_month = self.reversal_date.month
+
+        # Status flags
+        still_high = False  # Completed patterns are no longer "high"
+
+        return LowHighDerivedData(
+            # Base fields
+            ticker_history_id=self.ticker_history_id,
+            threshold=self.threshold,
+            low_start_price=self.low_start_price,
+            low_start_date=self.low_start_date,
+            # Price and date fields
+            high_threshold_price=self.high_threshold_price,
+            high_threshold_date=self.high_threshold_date,
+            highest_price=self.highest_price,
+            highest_date=self.highest_date,
+            low_threshold_price=self.low_threshold_price,
+            low_threshold_date=self.low_threshold_date,
+            reversal_price=self.reversal_price,
+            reversal_date=self.reversal_date,
+            # Counter
+            number_of_low_thresholds=self.number_of_low_thresholds,
+            # Status flags
+            is_high=not is_complete,
+            is_reversal=is_complete,
+            still_high=still_high,
+            expired=self.is_expired(),
+            # Days between key points
+            days_ls_ht=days_ls_ht,
+            days_ls_h=days_ls_h,
+            days_ls_lt=days_ls_lt,
+            days_ls_r=days_ls_r,
+            days_ht_h=days_ht_h,
+            days_ht_lt=days_ht_lt,
+            days_ht_r=days_ht_r,
+            days_h_lt=days_h_lt,
+            days_h_r=days_h_r,
+            days_lt_r=days_lt_r,
+            days_ht_now=None,  # Not applicable for completed patterns
+            # Temporal metadata
+            ht_year=ht_year,
+            ht_year_month=ht_year_month,
+            ht_month=ht_month,
+            r_year=r_year,
+            r_year_month=r_year_month,
+            r_month=r_month,
+            # Constants
+            days_till_expiration=EXPIRED_DAYS_OUT,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization.
