@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from src.database.algorithms.tables.lows import Low as DBLow
 
-# Days until a pattern expires (from old_repo: EXPIRED_DAYS_OUT = 800)
-EXPIRATION_DAYS = 800
+# Days until a pattern expires
+EXPIRATION_DAYS = 1200
 
 
 @dataclass

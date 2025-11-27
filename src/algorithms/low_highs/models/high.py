@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from src.database.algorithms.tables.highs import High as DBHigh
 
-# Days until a pattern expires (from high/low implementation: EXPIRATION_DAYS = 800)
-EXPIRATION_DAYS = 800
+# Days until a pattern expires
+EXPIRATION_DAYS = 1200
 
 
 @dataclass
