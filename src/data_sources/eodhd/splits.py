@@ -252,7 +252,7 @@ if __name__ == "__main__":
                 print(f"  {split.date}: {split.split_ratio} (ratio={ratio})")
 
         # Example 2: Get splits for a specific date (bulk)
-        print(f"\nFetching splits for a specific date...")
+        print("\nFetching splits for a specific date...")
         from datetime import timedelta
 
         target_date = date.today() - timedelta(days=7)
