@@ -96,7 +96,7 @@ then run `uv run pyright <python_file>` to get more static typing checking infor
 if you need information on SqlAlchemy please conduct context7 resource `https://context7.com/sqlalchemy/sqlalchemy`
 
 
-## Testing
-to test a file in this repo,  you will need to set the `OPTIONS_DEEP_ENV=local`
-ensure that it is always set to `local` this is a ***MUST***.
-`export OPTIONS_DEEP_ENV=local && python -m unittest <file> -v`
+## unit testing
+to test a file in this repo,  you will need to set the `OPTIONS_DEEP_ENV=unittest`
+ensure that it is always set to `unittest` this is a ***MUST***.
+`export OPTIONS_DEEP_ENV=unittest && python -m unittest <file> -v`
