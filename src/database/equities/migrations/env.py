@@ -29,7 +29,7 @@ target_metadata = Base.metadata
 # Set the database URL from environment configuration
 # Default to equities database for migrations
 db_config = CONFIG.get_database_config("equities")
-config.set_main_option("sqlalchemy.url", db_config.get_connection_string())
+config.set_main_option("sqlalchemy.url", db_config.get_connection_string(driver="psycopg2"))
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

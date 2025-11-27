@@ -17,12 +17,17 @@ class DatabaseConfig:
     password: str
     environment: str
 
-    def get_connection_string(self) -> str:
+    def get_connection_string(self, driver: str = "psycopg2") -> str:
         """Get PostgreSQL connection string.
 
         For testcontainers: Checks for OPTIONS_DEEP_TEST_DB_PORT environment variable
         and overrides the configured port if present. This allows tests to use
         dynamically assigned ports from Docker containers.
+
+        Args:
+            driver: Optional SQLAlchemy driver name (e.g., "psycopg2", "psycopg").
+                    If provided, will be appended as postgresql+driver://
+                    defaults to psycopg2
 
         Returns:
             SQLAlchemy connection string
@@ -31,13 +36,18 @@ class DatabaseConfig:
         test_db_port = os.getenv("OPTIONS_DEEP_TEST_DB_PORT")
         port = test_db_port if test_db_port else self.port
 
-        return f"postgresql://{self.username}:{self.password}@{self.host}:{port}/{self.database}"
+        driver_part = f"+{driver}" if driver else ""
+        return f"postgresql{driver_part}://{self.username}:{self.password}@{self.host}:{port}/{self.database}"
 
-    def get_async_connection_string(self) -> str:
+    def get_async_connection_string(self, driver: str = "asyncpg") -> str:
         """Get PostgreSQL async connection string.
 
         For testcontainers: Checks for OPTIONS_DEEP_TEST_DB_PORT environment variable
         and overrides the configured port if present.
+
+        Args:
+            driver: SQLAlchemy async driver name. Defaults to "asyncpg".
+                    Other options include "psycopg" (psycopg3 async).
 
         Returns:
             SQLAlchemy async connection string
@@ -46,4 +56,4 @@ class DatabaseConfig:
         test_db_port = os.getenv("OPTIONS_DEEP_TEST_DB_PORT")
         port = test_db_port if test_db_port else self.port
 
-        return f"postgresql+asyncpg://{self.username}:{self.password}@{self.host}:{port}/{self.database}"
+        return f"postgresql+{driver}://{self.username}:{self.password}@{self.host}:{port}/{self.database}"
