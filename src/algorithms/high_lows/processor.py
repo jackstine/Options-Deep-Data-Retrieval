@@ -143,8 +143,10 @@ def process_high_low_patterns(
 				if price >= pattern.lowest_price * (Decimal("1") + threshold):
 					pattern.high_threshold_price = price
 					pattern.high_threshold_date = price_data.date
+					pattern.number_of_high_thresholds += 1
 					logger.debug(
-						f"Pattern {pattern.id or 'new'}: High threshold reached at {price}"
+						f"Pattern {pattern.id or 'new'}: High threshold reached at {price} "
+						f"(count={pattern.number_of_high_thresholds})"
 					)
 
 					# Spawn new pattern if not already spawned
@@ -272,4 +274,5 @@ def _create_rebound_from_low(low: Low, rebound_price: Decimal, rebound_date: dat
 		high_threshold_date=low.high_threshold_date,
 		rebound_price=rebound_price,
 		rebound_date=rebound_date,
+		number_of_high_thresholds=low.number_of_high_thresholds,
 	)

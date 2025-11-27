@@ -43,6 +43,7 @@ class Low:
     lowest_date: date | None = None
     high_threshold_price: Decimal | None = None
     high_threshold_date: date | None = None
+    number_of_high_thresholds: int = 0
     spawned: bool = False
     expired: bool = False
     id: int | None = None
@@ -138,6 +139,7 @@ class Low:
             "high_threshold_date": (
                 self.high_threshold_date.isoformat() if self.high_threshold_date else None
             ),
+            "number_of_high_thresholds": self.number_of_high_thresholds,
             "last_updated": self.last_updated.isoformat(),
             "spawned": self.spawned,
             "expired": self.expired,
@@ -193,6 +195,7 @@ class Low:
                 else None
             ),
             high_threshold_date=self.high_threshold_date,
+            number_of_high_thresholds=self.number_of_high_thresholds,
             last_updated=self.last_updated,
             spawned=self.spawned,
             expired=self.expired,
@@ -242,6 +245,7 @@ class Low:
                 else None
             ),
             high_threshold_date=db_model.high_threshold_date,
+            number_of_high_thresholds=db_model.number_of_high_thresholds,
             last_updated=db_model.last_updated,
             spawned=db_model.spawned,
             expired=db_model.expired,
@@ -281,6 +285,7 @@ class Low:
             else None
         )
         db_model.high_threshold_date = self.high_threshold_date
+        db_model.number_of_high_thresholds = self.number_of_high_thresholds
         db_model.last_updated = self.last_updated
         db_model.spawned = self.spawned
         db_model.expired = self.expired

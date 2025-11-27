@@ -143,8 +143,10 @@ def process_low_high_patterns(
 				if price <= pattern.highest_price / (Decimal("1") + threshold):
 					pattern.low_threshold_price = price
 					pattern.low_threshold_date = price_data.date
+					pattern.number_of_low_thresholds += 1
 					logger.debug(
-						f"Pattern {pattern.id or 'new'}: Low threshold reached at {price}"
+						f"Pattern {pattern.id or 'new'}: Low threshold reached at {price} "
+						f"(count={pattern.number_of_low_thresholds})"
 					)
 
 					# Spawn new pattern if not already spawned
@@ -272,4 +274,5 @@ def _create_reversal_from_high(high: High, reversal_price: Decimal, reversal_dat
 		low_threshold_date=high.low_threshold_date,
 		reversal_price=reversal_price,
 		reversal_date=reversal_date,
+		number_of_low_thresholds=high.number_of_low_thresholds,
 	)

@@ -67,6 +67,11 @@ class High(Base):
     low_threshold_price: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     low_threshold_date: Mapped[date_type | None] = mapped_column(Date, nullable=True)
 
+    # Threshold crossing counter - tracks number of times low_threshold is crossed
+    number_of_low_thresholds: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+
     # Tracking fields
     last_updated: Mapped[date_type] = mapped_column(Date, nullable=False, index=True)
     spawned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

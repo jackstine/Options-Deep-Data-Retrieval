@@ -73,6 +73,11 @@ class Rebound(Base):
     rebound_price: Mapped[int] = mapped_column(BigInteger, nullable=False)
     rebound_date: Mapped[date_type] = mapped_column(Date, nullable=False, index=True)
 
+    # Threshold crossing counter - tracks number of times high_threshold was crossed
+    number_of_high_thresholds: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+
     # Relationships
     ticker_history: Mapped[TickerHistory] = relationship(
         "TickerHistory", foreign_keys=[ticker_history_id]

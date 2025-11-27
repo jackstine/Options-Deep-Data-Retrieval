@@ -40,6 +40,7 @@ class Rebound:
     high_threshold_date: date
     rebound_price: Decimal
     rebound_date: date
+    number_of_high_thresholds: int
     id: int | None = None
 
     def days_from_low_to_rebound(self) -> int:
@@ -106,6 +107,7 @@ class Rebound:
             "high_threshold_date": self.high_threshold_date.isoformat(),
             "rebound_price": float(self.rebound_price),
             "rebound_date": self.rebound_date.isoformat(),
+            "number_of_high_thresholds": self.number_of_high_thresholds,
             "days_from_low_to_rebound": self.days_from_low_to_rebound(),
             "total_pattern_days": self.total_pattern_days(),
             "drop_percentage": float(self.drop_percentage()),
@@ -152,6 +154,7 @@ class Rebound:
             high_threshold_date=self.high_threshold_date,
             rebound_price=int(self.rebound_price * PRICE_MULTIPLIER),
             rebound_date=self.rebound_date,
+            number_of_high_thresholds=self.number_of_high_thresholds,
         )
 
         if self.id is not None:
@@ -190,6 +193,7 @@ class Rebound:
             high_threshold_date=db_model.high_threshold_date,
             rebound_price=Decimal(db_model.rebound_price) / PRICE_MULTIPLIER,
             rebound_date=db_model.rebound_date,
+            number_of_high_thresholds=db_model.number_of_high_thresholds,
         )
 
     def update_db_model(self, db_model: DBRebound) -> None:
@@ -220,3 +224,4 @@ class Rebound:
         db_model.high_threshold_date = self.high_threshold_date
         db_model.rebound_price = int(self.rebound_price * PRICE_MULTIPLIER)
         db_model.rebound_date = self.rebound_date
+        db_model.number_of_high_thresholds = self.number_of_high_thresholds

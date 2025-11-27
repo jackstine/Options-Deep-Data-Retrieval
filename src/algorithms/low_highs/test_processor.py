@@ -353,6 +353,7 @@ class TestProcessorStateThree(unittest.TestCase):
             highest_date=self.base_date + timedelta(days=2),
             low_threshold_price=Decimal("83.00"),
             low_threshold_date=self.base_date + timedelta(days=3),
+            number_of_low_thresholds=1,  # Counter was incremented when low_threshold was set
             last_updated=self.base_date + timedelta(days=3),
             spawned=True,
         )
@@ -378,6 +379,60 @@ class TestProcessorStateThree(unittest.TestCase):
         self.assertIsNone(updated_pattern.low_threshold_date)
         self.assertEqual(updated_pattern.highest_price, Decimal("105.00"))
         self.assertEqual(updated_pattern.highest_date, self.base_date + timedelta(days=4))
+        # Counter should remain unchanged (retains previous count)
+        self.assertEqual(updated_pattern.number_of_low_thresholds, 1)
+
+    def test_low_threshold_counter_increments_on_each_crossing(self) -> None:
+        """Test that number_of_low_thresholds increments on each threshold crossing."""
+        # Arrange - Pattern in State 2 (high_threshold set, waiting for low_threshold)
+        pattern = High(
+            ticker_history_id=self.ticker_history_id,
+            threshold=self.threshold,
+            low_start_price=Decimal("80.00"),
+            low_start_date=self.base_date,
+            high_threshold_price=Decimal("96.00"),
+            high_threshold_date=self.base_date + timedelta(days=1),
+            highest_price=Decimal("100.00"),
+            highest_date=self.base_date + timedelta(days=2),
+            last_updated=self.base_date + timedelta(days=2),
+            spawned=False,
+        )
+
+        # Simulate oscillating pattern:
+        # Day 3: Decline to 83.33 (crosses low_threshold from 100) - count should be 1
+        # Day 4: Rise to 102 (above highest, resets low_threshold) - count stays 1
+        # Day 5: Decline to 85 (crosses low_threshold again from 102) - count should be 2
+        # Day 6: Rise to 105 (above highest, resets low_threshold) - count stays 2
+        # Day 7: Decline to 87.5 (crosses low_threshold again from 105) - count should be 3
+        new_prices = [
+            DatePrice(date=self.base_date + timedelta(days=3), price=Decimal("83.33")),  # 1st crossing
+            DatePrice(date=self.base_date + timedelta(days=4), price=Decimal("102.00")),  # Reset
+            DatePrice(date=self.base_date + timedelta(days=5), price=Decimal("85.00")),  # 2nd crossing
+            DatePrice(date=self.base_date + timedelta(days=6), price=Decimal("105.00")),  # Reset
+            DatePrice(date=self.base_date + timedelta(days=7), price=Decimal("87.50")),  # 3rd crossing
+        ]
+
+        # Act
+        result = process_low_high_patterns([pattern], new_prices, self.threshold)
+
+        # Assert
+        self.assertGreaterEqual(len(result.active_highs), 1)  # At least original pattern
+        self.assertEqual(len(result.completed_reversals), 0)
+
+        # Find the original pattern by checking which one started at low_start_price 80
+        original_pattern = None
+        for p in result.active_highs:
+            if p.low_start_price == Decimal("80.00"):
+                original_pattern = p
+                break
+
+        self.assertIsNotNone(original_pattern, "Original pattern should still be active")
+
+        # Should have crossed low_threshold 3 times
+        self.assertEqual(original_pattern.number_of_low_thresholds, 3)      # pyright: ignore[reportOptionalMemberAccess]
+        # Should still be in State 3 (low_threshold set, waiting for reversal)
+        self.assertIsNotNone(original_pattern.low_threshold_price)          # pyright: ignore[reportOptionalMemberAccess]
+        self.assertEqual(original_pattern.highest_price, Decimal("105.00")) # pyright: ignore[reportOptionalMemberAccess]
 
 
 class TestEdgeCases(unittest.TestCase):

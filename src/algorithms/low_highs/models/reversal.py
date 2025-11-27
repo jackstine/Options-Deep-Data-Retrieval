@@ -40,6 +40,7 @@ class Reversal:
     low_threshold_date: date
     reversal_price: Decimal
     reversal_date: date
+    number_of_low_thresholds: int
     id: int | None = None
 
     def days_from_high_to_reversal(self) -> int:
@@ -106,6 +107,7 @@ class Reversal:
             "low_threshold_date": self.low_threshold_date.isoformat(),
             "reversal_price": float(self.reversal_price),
             "reversal_date": self.reversal_date.isoformat(),
+            "number_of_low_thresholds": self.number_of_low_thresholds,
             "days_from_high_to_reversal": self.days_from_high_to_reversal(),
             "total_pattern_days": self.total_pattern_days(),
             "rise_percentage": float(self.rise_percentage()),
@@ -152,6 +154,7 @@ class Reversal:
             low_threshold_date=self.low_threshold_date,
             reversal_price=int(self.reversal_price * PRICE_MULTIPLIER),
             reversal_date=self.reversal_date,
+            number_of_low_thresholds=self.number_of_low_thresholds,
         )
 
         if self.id is not None:
@@ -190,6 +193,7 @@ class Reversal:
             low_threshold_date=db_model.low_threshold_date,
             reversal_price=Decimal(db_model.reversal_price) / PRICE_MULTIPLIER,
             reversal_date=db_model.reversal_date,
+            number_of_low_thresholds=db_model.number_of_low_thresholds,
         )
 
     def update_db_model(self, db_model: DBReversal) -> None:
@@ -220,3 +224,4 @@ class Reversal:
         db_model.low_threshold_date = self.low_threshold_date
         db_model.reversal_price = int(self.reversal_price * PRICE_MULTIPLIER)
         db_model.reversal_date = self.reversal_date
+        db_model.number_of_low_thresholds = self.number_of_low_thresholds
