@@ -18,6 +18,6 @@
 
 - **Multiple Thresholds**: Each ticker has patterns at 15%, 20%, 25%, etc.
 - **Pattern Spawning**: When a pattern hits high_threshold, a new pattern begins
-- **Expiration**: Patterns expire after 800 days from low_threshold_date
+- **Expiration**: Patterns expire after a configurable period from low_threshold_date (see `EXPIRED_DAYS_OUT` in `src/algorithms/high_lows/constants.py`)
 - **Precision**: Prices stored as BIGINT × 1,000,000 (penny = 10,000)
 
