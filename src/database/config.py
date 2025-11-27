@@ -46,10 +46,19 @@ def get_database_config(database_name: str = "equities") -> DatabaseConfig:
     environment = os.getenv("ENVIRONMENT", "local").lower()
 
     # Get database password
+    # First try environment variable
     password = os.getenv("OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD")
+
+    # If not in environment, try to read from .{OPTIONS_DEEP_ENV}.env file
+    if password is None:
+        options_deep_env = os.getenv("OPTIONS_DEEP_ENV", environment)
+        password = _get_password_from_env_file(options_deep_env)
+
+    # If still not found, raise error
     if password is None:
         raise ValueError(
-            "OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD environment variable is not set"
+            "OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD not found in environment variables "
+            f"or .{os.getenv('OPTIONS_DEEP_ENV', environment)}.env file"
         )
 
     # Load config from JSON file
@@ -119,3 +128,36 @@ def get_available_databases() -> list[str]:
         return []
 
     return list(config_data["databases"].keys())
+
+def _get_password_from_env_file(options_deep_env: str) -> str | None:
+    """Try to read OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD from env file.
+
+    Args:
+        options_deep_env: The OPTIONS_DEEP_ENV value (e.g., 'local', 'dev')
+
+    Returns:
+        Password string if found, None otherwise
+    """
+    env_file = Path.cwd() / f".{options_deep_env}.env"
+
+    if not env_file.exists():
+        return None
+
+    try:
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                # Skip comments and empty lines
+                if not line or line.startswith("#"):
+                    continue
+                # Parse KEY=VALUE format
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    if key.strip() == "OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD":
+                        return value.strip()
+    except Exception:
+        # If we can't read the file, just return None
+        return None
+
+    return None
+
