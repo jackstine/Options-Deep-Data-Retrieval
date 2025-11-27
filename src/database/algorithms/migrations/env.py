@@ -5,7 +5,7 @@ from pathlib import Path
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from src.config.configuration import CONFIG
+from src.database.config import get_database_config
 from src.database.algorithms.base import Base
 
 # Add the src directory to the Python path
@@ -29,7 +29,7 @@ target_metadata = Base.metadata
 
 # Set the database URL from environment configuration
 # Target algorithms database for migrations
-db_config = CONFIG.get_database_config("algorithm")
+db_config = get_database_config("algorithm")
 config.set_main_option("sqlalchemy.url", db_config.get_connection_string(driver="psycopg2"))
 
 # other values from the config, defined by the needs of env.py,

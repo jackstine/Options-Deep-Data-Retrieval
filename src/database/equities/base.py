@@ -5,7 +5,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.config.configuration import CONFIG
+from src.database.config import get_database_config
 
 # This is the primary database for this configuration.
 DATABASE = "equities"
@@ -17,7 +17,7 @@ Base = declarative_base()
 # Database engine and session for equities
 def get_engine() -> Engine:
     """Get database engine for equities database."""
-    config = CONFIG.get_database_config(DATABASE)
+    config = get_database_config(DATABASE)
     return create_engine(config.get_connection_string())
 
 
