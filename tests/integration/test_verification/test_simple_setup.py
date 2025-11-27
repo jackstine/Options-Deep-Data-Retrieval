@@ -12,39 +12,30 @@ Alembic migrations pre-applied. Build the image first using:
 
 from __future__ import annotations
 
-import os
-
 # IMPORTANT: Set environment variables BEFORE importing any src modules
-# This prevents CONFIG from initializing during import time
-os.environ["OPTIONS_DEEP_ENV"] = "local-test"
-os.environ["OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD"] = "test"
-os.environ["ENVIRONMENT"] = "local-test"
-os.environ["NASDAQ_API_KEY"] = "test_key"
-os.environ["EODHD_API_KEY"] = "test_key"
+from tests.integration.common_setup import setup_test_environment
 
-import pytest
+setup_test_environment()
+
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session, sessionmaker
-from testcontainers.postgres import PostgresContainer
 
 from src.database.equities.enums import DataSourceEnum
 from src.models.company import Company
-# Note: CompanyRepository imported inside test function after port is set
+from tests.integration.common_setup import integration_test_container
 
 
 def test_simple_setup():
     """Simple end-to-end test: container -> schema -> insert -> select."""
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("STEP 1: Starting PostgreSQL container...")
-    print("="*80)
+    print("=" * 80)
 
-    # Start PostgreSQL container with pre-applied migrations
-    with PostgresContainer("options-deep-test:latest", username="test", password="test", dbname="test") as postgres:
+    # Start PostgreSQL container using common setup
+    with integration_test_container() as (postgres, repo, port):
 
         # Get connection details
         host = postgres.get_container_host_ip()
-        port = postgres.get_exposed_port(5432)
         database = "test"
         username = "test"
         password = "test"
@@ -52,34 +43,28 @@ def test_simple_setup():
         print(f"✓ Container started: {host}:{port}")
         print(f"  Database: {database}, User: {username}")
 
-        print("\n" + "="*80)
-        print("STEP 2: Setting up environment variables...")
-        print("="*80)
-
-        # Set environment variables for test
-        os.environ["OPTIONS_DEEP_ENV"] = "local-test"
-        os.environ["OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD"] = password
-        os.environ["OPTIONS_DEEP_TEST_DB_PORT"] = str(port)
-        os.environ["ENVIRONMENT"] = "local-test"
-        os.environ["NASDAQ_API_KEY"] = "test_key"
-        os.environ["EODHD_API_KEY"] = "test_key"
+        print("\n" + "=" * 80)
+        print("STEP 2: Environment configured via common_setup")
+        print("=" * 80)
 
         print(f"✓ OPTIONS_DEEP_ENV = local-test")
         print(f"✓ OPTIONS_DEEP_TEST_DB_PORT = {port}")
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("STEP 3: Verifying tables were created (pre-applied in Docker image)...")
-        print("="*80)
+        print("=" * 80)
 
         # Create direct connection to verify tables
         connection_string = f"postgresql+psycopg2://{username}:{password}@{host}:{port}/{database}"
         engine = create_engine(connection_string)
 
         with engine.connect() as conn:
-            result = conn.execute(text(
-                "SELECT table_name FROM information_schema.tables "
-                "WHERE table_schema = 'public' ORDER BY table_name"
-            ))
+            result = conn.execute(
+                text(
+                    "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_schema = 'public' ORDER BY table_name"
+                )
+            )
             tables = [row[0] for row in result]
 
         print(f"✓ Found {len(tables)} tables:")
@@ -89,16 +74,10 @@ def test_simple_setup():
         # Verify companies table exists
         assert "companies" in tables, "companies table should exist"
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("STEP 4: Creating repository and inserting company...")
-        print("="*80)
+        print("=" * 80)
 
-        # Now import CompanyRepository after dynamic port is set
-        # This ensures CONFIG reads the correct port
-        from src.repos.equities.companies.company_repository import CompanyRepository
-
-        # Create repository
-        repo = CompanyRepository()
         print(f"✓ Repository created with dynamic port: {port}")
 
         # Create test company
@@ -124,9 +103,9 @@ def test_simple_setup():
 
         company_id = inserted.id
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("STEP 5: Selecting company from repository...")
-        print("="*80)
+        print("=" * 80)
 
         # Select company by ID
         retrieved = repo.get_by_id(company_id)
@@ -138,13 +117,13 @@ def test_simple_setup():
         assert retrieved.exchange == "NASDAQ", "Exchange should match"
         assert retrieved.active is True, "Active status should match"
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("✅ ALL STEPS COMPLETED SUCCESSFULLY!")
-        print("="*80)
+        print("=" * 80)
         print("Summary:")
         print("  ✓ Container started with pre-applied migrations")
         print("  ✓ Schema verified (10 tables including alembic_version)")
         print("  ✓ Company inserted via repository")
         print("  ✓ Company retrieved via repository")
         print("  ✓ All data matched correctly")
-        print("="*80)
+        print("=" * 80)

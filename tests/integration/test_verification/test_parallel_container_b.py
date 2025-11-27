@@ -12,21 +12,16 @@ Alembic migrations pre-applied. Build the image first using:
 
 from __future__ import annotations
 
-import os
 from datetime import datetime
 
 # IMPORTANT: Set environment variables BEFORE importing any src modules
-# This prevents CONFIG from initializing during import time
-os.environ["OPTIONS_DEEP_ENV"] = "local-test"
-os.environ["OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD"] = "test"
-os.environ["ENVIRONMENT"] = "local-test"
-os.environ["NASDAQ_API_KEY"] = "test_key"
-os.environ["EODHD_API_KEY"] = "test_key"
+from tests.integration.common_setup import setup_test_environment
 
-from testcontainers.postgres import PostgresContainer
+setup_test_environment()
 
 from src.database.equities.enums import DataSourceEnum
 from src.models.company import Company
+from tests.integration.common_setup import integration_test_container
 
 
 def test_parallel_container_b():
@@ -37,35 +32,19 @@ def test_parallel_container_b():
     print(f"TEST B: Started at {start_time.strftime('%H:%M:%S.%f')[:-3]}")
     print("=" * 80)
 
-    # Start PostgreSQL container with pre-applied migrations
-    # This container is INDEPENDENT from any other test containers
-    with PostgresContainer(
-        "options-deep-test:latest", username="test", password="test", dbname="test"
-    ) as postgres:
+    # Start PostgreSQL container using common setup
+    with integration_test_container() as (postgres, repo, port):
 
         # Get connection details
         host = postgres.get_container_host_ip()
-        port = postgres.get_exposed_port(5432)
 
         container_start = datetime.now()
         print(f"\n✓ TEST B: Container started at {container_start.strftime('%H:%M:%S.%f')[:-3]}")
         print(f"  Container: {host}:{port}")
         print(f"  Time elapsed: {(container_start - start_time).total_seconds():.3f}s")
 
-        # Set environment variables for this test's dynamic port
-        os.environ["OPTIONS_DEEP_ENV"] = "local-test"
-        os.environ["OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD"] = "test"
-        os.environ["OPTIONS_DEEP_TEST_DB_PORT"] = str(port)
-        os.environ["ENVIRONMENT"] = "local-test"
-        os.environ["NASDAQ_API_KEY"] = "test_key"
-        os.environ["EODHD_API_KEY"] = "test_key"
-
         print(f"\n✓ TEST B: Environment configured (port {port})")
 
-        # Import repository AFTER port is set
-        from src.repos.equities.companies.company_repository import CompanyRepository
-
-        repo = CompanyRepository()
         repo_ready = datetime.now()
         print(f"✓ TEST B: Repository created at {repo_ready.strftime('%H:%M:%S.%f')[:-3]}")
         print(f"  Time elapsed: {(repo_ready - start_time).total_seconds():.3f}s")
