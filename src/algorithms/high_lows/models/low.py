@@ -7,6 +7,10 @@ from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
+from src.algorithms.high_lows.constants import EXPIRED_DAYS_OUT
+from src.algorithms.high_lows.derived_data import HighLowDerivedData
+from src.utils.date_utils import days_between, get_year_month
+
 if TYPE_CHECKING:
     from src.database.algorithms.tables.lows import Low as DBLow
 
@@ -112,6 +116,108 @@ class Low:
         if not self.low_threshold_date:
             return None
         return (date.today() - self.low_threshold_date).days
+
+    def get_derived_data(self) -> HighLowDerivedData:
+        """Calculate derived data from the pattern.
+
+        This includes days between key points, status flags, and temporal metadata.
+        Mimics the old repository's get_data() function.
+
+        Returns:
+            HighLowDerivedData: TypedDict with all derived metrics
+        """
+        # Low patterns never have a rebound (they're still active)
+        is_complete = False
+
+        # Calculate days between all combinations of key points
+        days_hs_lt = (
+            days_between(self.high_start_date, self.low_threshold_date)
+            if self.low_threshold_date
+            else None
+        )
+        days_hs_l = (
+            days_between(self.high_start_date, self.lowest_date)
+            if self.lowest_date
+            else None
+        )
+        days_hs_ht = (
+            days_between(self.high_start_date, self.high_threshold_date)
+            if self.high_threshold_date
+            else None
+        )
+        days_lt_l = (
+            days_between(self.low_threshold_date, self.lowest_date)
+            if self.low_threshold_date and self.lowest_date
+            else None
+        )
+        days_lt_ht = (
+            days_between(self.low_threshold_date, self.high_threshold_date)
+            if self.low_threshold_date and self.high_threshold_date
+            else None
+        )
+        days_l_ht = (
+            days_between(self.lowest_date, self.high_threshold_date)
+            if self.lowest_date and self.high_threshold_date
+            else None
+        )
+
+        # Days since low threshold (for active patterns only)
+        days_lt_now = self.days_since_low_threshold()
+
+        # Temporal metadata for low threshold
+        lt_year = self.low_threshold_date.year if self.low_threshold_date else None
+        lt_year_month = (
+            get_year_month(self.low_threshold_date) if self.low_threshold_date else None
+        )
+        lt_month = self.low_threshold_date.month if self.low_threshold_date else None
+
+        # Status flags
+        still_low = not is_complete and not self.is_expired()
+
+        return HighLowDerivedData(
+            # Base fields
+            ticker_history_id=self.ticker_history_id,
+            threshold=self.threshold,
+            high_start_price=self.high_start_price,
+            high_start_date=self.high_start_date,
+            # Price and date fields
+            low_threshold_price=self.low_threshold_price,
+            low_threshold_date=self.low_threshold_date,
+            lowest_price=self.lowest_price,
+            lowest_date=self.lowest_date,
+            high_threshold_price=self.high_threshold_price,
+            high_threshold_date=self.high_threshold_date,
+            rebound_price=None,  # Low patterns don't have rebound
+            rebound_date=None,
+            # Counter
+            number_of_high_thresholds=self.number_of_high_thresholds,
+            # Status flags
+            is_low=not is_complete,
+            is_rebound=is_complete,
+            still_low=still_low,
+            expired=self.is_expired(),
+            # Days between key points
+            days_hs_lt=days_hs_lt,
+            days_hs_l=days_hs_l,
+            days_hs_ht=days_hs_ht,
+            days_hs_r=None,  # No rebound for Low patterns
+            days_lt_l=days_lt_l,
+            days_lt_ht=days_lt_ht,
+            days_lt_r=None,  # No rebound for Low patterns
+            days_l_ht=days_l_ht,
+            days_l_r=None,  # No rebound for Low patterns
+            days_ht_r=None,  # No rebound for Low patterns
+            days_lt_now=days_lt_now,
+            # Temporal metadata
+            lt_year=lt_year,
+            lt_year_month=lt_year_month,
+            lt_month=lt_month,
+            r_year=None,  # No rebound for Low patterns
+            r_year_month=None,
+            r_month=None,
+            # Constants
+            days_till_expiration=EXPIRED_DAYS_OUT,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization.
