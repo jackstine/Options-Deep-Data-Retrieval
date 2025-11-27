@@ -56,7 +56,7 @@ class ConfigurationManager:
             SystemExit: If OPTIONS_DEEP_ENV is not set
         """
         options_deep_env = os.getenv("OPTIONS_DEEP_ENV")
-        valid_envs = ["local", "dev", "qa", "prod"]
+        valid_envs = ["local", "local-test", "dev", "qa", "prod"]
 
         if options_deep_env is None:
             print("ERROR: OPTIONS_DEEP_ENV environment variable is not set.")
