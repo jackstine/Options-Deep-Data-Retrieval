@@ -29,9 +29,9 @@ import logging
 from datetime import date, datetime
 from decimal import Decimal
 
-from src.pipelines.algorithms.low_highs.backfill_low_high_pipeline import (
-    BackfillLowHighPipeline,
-)
+from src.algorithms.constants import DEFAULT_THRESHOLDS
+from src.algorithms.low_highs.pattern_config import LowHighPatternConfig
+from src.pipelines.algorithms.low_highs import BackfillLowHighPipeline
 
 # Configure logging
 logging.basicConfig(
@@ -122,9 +122,15 @@ Examples:
 
     args = parser.parse_args()
 
-    # Initialize pipeline
+    # Create configs
+    if args.thresholds:
+        configs = [LowHighPatternConfig(threshold=t) for t in args.thresholds]
+    else:
+        configs = [LowHighPatternConfig(threshold=t) for t in DEFAULT_THRESHOLDS]
+
+    # Initialize pipeline with configs
     logger.info("Initializing backfill pipeline...")
-    pipeline = BackfillLowHighPipeline()
+    pipeline = BackfillLowHighPipeline(configs=configs)
 
     # Run backfill
     if args.ticker:
@@ -133,7 +139,6 @@ Examples:
             ticker_symbol=args.ticker,
             from_date=args.from_date,
             to_date=args.to_date,
-            thresholds=args.thresholds,
         )
 
         # Print result
@@ -144,8 +149,8 @@ Examples:
         logger.info(f"Ticker History ID: {result['ticker_history_id']}")
         logger.info(f"Date Range: {result['from_date']} to {result['to_date']}")
         logger.info(f"Total Patterns Generated: {result['total_patterns_generated']}")
-        logger.info(f"Active Highs Inserted: {result['active_highs_inserted']}")
-        logger.info(f"Reversals Inserted: {result['reversals_inserted']}")
+        logger.info(f"Active Patterns Inserted: {result['active_patterns_inserted']}")
+        logger.info(f"Completed Patterns Inserted: {result['completed_patterns_inserted']}")
         logger.info(f"Errors: {result['errors']}")
         logger.info("=" * 60)
 
@@ -157,7 +162,6 @@ Examples:
         results = pipeline.run_bulk_backfill(
             from_date=args.from_date,
             to_date=args.to_date,
-            thresholds=args.thresholds,
         )
 
         # Print summary
@@ -166,12 +170,12 @@ Examples:
         logger.info("=" * 60)
         logger.info(f"Total Tickers Processed: {len(results)}")
         total_patterns = sum(r["total_patterns_generated"] for r in results)
-        total_active = sum(r["active_highs_inserted"] for r in results)
-        total_reversals = sum(r["reversals_inserted"] for r in results)
+        total_active = sum(r["active_patterns_inserted"] for r in results)
+        total_completed = sum(r["completed_patterns_inserted"] for r in results)
         total_errors = sum(r["errors"] for r in results)
         logger.info(f"Total Patterns Generated: {total_patterns}")
-        logger.info(f"Total Active Highs: {total_active}")
-        logger.info(f"Total Reversals: {total_reversals}")
+        logger.info(f"Total Active Patterns: {total_active}")
+        logger.info(f"Total Completed Patterns: {total_completed}")
         logger.info(f"Total Errors: {total_errors}")
         logger.info("=" * 60)
 

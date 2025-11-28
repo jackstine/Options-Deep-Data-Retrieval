@@ -22,9 +22,9 @@ import argparse
 import logging
 from datetime import date, datetime
 
-from src.pipelines.algorithms.low_highs.daily_low_high_pipeline import (
-    DailyLowHighPipeline,
-)
+from src.algorithms.constants import DEFAULT_THRESHOLDS
+from src.algorithms.low_highs.pattern_config import LowHighPatternConfig
+from src.pipelines.algorithms.low_highs import DailyLowHighPipeline
 
 # Configure logging
 logging.basicConfig(
@@ -71,9 +71,12 @@ Examples:
     args = parser.parse_args()
     calc_date = args.date or date.today()
 
-    # Initialize pipeline
+    # Create configs from default thresholds
+    configs = [LowHighPatternConfig(threshold=t) for t in DEFAULT_THRESHOLDS]
+
+    # Initialize pipeline with configs
     logger.info("Initializing daily low/high pipeline...")
-    pipeline = DailyLowHighPipeline()
+    pipeline = DailyLowHighPipeline(configs=configs)
 
     # Run daily processing
     logger.info(f"Starting daily low/high calculation for {calc_date}")
