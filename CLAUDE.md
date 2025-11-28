@@ -35,11 +35,12 @@ To run unit tests please run `make unit-test`.
 
 
 ## Static Type Checking
-### Step 1
-please run `python -m mypy <python_file>` to get the static type checking information.
+**Ensuyre you apply policy**. Please do not use type checking, unless you have been asked.
+
+Run `python -m mypy <python_file>` to get the static type checking information.
 Use this after writing to files to fix common missing behaviours please.
-### Step 2
-then run `uv run pyright <python_file>` to get more static typing checking information, and fix those issues as well.
+
+Run `uv run pyright <python_file>` to get more static typing checking information, and fix those issues as well.
 
 ## Common Packages
 if you need information on SqlAlchemy please conduct context7 resource `https://context7.com/sqlalchemy/sqlalchemy`
