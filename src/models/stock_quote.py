@@ -14,11 +14,11 @@ from typing import Any
 class StockQuote:
     """Normalized stock quote data model."""
 
-    symbol: str
-    price: Decimal
+    symbol: str | None = None
+    price: Decimal | None = None
     bid: Decimal | None = None
     ask: Decimal | None = None
-    volume: int = 0
+    volume: int | None = None
     market_cap: Decimal | None = None
     day_high: Decimal | None = None
     day_low: Decimal | None = None
@@ -28,8 +28,8 @@ class StockQuote:
     fifty_two_week_low: Decimal | None = None
     pe_ratio: Decimal | None = None
     dividend_yield: Decimal | None = None
-    timestamp: datetime = datetime.now()
-    source: str = ""
+    timestamp: datetime | None = None
+    source: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert stock quote to dictionary for serialization."""

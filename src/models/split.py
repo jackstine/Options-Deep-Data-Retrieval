@@ -23,10 +23,10 @@ class Split:
     while the ticker table only contains currently active symbols.
     """
 
-    date: date
-    split_ratio: str
+    date: date | None = None
+    split_ratio: str | None = None
     ticker_history_id: int | None = None
-    symbol: str = ""  # For display purposes only, not stored in DB
+    symbol: str | None = None  # For display purposes only, not stored in DB
     id: int | None = None
 
     def get_split_ratio(self) -> Decimal:
@@ -88,7 +88,7 @@ class Split:
         return cls(
             id=data.get("id"),
             ticker_history_id=data.get("ticker_history_id"),
-            symbol=data.get("symbol", ""),
+            symbol=data.get("symbol"),
             date=split_date,
             split_ratio=str(data["split_ratio"]),
         )
@@ -139,7 +139,7 @@ class Split:
         return cls(
             id=db_model.id,
             ticker_history_id=db_model.ticker_history_id,
-            symbol="",  # Symbol not stored in DB, must be set separately if needed
+            symbol=None,  # Symbol not stored in DB, must be set separately if needed
             date=db_model.date,
             split_ratio=db_model.split_ratio,
         )

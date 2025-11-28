@@ -21,15 +21,15 @@ class TickerHistoryStats:
     Coverage percentage stored as basis points (0-10000).
     """
 
-    ticker_history_id: int
+    ticker_history_id: int | None = None
     data_coverage_pct: int | None = None
     min_price: Decimal | None = None
     max_price: Decimal | None = None
     average_price: Decimal | None = None
     median_price: Decimal | None = None
-    has_insufficient_coverage: bool = False
-    low_suspicious_price: bool = False
-    high_suspicious_price: bool = False
+    has_insufficient_coverage: bool | None = None
+    low_suspicious_price: bool | None = None
+    high_suspicious_price: bool | None = None
     id: int | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None

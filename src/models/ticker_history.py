@@ -16,9 +16,9 @@ if TYPE_CHECKING:
 class TickerHistory:
     """Historical ticker symbol model with temporal validity tracking."""
 
-    symbol: str
-    company_id: int
-    valid_from: date = date(1900, 1, 1)
+    symbol: str | None = None
+    company_id: int | None = None
+    valid_from: date | None = None
     valid_to: date | None = None
     id: int | None = None
 
@@ -36,7 +36,7 @@ class TickerHistory:
     def from_dict(cls, data: dict[str, Any]) -> TickerHistory:
         """Create TickerHistory instance from dictionary."""
         # Parse dates from ISO format strings
-        valid_from = date(1900, 1, 1)  # Default
+        valid_from = None  # Default
         if data.get("valid_from"):
             if isinstance(data["valid_from"], str):
                 valid_from = date.fromisoformat(data["valid_from"])
@@ -67,7 +67,8 @@ class TickerHistory:
         Returns:
             True if ticker was valid on the given date
         """
-        if check_date < self.valid_from:
+        # If valid_from is None, assume valid from beginning of time
+        if self.valid_from is not None and check_date < self.valid_from:
             return False
         if self.valid_to is not None and check_date > self.valid_to:
             return False
@@ -91,7 +92,7 @@ class TickerHistory:
         Returns:
             String representation of validity period
         """
-        start = self.valid_from.strftime("%Y-%m-%d")
+        start = self.valid_from.strftime("%Y-%m-%d") if self.valid_from else "unknown"
         if self.valid_to:
             end = self.valid_to.strftime("%Y-%m-%d")
             return f"{start} to {end}"
@@ -126,7 +127,7 @@ class TickerHistory:
         return DBTickerHistory(
             symbol=self.symbol,
             company_id=self.company_id,
-            valid_from=self.valid_from,
+            valid_from=self.valid_from if self.valid_from is not None else None,
             valid_to=self.valid_to,
         )
 

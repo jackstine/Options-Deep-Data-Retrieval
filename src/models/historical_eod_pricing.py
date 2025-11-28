@@ -22,15 +22,15 @@ class HistoricalEndOfDayPricing:
     while the ticker table only contains currently active symbols.
     """
 
-    date: date
-    open: Decimal
-    high: Decimal
-    low: Decimal
-    close: Decimal
-    adjusted_close: Decimal
-    volume: int
+    date: date | None = None
+    open: Decimal | None = None
+    high: Decimal | None = None
+    low: Decimal | None = None
+    close: Decimal | None = None
+    adjusted_close: Decimal | None = None
+    volume: int | None = None
     ticker_history_id: int | None = None  # References ticker_history table
-    symbol: str = ""  # For display purposes only, not stored in DB
+    symbol: str | None = None  # For display purposes only, not stored in DB
 
     def to_dict(self) -> dict[str, Any]:
         """Convert pricing data to dictionary for serialization."""
@@ -63,7 +63,7 @@ class HistoricalEndOfDayPricing:
 
         return cls(
             ticker_history_id=data.get("ticker_history_id"),
-            symbol=data.get("symbol", ""),
+            symbol=data.get("symbol"),
             date=pricing_date,
             open=Decimal(str(data["open"])),
             high=Decimal(str(data["high"])),
@@ -137,7 +137,7 @@ class HistoricalEndOfDayPricing:
 
         return cls(
             ticker_history_id=db_model.ticker_history_id,
-            symbol="",  # Symbol not stored in DB, must be set separately if needed
+            symbol=None,  # Symbol not stored in DB, must be set separately if needed
             date=db_model.date,
             open=Decimal(db_model.open) / PRICE_MULTIPLIER,
             high=Decimal(db_model.high) / PRICE_MULTIPLIER,

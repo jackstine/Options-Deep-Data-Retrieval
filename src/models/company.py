@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 class Company:
     """Generic company information model."""
 
-    company_name: str
-    exchange: str
+    company_name: str | None = None
+    exchange: str | None = None
     ticker: Ticker | None = None  # Primary ticker model
     id: int | None = None
     sector: str | None = None
@@ -75,7 +75,7 @@ class Company:
                 ticker = Ticker(symbol=ticker_data, company_id=data.get("id", 0))
 
         # Handle source field - convert string to enum if possible
-        source_value = data.get("source") or data.get("Source", "")
+        source_value = data.get("source") or data.get("Source")
         if isinstance(source_value, str) and source_value:
             try:
                 source_value = DataSourceEnum(source_value)
@@ -86,8 +86,8 @@ class Company:
         # Support both snake_case and PascalCase for field names
         return cls(
             id=data.get("id"),
-            company_name=data.get("company_name") or data.get("Name", ""),
-            exchange=data.get("exchange") or data.get("Exchange", ""),
+            company_name=data.get("company_name") or data.get("Name"),
+            exchange=data.get("exchange") or data.get("Exchange"),
             ticker=ticker,
             sector=data.get("sector"),
             industry=data.get("industry"),

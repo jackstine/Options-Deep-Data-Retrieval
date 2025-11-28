@@ -17,7 +17,7 @@ class Ticker:
     All tickers must have a corresponding ticker_history record referenced by ticker_history_id.
     """
 
-    symbol: str
+    symbol: str | None = None
     company_id: int | None = (
         None  # not required because it can be retrieved from sources that have just the symbol
     )
