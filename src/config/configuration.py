@@ -35,7 +35,7 @@ class ConfigurationManager:
         self._load_environment_file()
         self._load_and_validate_env_vars()
         self._environment = os.getenv(ENV_VARS.OP_ENVIRONMENT, "local").lower()
-        self._config_dir = Path(__file__).parent / "environment_configs"
+        self._config_dir = Path(__file__).parent.parent / "database" / "configs" / "environments"
         self._config_cache: dict[str, Any] = {}
         self._cache_loaded = False
         self._lock = threading.RLock()
