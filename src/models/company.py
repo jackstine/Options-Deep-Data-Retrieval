@@ -24,9 +24,9 @@ class Company:
     country: str | None = None
     market_cap: int | None = None
     description: str | None = None
-    active: bool = True
-    is_valid_data: bool = True
-    source: DataSourceEnum | str = DataSourceEnum.EODHD
+    active: bool | None = None
+    is_valid_data: bool | None = None
+    source: DataSourceEnum | str | None = None
     currency: str | None = None  #not in the DB
     type: str | None = None  #not in the DB
     isin: str | None = None  #not in the DB

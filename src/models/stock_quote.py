@@ -72,7 +72,7 @@ class StockQuote:
             price=Decimal(str(data["price"])),
             bid=Decimal(str(data["bid"])) if data.get("bid") is not None else None,
             ask=Decimal(str(data["ask"])) if data.get("ask") is not None else None,
-            volume=data.get("volume", 0),
+            volume=data.get("volume"),
             market_cap=Decimal(str(data["market_cap"]))
             if data.get("market_cap") is not None
             else None,

@@ -197,7 +197,7 @@ class EodhdSymbolsSource(CompanyDataSource):
             for symbol in data:
                 symbol["source"] = DataSourceEnum.EODHD
                 companies.append(transform_eodhd_symbol_to_company(symbol))
-
+            
             logger.info(f"Retrieved {len(companies)} active symbols from {exchange}")
             return companies
 

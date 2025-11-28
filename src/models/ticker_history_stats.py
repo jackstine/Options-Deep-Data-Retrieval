@@ -73,9 +73,9 @@ class TickerHistoryStats:
             max_price=Decimal(str(data["max_price"])) if data.get("max_price") is not None else None,
             average_price=Decimal(str(data["average_price"])) if data.get("average_price") is not None else None,
             median_price=Decimal(str(data["median_price"])) if data.get("median_price") is not None else None,
-            has_insufficient_coverage=data.get("has_insufficient_coverage", False),
-            low_suspicious_price=data.get("low_suspicious_price", False),
-            high_suspicious_price=data.get("high_suspicious_price", False),
+            has_insufficient_coverage=data.get("has_insufficient_coverage"),
+            low_suspicious_price=data.get("low_suspicious_price"),
+            high_suspicious_price=data.get("high_suspicious_price"),
             created_at=created_at,
             updated_at=updated_at,
         )
