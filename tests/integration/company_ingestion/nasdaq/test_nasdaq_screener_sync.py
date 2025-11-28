@@ -24,8 +24,18 @@ from tests.utils.db_assertions import (
 class TestNasdaqScreenerSync:
     """Integration tests for NASDAQ screener sync."""
 
-    def test_initial_ingestion_creates_companies(self):
-        """Test initial ingestion creates companies, tickers, and ticker_histories."""
+    def test_initial_ingestion_creates_companies_with_valid_data(self):
+        """Comprehensive test for initial NASDAQ screener ingestion.
+
+        Validates:
+        - Database starts empty
+        - All fixture companies are ingested
+        - Companies have correct field values (source, exchange, sector, etc.)
+        - Tickers are created and linked to companies
+        - Ticker histories are created and currently valid
+        - Foreign key relationships are correctly established
+        - Ingestion completes without errors
+        """
         with integration_test_container() as (postgres, repo, port):
             # Import pipeline after port is set
             from src.pipelines.companies.new_company_pipeline import CompanyPipeline
@@ -37,7 +47,11 @@ class TestNasdaqScreenerSync:
             # Create database session for assertions
             session = create_test_session(postgres, port)
 
-            # Verify database is empty
+            # Get expected companies from mock source
+            mock_companies = mock_nasdaq_source.get_companies()
+            expected_count = len(mock_companies)
+
+            # Verify database starts empty
             assert count_companies(session) == 0
             assert count_tickers(session) == 0
             assert count_ticker_histories(session) == 0
@@ -46,33 +60,23 @@ class TestNasdaqScreenerSync:
             result = company_pipeline.run_ingestion([mock_nasdaq_source])
 
             # Verify ingestion results
-            assert result["inserted"] > 0
-            assert result["tickers_inserted"] > 0
-            assert result["ticker_histories_inserted"] > 0
+            assert result["inserted"] == expected_count
+            assert result["tickers_inserted"] == expected_count
+            assert result["ticker_histories_inserted"] == expected_count
             assert result["errors"] == 0
 
-            # Verify database state
+            # Verify database state matches ingestion results
             assert count_companies(session) == result["inserted"]
             assert count_tickers(session) == result["tickers_inserted"]
             assert count_ticker_histories(session) == result["ticker_histories_inserted"]
 
-    def test_ingested_companies_have_correct_data(self):
-        """Test that ingested companies have correct field values."""
-        with integration_test_container() as (postgres, repo, port):
-            # Import pipeline after port is set
-            from src.pipelines.companies.new_company_pipeline import CompanyPipeline
+            # Verify each fixture company was ingested
+            for company in mock_companies:
+                assert_company_exists(session, company.company_name)
+                if company.ticker:
+                    assert_ticker_exists(session, company.ticker.symbol)
 
-            # Create mock source and pipeline
-            mock_nasdaq_source = MockNasdaqScreenerSource()
-            company_pipeline = CompanyPipeline()
-
-            # Create database session for assertions
-            session = create_test_session(postgres, port)
-
-            # Run ingestion
-            company_pipeline.run_ingestion([mock_nasdaq_source])
-
-            # Verify Apple Inc. was ingested correctly
+            # Verify Apple Inc. has correct field values
             apple = assert_company_exists(
                 session,
                 "Apple Inc.",
@@ -85,7 +89,7 @@ class TestNasdaqScreenerSync:
                 },
             )
 
-            # Verify ticker exists and is linked to company
+            # Verify ticker is linked to company with correct foreign keys
             ticker = assert_ticker_exists(session, "AAPL", company_id=apple.id)
             assert ticker.ticker_history_id is not None
 
@@ -98,7 +102,11 @@ class TestNasdaqScreenerSync:
                 company_id=apple.id,
                 valid_to=None,  # Currently valid (no end date)
             )
-            assert ticker_history.id == ticker.ticker_history_id
+
+            # Verify circular foreign key reference is correct
+            assert ticker.ticker_history_id == ticker_history.id
+            assert ticker.company_id == apple.id
+            assert ticker_history.company_id == apple.id
 
     def test_duplicate_ingestion_updates_market_cap(self):
         """Test that re-running ingestion updates market_cap for existing companies."""
@@ -138,70 +146,3 @@ class TestNasdaqScreenerSync:
             apple_after = get_company_by_name(session, "Apple Inc.")
             assert apple_after is not None
             assert apple_after.market_cap == initial_market_cap
-
-    def test_all_fixture_companies_are_ingested(self):
-        """Test that all companies from fixture file are ingested."""
-        with integration_test_container() as (postgres, repo, port):
-            # Import pipeline after port is set
-            from src.pipelines.companies.new_company_pipeline import CompanyPipeline
-
-            # Create mock source and pipeline
-            mock_nasdaq_source = MockNasdaqScreenerSource()
-            company_pipeline = CompanyPipeline()
-
-            # Create database session for assertions
-            session = create_test_session(postgres, port)
-
-            # Get companies from mock source
-            mock_companies = mock_nasdaq_source.get_companies()
-            expected_count = len(mock_companies)
-
-            # Run ingestion
-            result = company_pipeline.run_ingestion([mock_nasdaq_source])
-
-            # Verify all companies were ingested
-            assert result["inserted"] == expected_count
-            assert count_companies(session) == expected_count
-
-            # Verify each company exists
-            for company in mock_companies:
-                assert_company_exists(session, company.company_name)
-                if company.ticker:
-                    assert_ticker_exists(session, company.ticker.symbol)
-
-    def test_ingestion_creates_valid_foreign_keys(self):
-        """Test that all foreign key relationships are correctly established."""
-        with integration_test_container() as (postgres, repo, port):
-            # Import pipeline after port is set
-            from src.pipelines.companies.new_company_pipeline import CompanyPipeline
-
-            # Create mock source and pipeline
-            mock_nasdaq_source = MockNasdaqScreenerSource()
-            company_pipeline = CompanyPipeline()
-
-            # Create database session for assertions
-            session = create_test_session(postgres, port)
-
-            # Run ingestion
-            company_pipeline.run_ingestion([mock_nasdaq_source])
-
-            # Get a sample company
-            apple = get_company_by_name(session, "Apple Inc.")
-            assert apple is not None
-
-            # Verify ticker has correct company_id
-            ticker = assert_ticker_exists(session, "AAPL")
-            assert ticker.company_id == apple.id
-
-            # Verify ticker has ticker_history_id set
-            assert ticker.ticker_history_id is not None
-
-            # Verify ticker_history exists with same company_id
-            ticker_history = assert_ticker_history_valid(
-                session,
-                "AAPL",
-                company_id=apple.id,
-            )
-
-            # Verify circular reference is correct
-            assert ticker.ticker_history_id == ticker_history.id
