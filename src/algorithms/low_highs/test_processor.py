@@ -52,7 +52,7 @@ class TestProcessorStateOne(unittest.TestCase):
         ]
 
         # Act
-        result = process_low_high_patterns([pattern], new_prices, self.threshold)
+        result = process_low_high_patterns([pattern], new_prices, self.threshold, self.ticker_history_id)
 
         # Assert
         # TODO needs to verify that other things do not change,  that they are none
@@ -87,7 +87,7 @@ class TestProcessorStateOne(unittest.TestCase):
         ]
 
         # Act
-        result = process_low_high_patterns([pattern], new_prices, self.threshold)
+        result = process_low_high_patterns([pattern], new_prices, self.threshold, self.ticker_history_id)
 
         # Assert
         # TODO needs to verify that other things do not change,  that they are none
@@ -120,7 +120,7 @@ class TestProcessorStateOne(unittest.TestCase):
         ]
 
         # Act
-        result = process_low_high_patterns([pattern], new_prices, self.threshold)
+        result = process_low_high_patterns([pattern], new_prices, self.threshold, self.ticker_history_id)
 
         # Assert
         self.assertEqual(len(result.active_highs), 1)
@@ -166,7 +166,7 @@ class TestProcessorStateTwo(unittest.TestCase):
         ]
 
         # Act
-        result = process_low_high_patterns([pattern], new_prices, self.threshold)
+        result = process_low_high_patterns([pattern], new_prices, self.threshold, self.ticker_history_id)
 
         # Assert
         self.assertEqual(len(result.active_highs), 1)
@@ -201,7 +201,7 @@ class TestProcessorStateTwo(unittest.TestCase):
         ]
 
         # Act
-        result = process_low_high_patterns([pattern], new_prices, self.threshold)
+        result = process_low_high_patterns([pattern], new_prices, self.threshold, self.ticker_history_id)
 
         # Assert
         # Should have original pattern + spawned pattern
@@ -242,7 +242,7 @@ class TestProcessorStateTwo(unittest.TestCase):
         ]
 
         # Act
-        result = process_low_high_patterns([pattern], new_prices, self.threshold)
+        result = process_low_high_patterns([pattern], new_prices, self.threshold, self.ticker_history_id)
 
         # Assert
         self.assertEqual(len(result.active_highs), 1)
@@ -275,7 +275,7 @@ class TestProcessorStateTwo(unittest.TestCase):
         ]
 
         # Act
-        result = process_low_high_patterns([pattern], new_prices, self.threshold)
+        result = process_low_high_patterns([pattern], new_prices, self.threshold, self.ticker_history_id)
 
         # Assert
         # Should have spawned pattern + completed reversal
@@ -328,7 +328,7 @@ class TestProcessorStateThree(unittest.TestCase):
         ]
 
         # Act
-        result = process_low_high_patterns([pattern], new_prices, self.threshold)
+        result = process_low_high_patterns([pattern], new_prices, self.threshold, self.ticker_history_id)
 
         # Assert
         self.assertEqual(len(result.active_highs), 0)
@@ -367,7 +367,7 @@ class TestProcessorStateThree(unittest.TestCase):
         ]
 
         # Act
-        result = process_low_high_patterns([pattern], new_prices, self.threshold)
+        result = process_low_high_patterns([pattern], new_prices, self.threshold, self.ticker_history_id)
 
         # Assert
         self.assertEqual(len(result.active_highs), 1)
@@ -413,7 +413,7 @@ class TestProcessorStateThree(unittest.TestCase):
         ]
 
         # Act
-        result = process_low_high_patterns([pattern], new_prices, self.threshold)
+        result = process_low_high_patterns([pattern], new_prices, self.threshold, self.ticker_history_id)
 
         # Assert
         self.assertGreaterEqual(len(result.active_highs), 1)  # At least original pattern
@@ -456,7 +456,7 @@ class TestEdgeCases(unittest.TestCase):
         )
 
         # Act
-        result = process_low_high_patterns([pattern], [], self.threshold)
+        result = process_low_high_patterns([pattern], [], self.threshold, self.ticker_history_id)
 
         # Assert
         self.assertEqual(len(result.active_highs), 1)
@@ -480,7 +480,7 @@ class TestEdgeCases(unittest.TestCase):
         ]
 
         # Act
-        result = process_low_high_patterns([pattern], new_prices, self.threshold)
+        result = process_low_high_patterns([pattern], new_prices, self.threshold, self.ticker_history_id)
 
         # Assert
         updated_pattern = result.active_highs[0]
@@ -506,7 +506,7 @@ class TestEdgeCases(unittest.TestCase):
         ]
 
         # Act
-        result = process_low_high_patterns([pattern], new_prices, self.threshold)
+        result = process_low_high_patterns([pattern], new_prices, self.threshold, self.ticker_history_id)
 
         # Assert
         updated_pattern = result.active_highs[0]
@@ -562,7 +562,7 @@ class TestEdgeCases(unittest.TestCase):
 
         # Act
         result = process_low_high_patterns(
-            [pattern1, pattern2], new_prices, self.threshold
+            [pattern1, pattern2], new_prices, self.threshold, self.ticker_history_id
         )
 
         # Assert
