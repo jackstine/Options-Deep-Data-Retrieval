@@ -1,1 +1,0 @@
-"""Pipeline examples package."""

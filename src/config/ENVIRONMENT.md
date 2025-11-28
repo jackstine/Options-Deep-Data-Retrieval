@@ -10,6 +10,7 @@ This document describes all environment variables used in the Options Deep stock
 - `NASDAQ_API_KEY` - API key for accessing NASDAQ company data
 - `EODHD_API_KEY` - API key for accessing EODHD market data
 - `OPTIONS_DEEP_TEST_LIMITS` - (Optional) Limits the number of companies/symbols processed in ingestion pipelines for testing purposes. Set to a positive integer (e.g., `10`, `100`). If not set or invalid, no limit is applied
+- `OPTIONS_DEEP_TEST_DB_PORT` - (Optional) Overrides the database port for integration tests using testcontainers. Set automatically by testcontainer fixtures to use dynamically assigned Docker ports. Should not be set manually in normal usage
 
 ## Environment File Selection
 

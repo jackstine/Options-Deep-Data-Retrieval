@@ -12,9 +12,10 @@ from typing import Any
 from dotenv import load_dotenv
 
 from src.config.models.algorithm import AlgorithmConfig
-from src.config.models.database import DatabaseConfig
 from src.config.models.environment_variables import ENV_VARS
 from src.config.models.equities import EquitiesConfig
+from src.database.config import get_database_config as _get_db_config
+from src.database.models.database_config import DatabaseConfig
 
 
 class ConfigurationManager:
@@ -34,7 +35,7 @@ class ConfigurationManager:
         self._load_environment_file()
         self._load_and_validate_env_vars()
         self._environment = os.getenv(ENV_VARS.OP_ENVIRONMENT, "local").lower()
-        self._config_dir = Path(__file__).parent / "environment_configs"
+        self._config_dir = Path(__file__).parent.parent / "database" / "configs" / "environments"
         self._config_cache: dict[str, Any] = {}
         self._cache_loaded = False
         self._lock = threading.RLock()
@@ -56,7 +57,7 @@ class ConfigurationManager:
             SystemExit: If OPTIONS_DEEP_ENV is not set
         """
         options_deep_env = os.getenv("OPTIONS_DEEP_ENV")
-        valid_envs = ["local", "dev", "qa", "prod"]
+        valid_envs = ["local", "local-test", "dev", "qa", "prod"]
 
         if options_deep_env is None:
             print("ERROR: OPTIONS_DEEP_ENV environment variable is not set.")
@@ -149,34 +150,17 @@ class ConfigurationManager:
     def get_database_config(self, database_name: str = "equities") -> DatabaseConfig:
         """Get database configuration for current environment and database.
 
+        Delegates to src.database.config for database configuration loading.
+        This maintains backward compatibility while allowing the database module
+        to be self-contained.
+
         Args:
             database_name: Name of the database (equities, algorithm)
 
         Returns:
             DatabaseConfig for the current environment and database
         """
-        config_data = self._load_config()
-
-        if "databases" not in config_data:
-            raise ValueError("Config file missing 'databases' section")
-
-        if database_name not in config_data["databases"]:
-            available_dbs = list(config_data["databases"].keys())
-            raise ValueError(
-                f"Database '{database_name}' not found in config. Available: {available_dbs}"
-            )
-
-        db_config = config_data["databases"][database_name]
-        password = self._get_database_password()
-
-        return DatabaseConfig(
-            host=db_config["host"],
-            port=db_config["port"],
-            database=db_config["database"],
-            username=db_config["username"],
-            password=password,
-            environment=self._environment,
-        )
+        return _get_db_config(database_name)
 
     def get_available_databases(self) -> list[str]:
         """Get list of available databases from configuration.

@@ -5,7 +5,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.config.configuration import CONFIG
+from src.database.config import get_database_config
 
 # Create the declarative base for algorithms tables
 Base = declarative_base()
@@ -14,7 +14,7 @@ Base = declarative_base()
 # Database engine and session for algorithms
 def get_engine() -> Engine:
     """Get database engine for algorithms database."""
-    config = CONFIG.get_database_config("algorithm")
+    config = get_database_config("algorithm")
     return create_engine(config.get_connection_string())
 
 

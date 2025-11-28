@@ -372,7 +372,7 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
                 ]
 
                 self._logger.info(f"Bulk inserted {len(result_models)} records with IDs")
-                return result_models  # type: ignore[return-value]
+                return result_models
 
         except SQLAlchemyError as e:
             self._logger.error(f"Database error in insert_many_returning(): {e}")
