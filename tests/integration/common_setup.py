@@ -23,6 +23,8 @@ import os
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Generator
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 from testcontainers.postgres import PostgresContainer
 
 if TYPE_CHECKING:
@@ -48,6 +50,32 @@ def setup_test_environment() -> None:
     os.environ["ENVIRONMENT"] = "local-test"
     os.environ["NASDAQ_API_KEY"] = "test_key"
     os.environ["EODHD_API_KEY"] = "test_key"
+
+
+def create_test_session(postgres: PostgresContainer, port: int) -> Session:
+    """Create a SQLAlchemy session for the test database container.
+
+    This is a helper function to reduce code duplication when creating
+    database sessions in tests.
+
+    Args:
+        postgres: The PostgreSQL container instance
+        port: The exposed port number for the container
+
+    Returns:
+        SQLAlchemy Session connected to the test database
+
+    Example:
+        with integration_test_container() as (postgres, repo, port):
+            session = create_test_session(postgres, port)
+            # Use session for assertions
+            company = session.query(Company).filter_by(name="Apple Inc.").first()
+            assert company is not None
+    """
+    connection_string = f"postgresql+psycopg2://test:test@{postgres.get_container_host_ip()}:{port}/test"
+    engine = create_engine(connection_string)
+    SessionLocal = sessionmaker(bind=engine)
+    return SessionLocal()
 
 
 @contextmanager
