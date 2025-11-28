@@ -58,6 +58,10 @@ def create_test_session(postgres: PostgresContainer, port: int) -> Session:
     This is a helper function to reduce code duplication when creating
     database sessions in tests.
 
+    IMPORTANT: The session and engine will be automatically cleaned up
+    when the integration_test_container context exits. You don't need
+    to manually close the session.
+
     Args:
         postgres: The PostgreSQL container instance
         port: The exposed port number for the container
@@ -73,9 +77,20 @@ def create_test_session(postgres: PostgresContainer, port: int) -> Session:
             assert company is not None
     """
     connection_string = f"postgresql+psycopg2://test:test@{postgres.get_container_host_ip()}:{port}/test"
-    engine = create_engine(connection_string)
+    engine = create_engine(connection_string, pool_pre_ping=True)
     SessionLocal = sessionmaker(bind=engine)
-    return SessionLocal()
+    session = SessionLocal()
+
+    # Store engine and session for cleanup
+    if not hasattr(postgres, '_test_engines'):
+        postgres._test_engines = []
+    if not hasattr(postgres, '_test_sessions'):
+        postgres._test_sessions = []
+
+    postgres._test_engines.append(engine)
+    postgres._test_sessions.append(session)
+
+    return session
 
 
 @contextmanager
@@ -88,7 +103,8 @@ def integration_test_container() -> Generator[tuple[PostgresContainer, CompanyRe
     3. Sets OPTIONS_DEEP_TEST_DB_PORT environment variable
     4. Imports and creates CompanyRepository (after port is set)
     5. Yields the container, repository, and port for test use
-    6. Automatically cleans up the container when the context exits
+    6. Cleans up all SQLAlchemy sessions and engines
+    7. Automatically cleans up the container when the context exits
 
     NOTE: You must build the test Docker image first:
         make build-test-image
@@ -125,7 +141,41 @@ def integration_test_container() -> Generator[tuple[PostgresContainer, CompanyRe
         # Create repository instance
         repo = CompanyRepository()
 
-        # Yield to test
-        yield postgres, repo, port
+        try:
+            # Yield to test
+            yield postgres, repo, port
+        finally:
+            # Clean up all test sessions and engines before container stops
+            # This prevents "server closed the connection unexpectedly" errors
 
-        # Container cleanup happens automatically when context exits
+            # Close repository session if it exists
+            try:
+                if hasattr(repo, 'session') and repo.session:
+                    repo.session.close()
+            except Exception:
+                pass  # Ignore errors during cleanup
+
+            # Dispose repository engine if it exists
+            try:
+                if hasattr(repo, 'engine') and repo.engine:
+                    repo.engine.dispose()
+            except Exception:
+                pass  # Ignore errors during cleanup
+
+            # Close all test sessions
+            if hasattr(postgres, '_test_sessions'):
+                for session in postgres._test_sessions:
+                    try:
+                        session.close()
+                    except Exception:
+                        pass  # Ignore errors during cleanup
+
+            # Dispose all test engines (closes connection pools)
+            if hasattr(postgres, '_test_engines'):
+                for engine in postgres._test_engines:
+                    try:
+                        engine.dispose()
+                    except Exception:
+                        pass  # Ignore errors during cleanup
+
+            # Container cleanup happens automatically when context exits
