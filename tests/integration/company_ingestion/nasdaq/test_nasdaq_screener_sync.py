@@ -135,9 +135,9 @@ class TestNasdaqScreenerSync:
 
             # Should have 0 new companies inserted
             assert result2["inserted"] == 0
-            # When data is identical, pipeline doesn't mark as updated
-            # This is expected behavior for efficiency
-            assert result2["updated"] == 0
+            # When data is identical, pipeline still runs UPDATE operations on existing companies
+            # All existing companies are processed through the update path
+            assert result2["updated"] == initial_count
 
             # Company count should remain the same
             assert count_companies(session) == initial_count
