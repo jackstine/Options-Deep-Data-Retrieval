@@ -14,7 +14,7 @@ This document contains critical information about working with this codebase. Fo
    - **database** - this where database is constructed using alembic.
    - **config** - this is where setting up configurations, environment variables, and the like are stored.
    - **pipelines** - merging the repos and the data_sources together using dependency injection to abstract the use of the data sources.
-   - **algorithms** - used to define the algorithms of the project.
+   - **algorithms** - used to define the algorithms of the project. Each algorithm has it's own sub folder.
    
 - test information
    - **unittests** - unittests are written side by side their respective code.made along side the actual code base, is used with mocks to generate fast running tests. 
@@ -28,5 +28,25 @@ To run unit tests please run `make unit-test`.
 #### Specific test method
 `PYTHONPATH=. python -m unittest src.path.to.test_file.TestClassName.test_m`
 
-### Integration Tests
-for integration tests,  please read the `
+## Environment Variables
+- when adding environment variables you ***MUST*** ensure that you do the following
+   - that you add them to `src/config/models/environment_variables.py`
+   - that access to the environment variables goes through `src/config/configuration.py`
+   - you update the `src/config/ENVIRONMENT.md` with a summary of the variable
+
+
+## Static Type Checking
+### Step 1
+please run `python -m mypy <python_file>` to get the static type checking information.
+Use this after writing to files to fix common missing behaviours please.
+### Step 2
+then run `uv run pyright <python_file>` to get more static typing checking information, and fix those issues as well.
+
+## Common Packages
+if you need information on SqlAlchemy please conduct context7 resource `https://context7.com/sqlalchemy/sqlalchemy`
+
+
+## unit testing
+to test a file in this repo,  you will need to set the `OPTIONS_DEEP_ENV=unittest`
+ensure that it is always set to `unittest` this is a ***MUST***.
+`export OPTIONS_DEEP_ENV=unittest && python -m unittest <file> -v`

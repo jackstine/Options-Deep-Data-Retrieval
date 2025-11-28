@@ -13,6 +13,8 @@
     - Document with docstrings
     - Use f-strings for formatting
 
+
+
 ### Coding Best Practices
 Using TypeDicts and Dataclass are prefered.
 

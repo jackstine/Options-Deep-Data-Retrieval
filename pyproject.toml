@@ -18,6 +18,9 @@ dependencies = [
     "pandas>=2.0.0",
     "matplotlib>=3.8.0",
     "seaborn>=0.13.0",
+    "mypy>=1.17.1",
+    "pytest>=9.0.1",
+    "pyright>=1.1.407",
 ]
 
 [dependency-groups]
