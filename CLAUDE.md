@@ -16,11 +16,10 @@ This document contains critical information about working with this codebase. Fo
    - **pipelines** - merging the repos and the data_sources together using dependency injection to abstract the use of the data sources.
    - **algorithms** - used to define the algorithms of the project. Each algorithm has it's own sub folder.
    
-- test information
-   - **unittests** - unittests are written side by side their respective code.made along side the actual code base, is used with mocks to generate fast running tests. 
-   - **integration tests** - the `/tests` folder, *outside of src folder* is used for non-unit tests this will be integration and e2e tests.
-
 ## Testing
+- **unittests** - unittests are written side by side their respective code.made along side the actual code base, is used with mocks to generate fast running tests. 
+- **integration tests** - the `/tests` folder, *outside of src folder* is used for non-unit tests this will be integration and e2e tests.
+
 ### Unit Test
 To run unit tests please run `make unit-test`.
 #### Test Specific
