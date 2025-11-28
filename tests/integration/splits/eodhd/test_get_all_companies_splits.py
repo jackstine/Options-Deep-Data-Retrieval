@@ -43,6 +43,7 @@ class TestEodhdAllCompaniesSplitsIngestion:
 
             # Get expected splits data for first company
             first_company = expected_companies[0]
+            assert first_company.ticker is not None, "Expected company to have ticker"
             first_symbol = first_company.ticker.symbol
             expected_splits = mock_splits_source.get_splits(first_symbol)
             expected_splits_count = len(expected_splits)
@@ -92,6 +93,7 @@ class TestEodhdAllCompaniesSplitsIngestion:
             # Get expected data from mocks
             expected_companies = mock_symbols_source.get_active_symbols()
             first_company = expected_companies[0]
+            assert first_company.ticker is not None, "Expected company to have ticker"
             first_symbol = first_company.ticker.symbol
 
             # Get expected splits data

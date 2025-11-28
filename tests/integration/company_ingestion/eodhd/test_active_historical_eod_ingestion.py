@@ -42,7 +42,9 @@ class TestEodhdActiveHistoricalEodIngestion:
             expected_company_count = len(expected_companies)
 
             # Get sample EOD data to know how many records per symbol
-            sample_symbol = expected_companies[0].ticker.symbol
+            ticker = expected_companies[0].ticker
+            assert ticker is not None, "Expected company to have ticker"
+            sample_symbol = ticker.symbol
             sample_eod_data = mock_historical_source.get_eod_data(sample_symbol)
             expected_pricing_per_symbol = len(sample_eod_data)
 
@@ -87,6 +89,7 @@ class TestEodhdActiveHistoricalEodIngestion:
             # Get expected data from mocks
             expected_companies = mock_symbols_source.get_active_symbols()
             first_company = expected_companies[0]
+            assert first_company.ticker is not None, "Expected company to have ticker"
             first_symbol = first_company.ticker.symbol
 
             # Get expected EOD data

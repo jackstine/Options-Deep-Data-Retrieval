@@ -119,7 +119,7 @@ class TestEodhdCurrentDaySplitsIngestion:
             assert result["total_splits_fetched"] == expected_bulk_splits_count
 
             # Check symbols overlap between bulk_splits and our companies
-            company_symbols = {c.ticker.symbol for c in expected_companies}
+            company_symbols = {c.ticker.symbol for c in expected_companies if c.ticker is not None}
             bulk_split_symbols = {s.symbol for s in expected_bulk_splits}
             matching_symbols = company_symbols.intersection(bulk_split_symbols)
 

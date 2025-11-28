@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, create_engine, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
@@ -25,7 +25,7 @@ class SystemRepository:
     def __init__(self) -> None:
         """Initialize system repository."""
         config = CONFIG.get_equities_config()
-        engine = config.get_engine()
+        engine = create_engine(config.database.get_connection_string())
         self._SessionLocal: sessionmaker[Session] = sessionmaker(
             autocommit=False, autoflush=False, bind=engine
         )
