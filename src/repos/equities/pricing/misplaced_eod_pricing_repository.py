@@ -41,6 +41,52 @@ class MisplacedEodPricingRepository(
             db_model_class=MisplacedEodPricingDBModel,
         )
 
+    @staticmethod
+    def from_db_model(db_model: MisplacedEodPricingDBModel) -> MisplacedEodPricingDataModel:
+        """Create data model from SQLAlchemy database model.
+
+        Args:
+            db_model: SQLAlchemy MisplacedEodPricing instance from database
+
+        Returns:
+            MisplacedEndOfDayPricing: Data model instance
+        """
+        from src.database.equities.tables.misplaced_eod_pricing import PRICE_MULTIPLIER
+        from decimal import Decimal
+
+        return MisplacedEodPricingDataModel(
+            symbol=db_model.symbol,
+            date=db_model.date,
+            open=Decimal(db_model.open) / PRICE_MULTIPLIER,
+            high=Decimal(db_model.high) / PRICE_MULTIPLIER,
+            low=Decimal(db_model.low) / PRICE_MULTIPLIER,
+            close=Decimal(db_model.close) / PRICE_MULTIPLIER,
+            adjusted_close=Decimal(db_model.adjusted_close) / PRICE_MULTIPLIER,
+            volume=db_model.volume,
+            source=db_model.source,
+        )
+
+    @staticmethod
+    def to_db_model(data_model: MisplacedEodPricingDataModel) -> MisplacedEodPricingDBModel:
+        """Convert data model to SQLAlchemy database model.
+
+        Returns:
+            DBMisplacedEodPricing: SQLAlchemy model instance ready for database operations
+        """
+        from src.database.equities.tables.misplaced_eod_pricing import PRICE_MULTIPLIER
+
+        return MisplacedEodPricingDBModel(
+            symbol=data_model.symbol,
+            date=data_model.date,
+            open=int(data_model.open * PRICE_MULTIPLIER),
+            high=int(data_model.high * PRICE_MULTIPLIER),
+            low=int(data_model.low * PRICE_MULTIPLIER),
+            close=int(data_model.close * PRICE_MULTIPLIER),
+            adjusted_close=int(data_model.adjusted_close * PRICE_MULTIPLIER),
+            volume=data_model.volume,
+            source=data_model.source,
+        )
+
     def get_pricing_for_date(
         self, symbol: str, target_date: date
     ) -> MisplacedEodPricingDataModel | None:
@@ -67,7 +113,7 @@ class MisplacedEodPricingRepository(
 
                 if db_model:
                     logger.debug(f"Found misplaced pricing for {symbol} on {target_date}")
-                    return MisplacedEodPricingDataModel.from_db_model(db_model)
+                    return self.from_db_model(db_model)
                 else:
                     logger.debug(
                         f"No misplaced pricing found for {symbol} on {target_date}"
@@ -99,7 +145,7 @@ class MisplacedEodPricingRepository(
         try:
             with self._SessionLocal() as session:
                 # Convert data models to DB models
-                db_models = [pricing.to_db_model() for pricing in pricing_data]
+                db_models = [self.to_db_model(pricing) for pricing in pricing_data]
 
                 # Prepare values for upsert
                 values = [

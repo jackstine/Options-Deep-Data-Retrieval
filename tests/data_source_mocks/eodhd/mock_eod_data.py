@@ -8,6 +8,7 @@ from datetime import date
 from pathlib import Path
 
 from src.data_sources.base.historical_data_source import HistoricalDataSource
+from src.data_sources.eodhd.eod_data import transform_eodhd_eod_to_pricing
 from src.models.historical_eod_pricing import HistoricalEndOfDayPricing
 
 logger = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ class MockEodhdDataSource(HistoricalDataSource):
                     row["adjusted_close"] = row.pop("Adjusted_close")
                     row["volume"] = row.pop("Volume")
 
-                    pricing_data.append(HistoricalEndOfDayPricing.from_dict(row))
+                    pricing_data.append(transform_eodhd_eod_to_pricing(row))
 
             logger.info(
                 f"Loaded {len(pricing_data)} EOD records for {symbol} from fixture"

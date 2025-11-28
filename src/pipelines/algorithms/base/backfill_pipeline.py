@@ -139,8 +139,8 @@ class BackfillPipeline(Generic[TActive, TCompleted, TConfig]):
                 SplitAdjustedPricing[DatePrice],
                 self.split_adjusted_pricing_service.get_split_adjusted_pricing_with_ticker_history_id(
                     ticker_history_id=ticker_history_id,
-                    from_date=from_date if from_date is not None else None,
-                    to_date=to_date if to_date is not None else None,
+                    from_date=from_date,
+                    to_date=to_date,
                     include_ohlc=False,
                 ),
             )

@@ -100,8 +100,8 @@ class CompanyService:
                     company_db, ticker_history_db = row
 
                     # Convert DB models to data models
-                    company = CompanyDataModel.from_db_model(company_db)
-                    ticker_history = TickerHistory.from_db_model(ticker_history_db)
+                    company = CompanyRepository.from_db_model(company_db)
+                    ticker_history = TickerHistoryRepository.from_db_model(ticker_history_db)
 
                     return CompanyWithTickerDataModel(
                         company=company,

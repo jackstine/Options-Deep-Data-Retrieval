@@ -8,6 +8,27 @@ import requests
 from src.config.configuration import CONFIG
 from src.data_sources.base.company_data_source import CompanyDataSource
 from src.models.company import Company
+from src.models.ticker import Ticker
+
+
+def transform_nasdaq_listing_to_company(data: dict[str, Any]) -> Company:
+    """Transform NASDAQ listing data to Company model.
+
+    Handles NASDAQ API snake_case format (ticker, company_name, exchange).
+
+    Args:
+        data: Dictionary from NASDAQ API with listing fields
+
+    Returns:
+        Company: Company model instance with ticker information
+    """
+    ticker = Ticker(symbol=data["ticker"], company_id=None)
+    return Company(
+        company_name=data["company_name"],
+        exchange=data["exchange"],
+        ticker=ticker,
+        source="NASDAQ",
+    )
 
 
 class Headers:
@@ -97,17 +118,9 @@ def get_dict_of_stocks() -> list[dict] | None:
 
 def _convert_dict_to_stocks(ds: list[dict]) -> list[Company]:
     """Convert dictionary data to Company objects."""
-    from src.models.ticker import Ticker
-
     companies = []
     for k in ds:
-        ticker = Ticker(symbol=k[Headers.TICKER], company_id=None)
-        company = Company(
-            company_name=k[Headers.COMPANY_NAME],
-            exchange=k[Headers.EXCHANGE],
-            ticker=ticker,
-            source="NASDAQ",
-        )
+        company = transform_nasdaq_listing_to_company(k)
         companies.append(company)
     return companies
 

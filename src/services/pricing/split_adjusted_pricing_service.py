@@ -70,8 +70,8 @@ class SplitAdjustedPricingService:
     def get_split_adjusted_pricing_with_symbol(
         self,
         symbol: str,
-        from_date: date,
-        to_date: date,
+        from_date: date | None = None,
+        to_date: date | None = None,
         include_ohlc: bool = False,
     ) -> SplitAdjustedPricing[DatePrice] | SplitAdjustedPricing[EODSplitAdjustedPricing]:
         """Get split-adjusted pricing data for a stock symbol.
@@ -117,8 +117,8 @@ class SplitAdjustedPricingService:
     def get_split_adjusted_pricing_with_ticker_history_id(
         self,
         ticker_history_id: int,
-        from_date: date,
-        to_date: date,
+        from_date: date | None = None,
+        to_date: date | None = None,
         include_ohlc: bool = False,
     ) -> SplitAdjustedPricing[DatePrice] | SplitAdjustedPricing[EODSplitAdjustedPricing]:
         """Get split-adjusted pricing data for a ticker_history_id.

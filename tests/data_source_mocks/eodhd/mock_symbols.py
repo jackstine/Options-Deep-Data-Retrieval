@@ -7,6 +7,7 @@ import logging
 from pathlib import Path
 
 from src.data_sources.base.company_data_source import CompanyDataSource
+from src.data_sources.eodhd.symbols import transform_eodhd_symbol_to_company
 from src.database.equities.enums import DataSourceEnum
 from src.models.company import Company
 
@@ -60,7 +61,7 @@ class MockEodhdSymbolsSource(CompanyDataSource):
                 for row in reader:
                     # Ensure Type is Common Stock
                     if row.get("Type") == "Common Stock":
-                        # Map CSV columns to Company.from_dict() format
+                        # Map CSV columns to transform function format
                         symbol_data = {
                             "Code": row["Code"],
                             "Name": row["Name"],
@@ -71,7 +72,7 @@ class MockEodhdSymbolsSource(CompanyDataSource):
                             "Isin": row.get("Isin", ""),
                             "source": DataSourceEnum.EODHD
                         }
-                        companies.append(Company.from_dict(symbol_data))
+                        companies.append(transform_eodhd_symbol_to_company(symbol_data))
 
             logger.info(f"Loaded {len(companies)} delisted symbols from fixture")
             return companies
@@ -103,7 +104,7 @@ class MockEodhdSymbolsSource(CompanyDataSource):
                 for row in reader:
                     # Only include Common Stocks (filter out ETFs and FUNDs)
                     if row.get("Type") == "Common Stock":
-                        # Map CSV columns to Company.from_dict() format
+                        # Map CSV columns to transform function format
                         symbol_data = {
                             "Code": row["Code"],
                             "Name": row["Name"],
@@ -114,7 +115,7 @@ class MockEodhdSymbolsSource(CompanyDataSource):
                             "Isin": row.get("Isin", ""),
                             "source": DataSourceEnum.EODHD
                         }
-                        companies.append(Company.from_dict(symbol_data))
+                        companies.append(transform_eodhd_symbol_to_company(symbol_data))
 
             logger.info(f"Loaded {len(companies)} active symbols from fixture")
             return companies

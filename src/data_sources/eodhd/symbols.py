@@ -11,8 +11,53 @@ from src.config.configuration import CONFIG
 from src.data_sources.base.company_data_source import CompanyDataSource
 from src.database.equities.enums import DataSourceEnum
 from src.models.company import Company
+from src.models.ticker import Ticker
 
 logger = logging.getLogger(__name__)
+
+
+def transform_eodhd_symbol_to_company(data: dict[str, Any]) -> Company:
+    """Transform EODHD API symbol data to Company model.
+
+    Handles EODHD API PascalCase format (Code, Name, Exchange, etc.).
+
+    Args:
+        data: Dictionary from EODHD API with PascalCase field names
+
+    Returns:
+        Company: Company model instance with ticker information
+    """
+    # Handle ticker from EODHD Code field
+    ticker = None
+    if "Code" in data:
+        ticker = Ticker(symbol=data["Code"], company_id=data.get("id", 0))
+
+    # Handle source field - convert string to enum if possible
+    source_value = data.get("source") or data.get("Source")
+    if isinstance(source_value, str) and source_value:
+        try:
+            source_value = DataSourceEnum(source_value)
+        except ValueError:
+            # Keep as string if not a valid enum value
+            pass
+
+    return Company(
+        id=data.get("id"),
+        company_name=data.get("Name"),
+        exchange=data.get("Exchange"),
+        ticker=ticker,
+        sector=data.get("sector"),
+        industry=data.get("industry"),
+        country=data.get("Country"),
+        market_cap=data.get("market_cap"),
+        description=data.get("description"),
+        active=data.get("active", True),
+        is_valid_data=data.get("is_valid_data", True),
+        source=source_value or DataSourceEnum.EODHD,
+        currency=data.get("Currency"),
+        type=data.get("Type"),
+        isin=data.get("Isin"),
+    )
 
 
 class EodhdSymbolsSource(CompanyDataSource):
@@ -104,7 +149,7 @@ class EodhdSymbolsSource(CompanyDataSource):
                     # Ensure Type is Common Stock (double-check API filter)
                     if symbol.get("Type") == "Common Stock":
                         symbol["source"] = DataSourceEnum.EODHD
-                        all_delisted_companies.append(Company.from_dict(symbol))
+                        all_delisted_companies.append(transform_eodhd_symbol_to_company(symbol))
 
                 logger.info(
                     f"Retrieved {len(data)} delisted Common Stocks from {exchange}"
@@ -151,7 +196,7 @@ class EodhdSymbolsSource(CompanyDataSource):
             companies = []
             for symbol in data:
                 symbol["source"] = DataSourceEnum.EODHD
-                companies.append(Company.from_dict(symbol))
+                companies.append(transform_eodhd_symbol_to_company(symbol))
 
             logger.info(f"Retrieved {len(companies)} active symbols from {exchange}")
             return companies

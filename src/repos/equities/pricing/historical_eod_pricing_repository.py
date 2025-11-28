@@ -43,6 +43,59 @@ class HistoricalEodPricingRepository(
             db_model_class=HistoricalEodPricingDBModel,
         )
 
+    @staticmethod
+    def from_db_model(db_model: HistoricalEodPricingDBModel) -> HistoricalEodPricingDataModel:
+        """Create data model from SQLAlchemy database model.
+
+        Args:
+            db_model: SQLAlchemy HistoricalEodPricing instance from database
+
+        Returns:
+            HistoricalEndOfDayPricing: Data model instance
+        """
+        from src.database.equities.tables.historical_eod_pricing import PRICE_MULTIPLIER
+        from decimal import Decimal
+
+        return HistoricalEodPricingDataModel(
+            ticker_history_id=db_model.ticker_history_id,
+            symbol=None,  # Symbol not stored in DB, must be set separately if needed
+            date=db_model.date,
+            open=Decimal(db_model.open) / PRICE_MULTIPLIER,
+            high=Decimal(db_model.high) / PRICE_MULTIPLIER,
+            low=Decimal(db_model.low) / PRICE_MULTIPLIER,
+            close=Decimal(db_model.close) / PRICE_MULTIPLIER,
+            adjusted_close=Decimal(db_model.adjusted_close) / PRICE_MULTIPLIER,
+            volume=db_model.volume,
+        )
+
+    @staticmethod
+    def to_db_model(data_model: HistoricalEodPricingDataModel) -> HistoricalEodPricingDBModel:
+        """Convert data model to SQLAlchemy database model.
+
+        Returns:
+            DBHistoricalEodPricing: SQLAlchemy model instance ready for database operations
+
+        Raises:
+            ValueError: If ticker_history_id is None
+        """
+        if data_model.ticker_history_id is None:
+            raise ValueError(
+                "ticker_history_id must be set before converting to database model"
+            )
+
+        from src.database.equities.tables.historical_eod_pricing import PRICE_MULTIPLIER
+
+        return HistoricalEodPricingDBModel(
+            ticker_history_id=data_model.ticker_history_id,
+            date=data_model.date,
+            open=int(data_model.open * PRICE_MULTIPLIER),
+            high=int(data_model.high * PRICE_MULTIPLIER),
+            low=int(data_model.low * PRICE_MULTIPLIER),
+            close=int(data_model.close * PRICE_MULTIPLIER),
+            adjusted_close=int(data_model.adjusted_close * PRICE_MULTIPLIER),
+            volume=data_model.volume,
+        )
+
     def get_pricing_by_ticker(
         self,
         ticker_history_id: int,
@@ -88,7 +141,7 @@ class HistoricalEodPricingRepository(
                 db_models = result.scalars().all()
 
                 data_models = [
-                    HistoricalEodPricingDataModel.from_db_model(db_model)
+                    self.from_db_model(db_model)
                     for db_model in db_models
                 ]
                 logger.info(
@@ -128,7 +181,7 @@ class HistoricalEodPricingRepository(
                     logger.debug(
                         f"Found pricing for ticker_history_id={ticker_history_id} on {target_date}"
                     )
-                    return HistoricalEodPricingDataModel.from_db_model(db_model)
+                    return self.from_db_model(db_model)
                 else:
                     logger.debug(
                         f"No pricing found for ticker_history_id={ticker_history_id} on {target_date}"
@@ -167,7 +220,7 @@ class HistoricalEodPricingRepository(
                     pricing.ticker_history_id = ticker_history_id
 
                 # Convert data models to DB models
-                db_models = [pricing.to_db_model() for pricing in pricing_data]
+                db_models = [self.to_db_model(pricing) for pricing in pricing_data]
 
                 # Prepare values for upsert
                 values = [

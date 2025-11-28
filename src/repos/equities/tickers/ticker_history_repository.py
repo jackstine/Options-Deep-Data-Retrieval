@@ -30,6 +30,38 @@ class TickerHistoryRepository(
             db_model_class=TickerHistoryDBModel,
         )
 
+    @staticmethod
+    def from_db_model(db_model: TickerHistoryDBModel) -> TickerHistoryDataModel:
+        """Create data model from SQLAlchemy database model.
+
+        Args:
+            db_model: SQLAlchemy TickerHistory instance from database
+
+        Returns:
+            TickerHistory: Data model instance
+        """
+        return TickerHistoryDataModel(
+            id=db_model.id,
+            symbol=db_model.symbol,
+            company_id=db_model.company_id,
+            valid_from=db_model.valid_from,
+            valid_to=db_model.valid_to,
+        )
+
+    @staticmethod
+    def to_db_model(data_model: TickerHistoryDataModel) -> TickerHistoryDBModel:
+        """Convert data model to SQLAlchemy database model.
+
+        Returns:
+            DBTickerHistory: SQLAlchemy model instance ready for database operations
+        """
+        return TickerHistoryDBModel(
+            symbol=data_model.symbol,
+            company_id=data_model.company_id,
+            valid_from=data_model.valid_from,
+            valid_to=data_model.valid_to,
+        )
+
     def get_ticker_history_for_company(
         self, company_id: int
     ) -> list[TickerHistoryDataModel]:

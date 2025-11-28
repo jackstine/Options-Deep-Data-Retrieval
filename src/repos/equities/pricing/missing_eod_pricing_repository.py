@@ -40,6 +40,35 @@ class MissingEodPricingRepository(
             db_model_class=MissingEodPricingDBModel,
         )
 
+    @staticmethod
+    def from_db_model(db_model: MissingEodPricingDBModel) -> MissingEodPricingDataModel:
+        """Create data model from SQLAlchemy database model.
+
+        Args:
+            db_model: SQLAlchemy MissingEodPricing instance from database
+
+        Returns:
+            MissingEndOfDayPricing: Data model instance
+        """
+        return MissingEodPricingDataModel(
+            company_id=db_model.company_id,
+            ticker_history_id=db_model.ticker_history_id,
+            date=db_model.date,
+        )
+
+    @staticmethod
+    def to_db_model(data_model: MissingEodPricingDataModel) -> MissingEodPricingDBModel:
+        """Convert data model to SQLAlchemy database model.
+
+        Returns:
+            DBMissingEodPricing: SQLAlchemy model instance ready for database operations
+        """
+        return MissingEodPricingDBModel(
+            company_id=data_model.company_id,
+            ticker_history_id=data_model.ticker_history_id,
+            date=data_model.date,
+        )
+
     def bulk_insert_missing_dates(
         self, missing_data: list[MissingEodPricingDataModel]
     ) -> dict[str, int]:
@@ -60,7 +89,7 @@ class MissingEodPricingRepository(
         try:
             with self._SessionLocal() as session:
                 # Convert data models to DB models
-                db_models = [data.to_db_model() for data in missing_data]
+                db_models = [self.to_db_model(data) for data in missing_data]
 
                 # Prepare values for insert
                 values = [

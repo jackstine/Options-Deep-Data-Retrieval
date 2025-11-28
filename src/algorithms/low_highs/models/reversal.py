@@ -5,14 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from src.algorithms.low_highs.constants import EXPIRED_DAYS_OUT
 from src.algorithms.low_highs.derived_data import LowHighDerivedData
 from src.utils.date_utils import days_between, get_year_month
-
-if TYPE_CHECKING:
-    from src.database.algorithms.tables.reversals import Reversal as DBReversal
 
 
 @dataclass
@@ -241,104 +238,3 @@ class Reversal:
     def __repr__(self) -> str:
         """Detailed string representation of Reversal pattern."""
         return self.__str__()
-
-    def to_db_model(self) -> DBReversal:
-        """Convert data model to SQLAlchemy database model.
-
-        Returns:
-            DBReversal: SQLAlchemy model instance ready for database operations
-        """
-        from src.database.algorithms.tables.reversals import (
-            PRICE_MULTIPLIER,
-        )
-        from src.database.algorithms.tables.reversals import (
-            Reversal as DBReversal,
-        )
-
-        # Convert threshold from decimal to basis points (0.20 -> 2000)
-        threshold_bp = int(self.threshold * Decimal("10000"))
-
-        db_model = DBReversal(
-            ticker_history_id=self.ticker_history_id,
-            threshold=threshold_bp,
-            low_start_price=int(self.low_start_price * PRICE_MULTIPLIER),
-            low_start_date=self.low_start_date,
-            high_threshold_price=int(self.high_threshold_price * PRICE_MULTIPLIER),
-            high_threshold_date=self.high_threshold_date,
-            highest_price=int(self.highest_price * PRICE_MULTIPLIER),
-            highest_date=self.highest_date,
-            low_threshold_price=int(self.low_threshold_price * PRICE_MULTIPLIER),
-            low_threshold_date=self.low_threshold_date,
-            reversal_price=int(self.reversal_price * PRICE_MULTIPLIER),
-            reversal_date=self.reversal_date,
-            number_of_low_thresholds=self.number_of_low_thresholds,
-        )
-
-        if self.id is not None:
-            db_model.id = self.id
-
-        return db_model
-
-    @classmethod
-    def from_db_model(cls, db_model: DBReversal) -> Reversal:
-        """Create data model from SQLAlchemy database model.
-
-        Args:
-            db_model: SQLAlchemy Reversal instance from database
-
-        Returns:
-            Reversal: Data model instance
-        """
-        from src.database.algorithms.tables.reversals import PRICE_MULTIPLIER
-
-        # Convert threshold from basis points to decimal (2000 -> 0.20)
-        threshold = Decimal(db_model.threshold) / Decimal("10000")
-
-        return cls(
-            id=db_model.id,
-            ticker_history_id=db_model.ticker_history_id,
-            threshold=threshold,
-            low_start_price=Decimal(db_model.low_start_price) / PRICE_MULTIPLIER,
-            low_start_date=db_model.low_start_date,
-            high_threshold_price=Decimal(db_model.high_threshold_price)
-            / PRICE_MULTIPLIER,
-            high_threshold_date=db_model.high_threshold_date,
-            highest_price=Decimal(db_model.highest_price) / PRICE_MULTIPLIER,
-            highest_date=db_model.highest_date,
-            low_threshold_price=Decimal(db_model.low_threshold_price)
-            / PRICE_MULTIPLIER,
-            low_threshold_date=db_model.low_threshold_date,
-            reversal_price=Decimal(db_model.reversal_price) / PRICE_MULTIPLIER,
-            reversal_date=db_model.reversal_date,
-            number_of_low_thresholds=db_model.number_of_low_thresholds,
-        )
-
-    def update_db_model(self, db_model: DBReversal) -> None:
-        """Update existing SQLAlchemy database model with data from this model.
-
-        Note: Does not update id or ticker_history_id as they are immutable.
-
-        Args:
-            db_model: SQLAlchemy Reversal instance to update
-        """
-        from src.database.algorithms.tables.reversals import PRICE_MULTIPLIER
-
-        # Convert threshold from decimal to basis points
-        threshold_bp = int(self.threshold * Decimal("10000"))
-
-        db_model.threshold = threshold_bp
-        db_model.low_start_price = int(self.low_start_price * PRICE_MULTIPLIER)
-        db_model.low_start_date = self.low_start_date
-        db_model.high_threshold_price = int(
-            self.high_threshold_price * PRICE_MULTIPLIER
-        )
-        db_model.high_threshold_date = self.high_threshold_date
-        db_model.highest_price = int(self.highest_price * PRICE_MULTIPLIER)
-        db_model.highest_date = self.highest_date
-        db_model.low_threshold_price = int(
-            self.low_threshold_price * PRICE_MULTIPLIER
-        )
-        db_model.low_threshold_date = self.low_threshold_date
-        db_model.reversal_price = int(self.reversal_price * PRICE_MULTIPLIER)
-        db_model.reversal_date = self.reversal_date
-        db_model.number_of_low_thresholds = self.number_of_low_thresholds

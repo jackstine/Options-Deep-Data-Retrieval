@@ -98,8 +98,8 @@ class TickerHistoryService:
                 enriched_histories: list[TickerHistoryWithCompanyDataModel] = []
                 for ticker_history_db, company_db in rows:
                     # Convert DB models to data models
-                    ticker_history = TickerHistory.from_db_model(ticker_history_db)
-                    company = Company.from_db_model(company_db)
+                    ticker_history = TickerHistoryRepository.from_db_model(ticker_history_db)
+                    company = CompanyRepository.from_db_model(company_db)
 
                     enriched_histories.append(
                         TickerHistoryWithCompanyDataModel(

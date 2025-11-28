@@ -35,6 +35,141 @@ class HighsRepository(
             db_model_class=HighDBModel,
         )
 
+    @staticmethod
+    def from_db_model(db_model: HighDBModel) -> HighDataModel:
+        """Create data model from SQLAlchemy database model.
+
+        Args:
+            db_model: SQLAlchemy High instance from database
+
+        Returns:
+            High: Data model instance
+        """
+        from src.database.algorithms.tables.low_highs.highs import PRICE_MULTIPLIER
+
+        # Convert threshold from basis points to decimal (2000 -> 0.20)
+        threshold = Decimal(db_model.threshold) / Decimal("10000")
+
+        return HighDataModel(
+            id=db_model.id,
+            ticker_history_id=db_model.ticker_history_id,
+            threshold=threshold,
+            low_start_price=Decimal(db_model.low_start_price) / PRICE_MULTIPLIER,
+            low_start_date=db_model.low_start_date,
+            high_threshold_price=(
+                Decimal(db_model.high_threshold_price) / PRICE_MULTIPLIER
+                if db_model.high_threshold_price is not None
+                else None
+            ),
+            high_threshold_date=db_model.high_threshold_date,
+            highest_price=(
+                Decimal(db_model.highest_price) / PRICE_MULTIPLIER
+                if db_model.highest_price is not None
+                else None
+            ),
+            highest_date=db_model.highest_date,
+            low_threshold_price=(
+                Decimal(db_model.low_threshold_price) / PRICE_MULTIPLIER
+                if db_model.low_threshold_price is not None
+                else None
+            ),
+            low_threshold_date=db_model.low_threshold_date,
+            number_of_low_thresholds=db_model.number_of_low_thresholds,
+            last_updated=db_model.last_updated,
+            spawned=db_model.spawned,
+            expired=db_model.expired,
+        )
+
+    @staticmethod
+    def to_db_model(data_model: HighDataModel) -> HighDBModel:
+        """Convert data model to SQLAlchemy database model.
+
+        Args:
+            data_model: High data model instance
+
+        Returns:
+            HighDBModel: SQLAlchemy model instance ready for database operations
+        """
+        from src.database.algorithms.tables.low_highs.highs import PRICE_MULTIPLIER
+
+        # Convert threshold from decimal to basis points (0.20 -> 2000)
+        threshold_bp = int(data_model.threshold * Decimal("10000"))
+
+        db_model = HighDBModel(
+            ticker_history_id=data_model.ticker_history_id,
+            threshold=threshold_bp,
+            low_start_price=int(data_model.low_start_price * PRICE_MULTIPLIER),
+            low_start_date=data_model.low_start_date,
+            high_threshold_price=(
+                int(data_model.high_threshold_price * PRICE_MULTIPLIER)
+                if data_model.high_threshold_price is not None
+                else None
+            ),
+            high_threshold_date=data_model.high_threshold_date,
+            highest_price=(
+                int(data_model.highest_price * PRICE_MULTIPLIER)
+                if data_model.highest_price is not None
+                else None
+            ),
+            highest_date=data_model.highest_date,
+            low_threshold_price=(
+                int(data_model.low_threshold_price * PRICE_MULTIPLIER)
+                if data_model.low_threshold_price is not None
+                else None
+            ),
+            low_threshold_date=data_model.low_threshold_date,
+            number_of_low_thresholds=data_model.number_of_low_thresholds,
+            last_updated=data_model.last_updated,
+            spawned=data_model.spawned,
+            expired=data_model.expired,
+        )
+
+        if data_model.id is not None:
+            db_model.id = data_model.id
+
+        return db_model
+
+    @staticmethod
+    def _update_db_model(data_model: HighDataModel, db_model: HighDBModel) -> None:
+        """Update existing SQLAlchemy database model with data from data model.
+
+        Note: Does not update id or ticker_history_id as they are immutable.
+
+        Args:
+            data_model: High data model instance with new values
+            db_model: SQLAlchemy High instance to update
+        """
+        from src.database.algorithms.tables.low_highs.highs import PRICE_MULTIPLIER
+
+        # Convert threshold from decimal to basis points
+        threshold_bp = int(data_model.threshold * Decimal("10000"))
+
+        db_model.threshold = threshold_bp
+        db_model.low_start_price = int(data_model.low_start_price * PRICE_MULTIPLIER)
+        db_model.low_start_date = data_model.low_start_date
+        db_model.high_threshold_price = (
+            int(data_model.high_threshold_price * PRICE_MULTIPLIER)
+            if data_model.high_threshold_price is not None
+            else None
+        )
+        db_model.high_threshold_date = data_model.high_threshold_date
+        db_model.highest_price = (
+            int(data_model.highest_price * PRICE_MULTIPLIER)
+            if data_model.highest_price is not None
+            else None
+        )
+        db_model.highest_date = data_model.highest_date
+        db_model.low_threshold_price = (
+            int(data_model.low_threshold_price * PRICE_MULTIPLIER)
+            if data_model.low_threshold_price is not None
+            else None
+        )
+        db_model.low_threshold_date = data_model.low_threshold_date
+        db_model.number_of_low_thresholds = data_model.number_of_low_thresholds
+        db_model.last_updated = data_model.last_updated
+        db_model.spawned = data_model.spawned
+        db_model.expired = data_model.expired
+
     def get_all_active_highs(self) -> list[HighDataModel]:
         """Get all active (non-expired) high patterns.
 
@@ -49,7 +184,7 @@ class HighsRepository(
                 result = session.execute(stmt)
                 db_models = result.scalars().all()
 
-                return [HighDataModel.from_db_model(db_model) for db_model in db_models]
+                return [self.from_db_model(db_model) for db_model in db_models]
 
         except SQLAlchemyError as e:
             logger.error(f"Database error retrieving all active highs: {e}")
@@ -72,21 +207,21 @@ class HighsRepository(
                 for high in highs:
                     if high.id is None:
                         # Insert new record
-                        db_model = high.to_db_model()
+                        db_model = self.to_db_model(high)
                         session.add(db_model)
                         inserted_count += 1
                     else:
                         # Update existing record
                         existing = session.get(HighDBModel, high.id)
                         if existing:
-                            high.update_db_model(existing)
+                            self._update_db_model(high, existing)
                             updated_count += 1
                         else:
                             # TODO either we do this or we do not,  we need to make this a standard
                             # and if we do generate the ids, then it should be done by that standard
                             # else we need to not do it at all and throw an error.
                             # ID was set but record doesn't exist, insert anyway
-                            db_model = high.to_db_model()
+                            db_model = self.to_db_model(high)
                             session.add(db_model)
                             inserted_count += 1
 

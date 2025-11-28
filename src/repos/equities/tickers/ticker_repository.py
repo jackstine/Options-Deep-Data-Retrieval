@@ -26,6 +26,47 @@ class TickerRepository(BaseRepository[TickerDataModel, TickerDBModel]):
             db_model_class=TickerDBModel,
         )
 
+    @staticmethod
+    def from_db_model(db_model: TickerDBModel) -> TickerDataModel:
+        """Create data model from SQLAlchemy database model.
+
+        Args:
+            db_model: SQLAlchemy Ticker instance from database
+
+        Returns:
+            Ticker: Data model instance
+        """
+        return TickerDataModel(
+            id=db_model.id,
+            symbol=db_model.symbol,
+            company_id=db_model.company_id,
+            ticker_history_id=db_model.ticker_history_id,
+        )
+
+    @staticmethod
+    def to_db_model(data_model: TickerDataModel) -> TickerDBModel:
+        """Convert data model to SQLAlchemy database model.
+
+        Args:
+            data_model: Ticker data model instance
+
+        Returns:
+            DBTicker: SQLAlchemy model instance ready for database operations
+
+        Raises:
+            ValueError: If ticker_history_id is None
+        """
+        if data_model.ticker_history_id is None:
+            raise ValueError(
+                "ticker_history_id must be set before converting to database model"
+            )
+
+        return TickerDBModel(
+            symbol=data_model.symbol,
+            company_id=data_model.company_id,
+            ticker_history_id=data_model.ticker_history_id,
+        )
+
     def get_active_ticker_symbols(self) -> set[str]:
         """Get all ticker symbols from the database.
 

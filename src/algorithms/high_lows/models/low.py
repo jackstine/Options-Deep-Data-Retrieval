@@ -5,14 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from src.algorithms.high_lows.constants import EXPIRED_DAYS_OUT
 from src.algorithms.high_lows.derived_data import HighLowDerivedData
 from src.utils.date_utils import days_between, get_year_month
-
-if TYPE_CHECKING:
-    from src.database.algorithms.tables.lows import Low as DBLow
 
 # Days until a pattern expires
 EXPIRATION_DAYS = 1200
@@ -270,137 +267,3 @@ class Low:
     def __repr__(self) -> str:
         """Detailed string representation of Low pattern."""
         return self.__str__()
-
-    def to_db_model(self) -> DBLow:
-        """Convert data model to SQLAlchemy database model.
-
-        Returns:
-            DBLow: SQLAlchemy model instance ready for database operations
-        """
-        from src.database.algorithms.tables.lows import (
-            PRICE_MULTIPLIER,
-        )
-        from src.database.algorithms.tables.lows import (
-            Low as DBLow,
-        )
-
-        # Convert threshold from decimal to basis points (0.20 -> 2000)
-        threshold_bp = int(self.threshold * Decimal("10000"))
-
-        db_model = DBLow(
-            ticker_history_id=self.ticker_history_id,
-            threshold=threshold_bp,
-            high_start_price=int(self.high_start_price * PRICE_MULTIPLIER),
-            high_start_date=self.high_start_date,
-            low_threshold_price=(
-                int(self.low_threshold_price * PRICE_MULTIPLIER)
-                if self.low_threshold_price is not None
-                else None
-            ),
-            low_threshold_date=self.low_threshold_date,
-            lowest_price=(
-                int(self.lowest_price * PRICE_MULTIPLIER)
-                if self.lowest_price is not None
-                else None
-            ),
-            lowest_date=self.lowest_date,
-            high_threshold_price=(
-                int(self.high_threshold_price * PRICE_MULTIPLIER)
-                if self.high_threshold_price is not None
-                else None
-            ),
-            high_threshold_date=self.high_threshold_date,
-            number_of_high_thresholds=self.number_of_high_thresholds,
-            last_updated=self.last_updated,
-            spawned=self.spawned,
-            expired=self.expired,
-        )
-
-        if self.id is not None:
-            db_model.id = self.id
-
-        return db_model
-
-    @classmethod
-    def from_db_model(cls, db_model: DBLow) -> Low:
-        """Create data model from SQLAlchemy database model.
-
-        Args:
-            db_model: SQLAlchemy Low instance from database
-
-        Returns:
-            Low: Data model instance
-        """
-        from src.database.algorithms.tables.lows import PRICE_MULTIPLIER
-
-        # Convert threshold from basis points to decimal (2000 -> 0.20)
-        threshold = Decimal(db_model.threshold) / Decimal("10000")
-
-        return cls(
-            id=db_model.id,
-            ticker_history_id=db_model.ticker_history_id,
-            threshold=threshold,
-            high_start_price=Decimal(db_model.high_start_price) / PRICE_MULTIPLIER,
-            high_start_date=db_model.high_start_date,
-            low_threshold_price=(
-                Decimal(db_model.low_threshold_price) / PRICE_MULTIPLIER
-                if db_model.low_threshold_price is not None
-                else None
-            ),
-            low_threshold_date=db_model.low_threshold_date,
-            lowest_price=(
-                Decimal(db_model.lowest_price) / PRICE_MULTIPLIER
-                if db_model.lowest_price is not None
-                else None
-            ),
-            lowest_date=db_model.lowest_date,
-            high_threshold_price=(
-                Decimal(db_model.high_threshold_price) / PRICE_MULTIPLIER
-                if db_model.high_threshold_price is not None
-                else None
-            ),
-            high_threshold_date=db_model.high_threshold_date,
-            number_of_high_thresholds=db_model.number_of_high_thresholds,
-            last_updated=db_model.last_updated,
-            spawned=db_model.spawned,
-            expired=db_model.expired,
-        )
-
-    def update_db_model(self, db_model: DBLow) -> None:
-        """Update existing SQLAlchemy database model with data from this model.
-
-        Note: Does not update id or ticker_history_id as they are immutable.
-
-        Args:
-            db_model: SQLAlchemy Low instance to update
-        """
-        from src.database.algorithms.tables.lows import PRICE_MULTIPLIER
-
-        # Convert threshold from decimal to basis points
-        threshold_bp = int(self.threshold * Decimal("10000"))
-
-        db_model.threshold = threshold_bp
-        db_model.high_start_price = int(self.high_start_price * PRICE_MULTIPLIER)
-        db_model.high_start_date = self.high_start_date
-        db_model.low_threshold_price = (
-            int(self.low_threshold_price * PRICE_MULTIPLIER)
-            if self.low_threshold_price is not None
-            else None
-        )
-        db_model.low_threshold_date = self.low_threshold_date
-        db_model.lowest_price = (
-            int(self.lowest_price * PRICE_MULTIPLIER)
-            if self.lowest_price is not None
-            else None
-        )
-        db_model.lowest_date = self.lowest_date
-        db_model.high_threshold_price = (
-            int(self.high_threshold_price * PRICE_MULTIPLIER)
-            if self.high_threshold_price is not None
-            else None
-        )
-        db_model.high_threshold_date = self.high_threshold_date
-        db_model.number_of_high_thresholds = self.number_of_high_thresholds
-        db_model.last_updated = self.last_updated
-        db_model.spawned = self.spawned
-        db_model.expired = self.expired

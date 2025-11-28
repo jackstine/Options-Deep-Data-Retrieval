@@ -33,6 +33,56 @@ class TickerHistoryStatsRepository(
             db_model_class=TickerHistoryStatsDBModel,
         )
 
+    @staticmethod
+    def from_db_model(db_model: TickerHistoryStatsDBModel) -> TickerHistoryStatsDataModel:
+        """Create data model from SQLAlchemy database model.
+
+        Args:
+            db_model: SQLAlchemy TickerHistoryStats instance from database
+
+        Returns:
+            TickerHistoryStats: Data model instance
+        """
+        from src.database.equities.tables.ticker_history_stats import PRICE_MULTIPLIER
+        from decimal import Decimal
+
+        return TickerHistoryStatsDataModel(
+            id=db_model.id,
+            ticker_history_id=db_model.ticker_history_id,
+            data_coverage_pct=db_model.data_coverage_pct,
+            min_price=Decimal(db_model.min_price) / PRICE_MULTIPLIER if db_model.min_price is not None else None,
+            max_price=Decimal(db_model.max_price) / PRICE_MULTIPLIER if db_model.max_price is not None else None,
+            average_price=Decimal(db_model.average_price) / PRICE_MULTIPLIER if db_model.average_price is not None else None,
+            median_price=Decimal(db_model.median_price) / PRICE_MULTIPLIER if db_model.median_price is not None else None,
+            has_insufficient_coverage=db_model.has_insufficient_coverage,
+            low_suspicious_price=db_model.low_suspicious_price,
+            high_suspicious_price=db_model.high_suspicious_price,
+            created_at=db_model.created_at,
+            updated_at=db_model.updated_at,
+        )
+
+    @staticmethod
+    def to_db_model(data_model: TickerHistoryStatsDataModel) -> TickerHistoryStatsDBModel:
+        """Convert data model to SQLAlchemy database model.
+
+        Returns:
+            DBTickerHistoryStats: SQLAlchemy model instance ready for database operations
+        """
+        from src.database.equities.tables.ticker_history_stats import PRICE_MULTIPLIER
+
+        return TickerHistoryStatsDBModel(
+            id=data_model.id,
+            ticker_history_id=data_model.ticker_history_id,
+            data_coverage_pct=data_model.data_coverage_pct,
+            min_price=int(data_model.min_price * PRICE_MULTIPLIER) if data_model.min_price is not None else None,
+            max_price=int(data_model.max_price * PRICE_MULTIPLIER) if data_model.max_price is not None else None,
+            average_price=int(data_model.average_price * PRICE_MULTIPLIER) if data_model.average_price is not None else None,
+            median_price=int(data_model.median_price * PRICE_MULTIPLIER) if data_model.median_price is not None else None,
+            has_insufficient_coverage=data_model.has_insufficient_coverage,
+            low_suspicious_price=data_model.low_suspicious_price,
+            high_suspicious_price=data_model.high_suspicious_price,
+        )
+
     def upsert_stats(
         self, stats: TickerHistoryStatsDataModel
     ) -> TickerHistoryStatsDataModel:
@@ -50,7 +100,7 @@ class TickerHistoryStatsRepository(
         try:
             with self._SessionLocal() as session:
                 # Convert data model to DB model
-                db_model = stats.to_db_model()
+                db_model = self.to_db_model(stats)
 
                 # Prepare values for upsert
                 values = {

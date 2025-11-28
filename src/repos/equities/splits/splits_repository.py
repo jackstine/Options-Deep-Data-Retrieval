@@ -37,6 +37,46 @@ class SplitsRepository(BaseRepository[SplitDataModel, SplitDBModel]):
             db_model_class=SplitDBModel,
         )
 
+    @staticmethod
+    def from_db_model(db_model: SplitDBModel) -> SplitDataModel:
+        """Create data model from SQLAlchemy database model.
+
+        Args:
+            db_model: SQLAlchemy Split instance from database
+
+        Returns:
+            Split: Data model instance
+        """
+        return SplitDataModel(
+            id=db_model.id,
+            ticker_history_id=db_model.ticker_history_id,
+            symbol=None,  # Symbol not stored in DB, must be set separately if needed
+            date=db_model.date,
+            split_ratio=db_model.split_ratio,
+        )
+
+    @staticmethod
+    def to_db_model(data_model: SplitDataModel) -> SplitDBModel:
+        """Convert data model to SQLAlchemy database model.
+
+        Returns:
+            DBSplit: SQLAlchemy model instance ready for database operations
+
+        Raises:
+            ValueError: If ticker_history_id is None
+        """
+        if data_model.ticker_history_id is None:
+            raise ValueError(
+                "ticker_history_id must be set before converting to database model"
+            )
+
+        return SplitDBModel(
+            id=data_model.id,
+            ticker_history_id=data_model.ticker_history_id,
+            date=data_model.date,
+            split_ratio=data_model.split_ratio,
+        )
+
     def get_splits_by_ticker(
         self,
         ticker_history_id: int,
@@ -78,7 +118,7 @@ class SplitsRepository(BaseRepository[SplitDataModel, SplitDBModel]):
                 db_models = result.scalars().all()
 
                 data_models = [
-                    SplitDataModel.from_db_model(db_model) for db_model in db_models
+                    self.from_db_model(db_model) for db_model in db_models
                 ]
                 logger.info(
                     f"Retrieved {len(data_models)} split records for ticker_history_id={ticker_history_id}"
@@ -117,7 +157,7 @@ class SplitsRepository(BaseRepository[SplitDataModel, SplitDBModel]):
                     split.ticker_history_id = ticker_history_id
 
                 # Convert data models to DB models
-                db_models = [split.to_db_model() for split in splits_data]
+                db_models = [self.to_db_model(split) for split in splits_data]
 
                 # Prepare values for upsert
                 values = [

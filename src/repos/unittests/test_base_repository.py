@@ -24,8 +24,8 @@ class MockDataModel:
     """Mock data model for testing."""
 
     id: int = 0
-    name: str = ""
-    description: str = ""
+    name: str | None = None
+    description: str | None = None
     is_active: bool = True
     count: int = 0
     price: float = 0.0
@@ -97,12 +97,10 @@ class TestExtractFilterConditions(unittest.TestCase):
         """Test that filter model with default values returns all non-None fields."""
         filter_model = MockDataModel()
         result = self.repo._extract_filter_conditions(filter_model)
-        # All fields with non-None defaults are included (id=0, name="", etc.)
-        # Note: created_date is None by default, so it's filtered out
+        # All fields with non-None defaults are included (id=0, is_active=True, etc.)
+        # Note: name, description, and created_date are None by default, so they're filtered out
         expected = {
             "id": 0,
-            "name": "",
-            "description": "",
             "is_active": True,
             "count": 0,
             "price": 0.0,
@@ -114,10 +112,10 @@ class TestExtractFilterConditions(unittest.TestCase):
         filter_model = MockDataModel(name="test_name")
         result = self.repo._extract_filter_conditions(filter_model)
         # All non-None fields are included, not just the one we explicitly set
+        # description is None, so it's filtered out
         expected = {
             "id": 0,
             "name": "test_name",
-            "description": "",
             "is_active": True,
             "count": 0,
             "price": 0.0,
@@ -128,10 +126,10 @@ class TestExtractFilterConditions(unittest.TestCase):
         """Test extraction with multiple fields set to non-default values."""
         filter_model = MockDataModel(name="test_name", count=5, price=9.99)
         result = self.repo._extract_filter_conditions(filter_model)
+        # description is None, so it's filtered out
         expected = {
             "id": 0,
             "name": "test_name",
-            "description": "",
             "is_active": True,
             "count": 5,
             "price": 9.99,
@@ -154,8 +152,10 @@ class TestExtractFilterConditions(unittest.TestCase):
         filter_model = MockDataModel(description="")
         result = self.repo._extract_filter_conditions(filter_model)
         # Empty string is non-None, so it should be included
+        # name is None by default, so it's filtered out
         self.assertIn("description", result)
         self.assertEqual(result["description"], "")
+        self.assertNotIn("name", result)
 
     def test_includes_zero_values(self) -> None:
         """Test that zero values are included (they are non-None)."""
@@ -208,10 +208,9 @@ class TestExtractFilterConditions(unittest.TestCase):
         filter_model = MockDataModel(id=123, is_active=True)
         result = self.repo._extract_filter_conditions(filter_model)
         # All non-None fields are included
+        # name and description are None, so they're filtered out
         expected = {
             "id": 123,
-            "name": "",
-            "description": "",
             "is_active": True,
             "count": 0,
             "price": 0.0,
@@ -224,10 +223,9 @@ class TestExtractFilterConditions(unittest.TestCase):
         filter_model = MockDataModel(id=123, is_active=False)
         result = self.repo._extract_filter_conditions(filter_model)
         # All non-None fields are included
+        # name and description are None, so they're filtered out
         expected = {
             "id": 123,
-            "name": "",
-            "description": "",
             "is_active": False,
             "count": 0,
             "price": 0.0,
@@ -240,10 +238,10 @@ class TestExtractFilterConditions(unittest.TestCase):
         filter_model = MockDataModel(id=123, name="test")
         result = self.repo._extract_filter_conditions(filter_model)
         # All non-None fields are included
+        # description is None, so it's filtered out
         expected = {
             "id": 123,
             "name": "test",
-            "description": "",
             "is_active": True,
             "count": 0,
             "price": 0.0,
@@ -264,10 +262,12 @@ class TestExtractFilterConditions(unittest.TestCase):
         filter_model = MockDataModel(id=0, name="test")
         result = self.repo._extract_filter_conditions(filter_model)
         # All non-None fields are included, including id=0
+        # description is None, so it's filtered out
         self.assertIn("id", result)
         self.assertEqual(result["id"], 0)
         self.assertIn("name", result)
         self.assertEqual(result["name"], "test")
+        self.assertNotIn("description", result)
 
 
 class TestApplyTextSearch(unittest.TestCase):
