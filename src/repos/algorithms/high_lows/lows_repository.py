@@ -12,13 +12,20 @@ from sqlalchemy.exc import SQLAlchemyError
 from src.algorithms.high_lows.models.low import Low as LowDataModel
 from src.config.configuration import CONFIG
 from src.database.algorithms.tables.high_lows.lows import Low as LowDBModel
+from src.pipelines.algorithms.base.interfaces import ActivePatternRepository
 from src.repos.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class LowsRepository(BaseRepository[LowDataModel, LowDBModel]):
-    """Repository for lows pattern database operations."""
+class LowsRepository(
+    BaseRepository[LowDataModel, LowDBModel],
+    ActivePatternRepository[LowDataModel],
+):
+    """Repository for lows pattern database operations.
+
+    Implements both BaseRepository and ActivePatternRepository interfaces.
+    """
 
     def __init__(self) -> None:
         """Initialize lows repository."""
@@ -257,3 +264,43 @@ class LowsRepository(BaseRepository[LowDataModel, LowDBModel]):
                 f"Database error retrieving lows updated before {before_date}: {e}"
             )
             raise
+
+    # =========================================================================
+    # ActivePatternRepository Interface Implementation
+    # =========================================================================
+
+    def get_all_active(self) -> list[LowDataModel]:
+        """Get all non-expired active patterns.
+
+        Unified interface method that delegates to get_all_active_lows().
+
+        Returns:
+            List of all active Low patterns
+        """
+        return self.get_all_active_lows()
+
+    def bulk_upsert(self, patterns: list[LowDataModel]) -> dict[str, int]:
+        """Insert or update multiple patterns.
+
+        Unified interface method that delegates to bulk_upsert_lows().
+
+        Args:
+            patterns: List of patterns to upsert
+
+        Returns:
+            Dict with 'inserted' and 'updated' counts
+        """
+        return self.bulk_upsert_lows(patterns)
+
+    def delete_by_ids(self, pattern_ids: list[int]) -> int:
+        """Delete patterns by their IDs.
+
+        Unified interface method that delegates to delete_lows_by_ids().
+
+        Args:
+            pattern_ids: List of pattern IDs to delete
+
+        Returns:
+            Count of patterns deleted
+        """
+        return self.delete_lows_by_ids(pattern_ids)

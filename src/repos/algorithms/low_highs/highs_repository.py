@@ -12,13 +12,20 @@ from sqlalchemy.exc import SQLAlchemyError
 from src.algorithms.low_highs.models.high import High as HighDataModel
 from src.config.configuration import CONFIG
 from src.database.algorithms.tables.low_highs.highs import High as HighDBModel
+from src.pipelines.algorithms.base.interfaces import ActivePatternRepository
 from src.repos.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class HighsRepository(BaseRepository[HighDataModel, HighDBModel]):
-    """Repository for highs pattern database operations."""
+class HighsRepository(
+    BaseRepository[HighDataModel, HighDBModel],
+    ActivePatternRepository[HighDataModel],
+):
+    """Repository for highs pattern database operations.
+
+    Implements both BaseRepository and ActivePatternRepository interfaces.
+    """
 
     def __init__(self) -> None:
         """Initialize highs repository."""
@@ -257,3 +264,43 @@ class HighsRepository(BaseRepository[HighDataModel, HighDBModel]):
                 f"Database error retrieving highs updated before {before_date}: {e}"
             )
             raise
+
+    # =========================================================================
+    # ActivePatternRepository Interface Implementation
+    # =========================================================================
+
+    def get_all_active(self) -> list[HighDataModel]:
+        """Get all non-expired active patterns.
+
+        Unified interface method that delegates to get_all_active_highs().
+
+        Returns:
+            List of all active High patterns
+        """
+        return self.get_all_active_highs()
+
+    def bulk_upsert(self, patterns: list[HighDataModel]) -> dict[str, int]:
+        """Insert or update multiple patterns.
+
+        Unified interface method that delegates to bulk_upsert_highs().
+
+        Args:
+            patterns: List of patterns to upsert
+
+        Returns:
+            Dict with 'inserted' and 'updated' counts
+        """
+        return self.bulk_upsert_highs(patterns)
+
+    def delete_by_ids(self, pattern_ids: list[int]) -> int:
+        """Delete patterns by their IDs.
+
+        Unified interface method that delegates to delete_highs_by_ids().
+
+        Args:
+            pattern_ids: List of pattern IDs to delete
+
+        Returns:
+            Count of patterns deleted
+        """
+        return self.delete_highs_by_ids(pattern_ids)
