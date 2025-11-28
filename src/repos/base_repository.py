@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, fields
 from datetime import date
@@ -25,7 +24,7 @@ class DataModelProtocol(Protocol):
 
 class DBModelProtocol(Protocol):
     """Protocol for SQLAlchemy model classes."""
-    pass  # No conversion methods needed - pure ORM
+    id: int  # All DB models have an id field
 
 # Type variables for generic repository
 TDataModel = TypeVar("TDataModel", bound=DataModelProtocol)  # Data model type (e.g., Company)
@@ -46,15 +45,15 @@ class QueryOptions:
     date_range: tuple[date, date] | None = None
     text_search: str | None = None  # For full-text search
     text_search_fields: list[str] | None = None  # Specify which fields to search
-    text_search_operator: str = "ilike"  # 'ilike', 'like', 'match', 'fts'
+    text_search_operator: str | None = None  # 'ilike', 'like', 'match', 'fts'
 
     # Relationship loading
-    load_relationships: bool = False
+    load_relationships: bool | None = None
     relationship_filters: dict[str, Any] | None = None
 
 
-class BaseRepository(Generic[TDataModel, TDBModel], ABC):
-    """Abstract base repository providing common CRUD operations.
+class BaseRepository(Generic[TDataModel, TDBModel]):
+    """Base repository providing common CRUD operations.
 
     Type Parameters:
         TDataModel: The data model type (e.g., Company, Ticker)
@@ -81,44 +80,62 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
         self._db_model_class = db_model_class
         self._logger = logging.getLogger(self.__class__.__name__)
 
+    def _model_to_dict(self, model: TDataModel) -> dict[str, Any]:
+        """Convert data model to dictionary.
+
+        Args:
+            model: Data model instance
+
+        Returns:
+            Dictionary of field_name -> value
+        """
+        if hasattr(model, "to_dict"):
+            return model.to_dict()
+        else:
+            # Fallback for dataclasses
+            return {
+                field.name: getattr(model, field.name)
+                for field in fields(model)  # type: ignore[arg-type]
+            }
+
+    def _extract_valid_db_fields(self, model_dict: dict[str, Any]) -> dict[str, Any]:
+        """Extract fields that exist in DB model and have non-None values.
+
+        Args:
+            model_dict: Dictionary of field_name -> value
+
+        Returns:
+            Dictionary of valid field_name -> value pairs
+        """
+        return {
+            field_name: value
+            for field_name, value in model_dict.items()
+            if hasattr(self._db_model_class, field_name) and value is not None
+        }
+
     def _extract_filter_conditions(self, filter_model: TDataModel) -> dict[str, Any]:
-        """Extract non-empty values from data model to create filter conditions.
+        """Extract non-None values from data model to create filter conditions.
 
         Args:
             filter_model: Data model instance with filter values
 
         Returns:
-            Dictionary of field_name -> value for non-empty fields that exist in DB
+            Dictionary of field_name -> value for non-None fields that exist in DB
         """
-        conditions = {}
+        model_dict = self._model_to_dict(filter_model)
+        return self._extract_valid_db_fields(model_dict)
 
-        if hasattr(filter_model, "to_dict"):
-            model_dict = filter_model.to_dict()
-        else:
-            # Fallback for dataclasses - use type ignore for complex generic constraint
-            model_dict = {
-                field.name: getattr(filter_model, field.name)
-                for field in fields(filter_model)  # type: ignore[arg-type]
-            }
+    def _extract_update_values(self, update_data: TDataModel) -> dict[str, Any]:
+        """Extract non-None values from data model to create update values.
 
-        for field_name, value in model_dict.items():
-            # Only include fields that exist in the database model
-            if hasattr(self._db_model_class, field_name) and self._is_valid_filter_value(value):
-                conditions[field_name] = value
+        Args:
+            update_data: Data model instance with update values
 
-        return conditions
-
-    def _is_valid_filter_value(self, value: Any) -> bool:
-        """Check if a value should be used as a filter condition."""
-        if value is None:
-            return False
-        if isinstance(value, str) and value == "":
-            return False
-        if isinstance(value, (int, float)) and value == 0:
-            return False
-        if isinstance(value, (list, dict, set)) and len(value) == 0:
-            return False
-        return True
+        Returns:
+            Dictionary of field_name -> value for non-None fields that exist in DB
+        """
+        model_dict = self._model_to_dict(update_data)
+        return self._extract_valid_db_fields(model_dict)
 
     def _apply_text_search(
         self, stmt: Any, text_query: str, search_fields: list[str] | None = None
@@ -147,20 +164,51 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
 
         return stmt
 
-    @abstractmethod
-    def _create_id_filter(self, id: int) -> TDataModel:
-        """Create a data model filter for ID lookups.
-        Must be implemented by concrete repositories.
+    def _apply_filter_conditions(self, query: Any, filter_model: TDataModel | None) -> Any:
+        """Apply filter conditions from data model to query.
 
         Args:
-            id: Record ID
+            query: SQLAlchemy query/statement
+            filter_model: Data model with filter values (None = no filters)
 
         Returns:
-            Data model instance with ID set for filtering
+            Query with filter conditions applied
         """
-        pass
+        if filter_model:
+            conditions = self._extract_filter_conditions(filter_model)
+            for field, value in conditions.items():
+                if hasattr(self._db_model_class, field):
+                    query = query.where(
+                        getattr(self._db_model_class, field) == value
+                    )
+        return query
 
-    def get(
+    def _convert_to_data_model(self, db_model: TDBModel) -> TDataModel:
+        """Convert single DB model to data model.
+
+        Args:
+            db_model: SQLAlchemy model instance
+
+        Returns:
+            Data model instance
+        """
+        return self._data_model_class.from_db_model(db_model)
+
+    def _convert_to_data_models(self, db_models: list[TDBModel]) -> list[TDataModel]:
+        """Convert list of DB models to data models.
+
+        Args:
+            db_models: List of SQLAlchemy model instances
+
+        Returns:
+            List of data model instances
+        """
+        return [
+            self._data_model_class.from_db_model(db_model)
+            for db_model in db_models
+        ]
+
+    def get_filter(
         self,
         filter_model: TDataModel | None = None,
         options: QueryOptions | None = None,
@@ -181,13 +229,7 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
                 query = select(self._db_model_class)
 
                 # Apply filters from data model
-                if filter_model:
-                    conditions = self._extract_filter_conditions(filter_model)
-                    for field, value in conditions.items():
-                        if hasattr(self._db_model_class, field):
-                            query = query.where(
-                                getattr(self._db_model_class, field) == value
-                            )
+                query = self._apply_filter_conditions(query, filter_model)
 
                 # Apply text search
                 if options.text_search:
@@ -213,26 +255,36 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
                 db_models = result.scalars().all()
 
                 # Convert to data models using data model's from_db_model()
-                data_models = [
-                    self._data_model_class.from_db_model(db_model) for db_model in db_models
-                ]
+                data_models = self._convert_to_data_models(db_models)
 
                 self._logger.info(f"Retrieved {len(data_models)} records")
                 return data_models
 
         except SQLAlchemyError as e:
-            self._logger.error(f"Database error in get(): {e}")
+            self._logger.error(f"Database error in get_filter(): {e}")
             raise
 
     def get_one(self, filter_model: TDataModel) -> TDataModel | None:
         """Get single record matching filter."""
-        results = self.get(filter_model, QueryOptions(limit=1))
+        results = self.get_filter(filter_model, QueryOptions(limit=1))
         return results[0] if results else None
 
     def get_by_id(self, id: int) -> TDataModel | None:
         """Get record by ID."""
-        filter_model = self._create_id_filter(id)
-        return self.get_one(filter_model)
+        try:
+            with self._SessionLocal() as session:
+                query = select(self._db_model_class).where(
+                    self._db_model_class.id == id  # type: ignore[arg-type]
+                )
+                result = session.execute(query)
+                db_model = result.scalar_one_or_none()
+
+                if db_model:
+                    return self._convert_to_data_model(db_model)
+                return None
+        except SQLAlchemyError as e:
+            self._logger.error(f"Database error in get_by_id(): {e}")
+            raise
 
     def get_limit_offset(
         self,
@@ -251,7 +303,7 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
             List of data model instances
         """
         options = QueryOptions(limit=limit, offset=offset)
-        return self.get(filter_model, options)
+        return self.get_filter(filter_model, options)
 
     def count(self, filter_model: TDataModel | None = None) -> int:
         """Count records matching filter.
@@ -267,13 +319,7 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
                 query = select(func.count()).select_from(self._db_model_class)
 
                 # Apply filters
-                if filter_model:
-                    conditions = self._extract_filter_conditions(filter_model)
-                    for field, value in conditions.items():
-                        if hasattr(self._db_model_class, field):
-                            query = query.where(
-                                getattr(self._db_model_class, field) == value
-                            )
+                query = self._apply_filter_conditions(query, filter_model)
 
                 result = session.execute(query)
                 count = result.scalar()
@@ -303,7 +349,7 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
                 session.refresh(db_model)
 
                 # Convert back using data model's from_db_model()
-                result = self._data_model_class.from_db_model(db_model)
+                result = self._convert_to_data_model(db_model)
                 self._logger.info(f"Inserted record with ID {result.id}")
                 return result  # type: ignore[no-any-return]
 
@@ -366,10 +412,7 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
                 session.commit()
 
                 # Convert back to data models using data model's from_db_model()
-                result_models = [
-                    self._data_model_class.from_db_model(db_model)
-                    for db_model in db_models
-                ]
+                result_models = self._convert_to_data_models(db_models)
 
                 self._logger.info(f"Bulk inserted {len(result_models)} records with IDs")
                 return result_models
@@ -378,7 +421,7 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
             self._logger.error(f"Database error in insert_many_returning(): {e}")
             raise
 
-    def update(self, filter_model: TDataModel, update_data: TDataModel) -> int:
+    def update_filter(self, filter_model: TDataModel, update_data: TDataModel) -> int:
         """Update records matching filter with new data.
 
         Args:
@@ -402,7 +445,7 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
                         )
 
                 # Apply update values
-                update_values = self._extract_filter_conditions(update_data)
+                update_values = self._extract_update_values(update_data)
                 if not update_values:
                     self._logger.warning("No valid update values provided")
                     return 0
@@ -417,10 +460,87 @@ class BaseRepository(Generic[TDataModel, TDBModel], ABC):
                 return updated_count
 
         except SQLAlchemyError as e:
-            self._logger.error(f"Database error in update(): {e}")
+            self._logger.error(f"Database error in update_filter(): {e}")
             raise
 
     def update_by_id(self, id: int, update_data: TDataModel) -> bool:
         """Update single record by ID."""
-        filter_model = self._create_id_filter(id)
-        return self.update(filter_model, update_data) > 0
+        try:
+            with self._SessionLocal() as session:
+                # Build update query
+                query = update(self._db_model_class).where(
+                    self._db_model_class.id == id  # type: ignore[arg-type]
+                )
+
+                # Apply update values
+                update_values = self._extract_update_values(update_data)
+                if not update_values:
+                    self._logger.warning("No valid update values provided")
+                    return False
+
+                query = query.values(**update_values)
+                result = session.execute(query)
+                session.commit()
+
+                updated = result.rowcount > 0
+                if updated:
+                    self._logger.info(f"Updated record with ID {id}")
+                return updated
+        except SQLAlchemyError as e:
+            self._logger.error(f"Database error in update_by_id(): {e}")
+            raise
+
+    def delete_filter(self, filter_model: TDataModel) -> int:
+        """Delete records matching filter.
+
+        Args:
+            filter_model: Data model specifying which records to delete
+
+        Returns:
+            Number of records deleted
+        """
+        try:
+            with self._SessionLocal() as session:
+                # Build base query
+                query = select(self._db_model_class)
+
+                # Apply filter conditions
+                query = self._apply_filter_conditions(query, filter_model)
+
+                # Get the records to delete
+                result = session.execute(query)
+                records_to_delete = result.scalars().all()
+
+                # Delete them
+                for record in records_to_delete:
+                    session.delete(record)
+
+                session.commit()
+
+                deleted_count = len(records_to_delete)
+                self._logger.info(f"Deleted {deleted_count} records")
+                return deleted_count
+
+        except SQLAlchemyError as e:
+            self._logger.error(f"Database error in delete_filter(): {e}")
+            raise
+
+    def delete_by_id(self, id: int) -> bool:
+        """Delete single record by ID."""
+        try:
+            with self._SessionLocal() as session:
+                query = select(self._db_model_class).where(
+                    self._db_model_class.id == id  # type: ignore[arg-type]
+                )
+                result = session.execute(query)
+                record = result.scalar_one_or_none()
+
+                if record:
+                    session.delete(record)
+                    session.commit()
+                    self._logger.info(f"Deleted record with ID {id}")
+                    return True
+                return False
+        except SQLAlchemyError as e:
+            self._logger.error(f"Database error in delete_by_id(): {e}")
+            raise

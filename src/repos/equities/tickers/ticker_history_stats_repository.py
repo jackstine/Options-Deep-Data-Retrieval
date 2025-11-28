@@ -33,46 +33,6 @@ class TickerHistoryStatsRepository(
             db_model_class=TickerHistoryStatsDBModel,
         )
 
-    def _create_id_filter(self, id: int) -> TickerHistoryStatsDataModel:
-        """Create a TickerHistoryStats filter model for ID lookups."""
-        return TickerHistoryStatsDataModel(
-            ticker_history_id=0,  # Will be ignored
-            id=id,  # Will be used as filter
-        )
-
-    # Domain-specific methods
-
-    def get_stats_by_ticker_history_id(
-        self, ticker_history_id: int
-    ) -> TickerHistoryStatsDataModel | None:
-        """Get stats for a ticker history.
-
-        Args:
-            ticker_history_id: ID of the ticker history
-
-        Returns:
-            Stats data model, or None if no stats exist
-        """
-        try:
-            with self._SessionLocal() as session:
-                query = select(TickerHistoryStatsDBModel).where(
-                    TickerHistoryStatsDBModel.ticker_history_id == ticker_history_id
-                )
-
-                result = session.execute(query)
-                db_model = result.scalar_one_or_none()
-
-                if db_model:
-                    logger.debug(f"Found stats for ticker_history_id={ticker_history_id}")
-                    return TickerHistoryStatsDataModel.from_db_model(db_model)
-                else:
-                    logger.debug(f"No stats found for ticker_history_id={ticker_history_id}")
-                    return None
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error retrieving stats by ticker history ID: {e}")
-            raise
-
     def upsert_stats(
         self, stats: TickerHistoryStatsDataModel
     ) -> TickerHistoryStatsDataModel:
@@ -139,24 +99,3 @@ class TickerHistoryStatsRepository(
         except SQLAlchemyError as e:
             logger.error(f"Database error in upsert_stats: {e}")
             raise
-
-    def delete_stats_by_ticker_history_id(self, ticker_history_id: int) -> bool:
-        """Delete stats for a ticker history.
-
-        Args:
-            ticker_history_id: ID of the ticker history
-
-        Returns:
-            True if stats were deleted, False if no stats existed
-        """
-        filter_data = TickerHistoryStatsDataModel(
-            ticker_history_id=ticker_history_id
-        )
-        deleted_count = self.delete(filter_data)
-
-        if deleted_count > 0:
-            logger.info(f"Deleted stats for ticker_history_id={ticker_history_id}")
-            return True
-        else:
-            logger.debug(f"No stats to delete for ticker_history_id={ticker_history_id}")
-            return False

@@ -35,52 +35,6 @@ class LowsRepository(
             db_model_class=LowDBModel,
         )
 
-    def _create_id_filter(self, id: int) -> LowDataModel:
-        """Create a Low filter model for ID lookups."""
-        return LowDataModel(
-            ticker_history_id=0,  # Will be ignored
-            threshold=Decimal("0"),  # Will be ignored
-            high_start_price=Decimal("0"),  # Will be ignored
-            high_start_date=date(1900, 1, 1),  # Will be ignored
-            last_updated=date(1900, 1, 1),  # Will be ignored
-            id=id,  # Will be used as filter
-        )
-
-    def get_active_lows_by_ticker(
-        self, ticker_history_id: int, threshold: Decimal | None = None
-    ) -> list[LowDataModel]:
-        """Get all active (non-expired) lows for a ticker.
-
-        Args:
-            ticker_history_id: ID of ticker_history record
-            threshold: Optional threshold filter (e.g., Decimal("0.20") for 20%)
-
-        Returns:
-            List of active Low patterns
-        """
-        try:
-            with self._SessionLocal() as session:
-                stmt = select(LowDBModel).where(
-                    LowDBModel.ticker_history_id == ticker_history_id,
-                    LowDBModel.expired == False,  # noqa: E712
-                )
-
-                if threshold is not None:
-                    # Convert threshold to basis points
-                    threshold_bp = int(threshold * Decimal("10000"))
-                    stmt = stmt.where(LowDBModel.threshold == threshold_bp)
-
-                result = session.execute(stmt)
-                db_models = result.scalars().all()
-
-                return [LowDataModel.from_db_model(db_model) for db_model in db_models]
-
-        except SQLAlchemyError as e:
-            logger.error(
-                f"Database error retrieving active lows for ticker_history_id {ticker_history_id}: {e}"
-            )
-            raise
-
     def get_all_active_lows(self) -> list[LowDataModel]:
         """Get all active (non-expired) low patterns.
 
@@ -173,7 +127,7 @@ class LowsRepository(
             logger.error(f"Database error deleting lows: {e}")
             raise
 
-    def mark_as_expired(self, low_ids: list[int]) -> int:
+    def mark_as_expired(self, pattern_ids: list[int]) -> int:
         """Mark low patterns as expired.
 
         Args:
@@ -182,14 +136,14 @@ class LowsRepository(
         Returns:
             Number of records updated
         """
-        if not low_ids:
+        if not pattern_ids:
             return 0
 
         try:
             with self._SessionLocal() as session:
                 stmt = (
                     LowDBModel.__table__.update()
-                    .where(LowDBModel.id.in_(low_ids))
+                    .where(LowDBModel.id.in_(pattern_ids))
                     .values(expired=True)
                 )
                 result = session.execute(stmt)
@@ -201,68 +155,6 @@ class LowsRepository(
 
         except SQLAlchemyError as e:
             logger.error(f"Database error marking lows as expired: {e}")
-            raise
-
-    def get_lows_by_ticker_and_threshold(
-        self, ticker_history_id: int, threshold: Decimal
-    ) -> list[LowDataModel]:
-        """Get all lows for a specific ticker and threshold.
-
-        Args:
-            ticker_history_id: ID of ticker_history record
-            threshold: Threshold as decimal (e.g., Decimal("0.20") for 20%)
-
-        Returns:
-            List of Low patterns matching criteria
-        """
-        try:
-            with self._SessionLocal() as session:
-                # Convert threshold to basis points
-                threshold_bp = int(threshold * Decimal("10000"))
-
-                stmt = select(LowDBModel).where(
-                    LowDBModel.ticker_history_id == ticker_history_id,
-                    LowDBModel.threshold == threshold_bp,
-                )
-
-                result = session.execute(stmt)
-                db_models = result.scalars().all()
-
-                return [LowDataModel.from_db_model(db_model) for db_model in db_models]
-
-        except SQLAlchemyError as e:
-            logger.error(
-                f"Database error retrieving lows for ticker {ticker_history_id}, threshold {threshold}: {e}"
-            )
-            raise
-
-    def get_lows_updated_before(self, before_date: date) -> list[LowDataModel]:
-        """Get all lows last updated before a specific date.
-
-        Useful for finding stale patterns that need reprocessing.
-
-        Args:
-            before_date: Date to compare against last_updated
-
-        Returns:
-            List of Low patterns last updated before the date
-        """
-        try:
-            with self._SessionLocal() as session:
-                stmt = select(LowDBModel).where(
-                    LowDBModel.last_updated < before_date,
-                    LowDBModel.expired == False,  # noqa: E712
-                )
-
-                result = session.execute(stmt)
-                db_models = result.scalars().all()
-
-                return [LowDataModel.from_db_model(db_model) for db_model in db_models]
-
-        except SQLAlchemyError as e:
-            logger.error(
-                f"Database error retrieving lows updated before {before_date}: {e}"
-            )
             raise
 
     # =========================================================================

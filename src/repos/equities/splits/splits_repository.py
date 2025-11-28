@@ -37,18 +37,6 @@ class SplitsRepository(BaseRepository[SplitDataModel, SplitDBModel]):
             db_model_class=SplitDBModel,
         )
 
-    def _create_id_filter(self, id: int) -> SplitDataModel:
-        """Create a Split filter model for ID lookups."""
-        from datetime import date as date_type
-
-        return SplitDataModel(
-            date=date_type(1900, 1, 1),  # Will be ignored
-            split_ratio="",  # Will be ignored
-            id=id,  # Will be used as filter
-        )
-
-    # Domain-specific methods
-
     def get_splits_by_ticker(
         self,
         ticker_history_id: int,
@@ -99,45 +87,6 @@ class SplitsRepository(BaseRepository[SplitDataModel, SplitDBModel]):
 
         except SQLAlchemyError as e:
             logger.error(f"Database error retrieving splits by ticker: {e}")
-            raise
-
-    def get_split_for_date(
-        self, ticker_history_id: int, target_date: date
-    ) -> SplitDataModel | None:
-        """Get split data for a specific ticker_history and date.
-
-        Args:
-            ticker_history_id: ID of the ticker_history record
-            target_date: The specific date
-
-        Returns:
-            Split data model for that date, or None if not found
-        """
-        try:
-            with self._SessionLocal() as session:
-                query = select(SplitDBModel).where(
-                    and_(
-                        SplitDBModel.ticker_history_id == ticker_history_id,
-                        SplitDBModel.date == target_date,
-                    )
-                )
-
-                result = session.execute(query)
-                db_model = result.scalar_one_or_none()
-
-                if db_model:
-                    logger.debug(
-                        f"Found split for ticker_history_id={ticker_history_id} on {target_date}"
-                    )
-                    return SplitDataModel.from_db_model(db_model)
-                else:
-                    logger.debug(
-                        f"No split found for ticker_history_id={ticker_history_id} on {target_date}"
-                    )
-                    return None
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error retrieving split for date: {e}")
             raise
 
     def bulk_upsert_splits(
@@ -205,77 +154,4 @@ class SplitsRepository(BaseRepository[SplitDataModel, SplitDBModel]):
 
         except SQLAlchemyError as e:
             logger.error(f"Database error in bulk_upsert_splits: {e}")
-            raise
-
-    def delete_splits_by_ticker(
-        self,
-        ticker_history_id: int,
-        from_date: date | None = None,
-        to_date: date | None = None,
-    ) -> int:
-        """Delete split data for a ticker_history within an optional date range.
-
-        Args:
-            ticker_history_id: ID of the ticker_history record
-            from_date: Start date (inclusive), None for no lower bound
-            to_date: End date (inclusive), None for no upper bound
-
-        Returns:
-            Number of records deleted
-        """
-        try:
-            with self._SessionLocal() as session:
-                query = delete(SplitDBModel).where(
-                    SplitDBModel.ticker_history_id == ticker_history_id
-                )
-
-                # Apply date filters
-                if from_date:
-                    query = query.where(SplitDBModel.date >= from_date)
-                if to_date:
-                    query = query.where(SplitDBModel.date <= to_date)
-
-                result = session.execute(query)
-                session.commit()
-
-                deleted_count = result.rowcount
-                logger.info(
-                    f"Deleted {deleted_count} split records for ticker_history_id={ticker_history_id}"
-                )
-                return deleted_count
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error in delete_splits_by_ticker: {e}")
-            raise
-
-    def get_date_range_for_ticker(
-        self, ticker_history_id: int
-    ) -> tuple[date | None, date | None]:
-        """Get the min and max dates available for a ticker_history.
-
-        Args:
-            ticker_history_id: ID of the ticker_history record
-
-        Returns:
-            Tuple of (earliest_date, latest_date), or (None, None) if no data
-        """
-        try:
-            with self._SessionLocal() as session:
-                from sqlalchemy import func
-
-                query = select(
-                    func.min(SplitDBModel.date),
-                    func.max(SplitDBModel.date),
-                ).where(SplitDBModel.ticker_history_id == ticker_history_id)
-
-                result = session.execute(query)
-                min_date, max_date = result.one()
-
-                logger.debug(
-                    f"Date range for ticker_history_id={ticker_history_id}: {min_date} to {max_date}"
-                )
-                return (min_date, max_date)
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error in get_date_range_for_ticker: {e}")
             raise

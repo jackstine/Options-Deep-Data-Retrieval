@@ -157,6 +157,7 @@ class CompanyService:
         if not company_id:
             return False
 
-        # Create deactivation data and update by ID
-        deactivate_data = CompanyDataModel(active=False, company_name="", exchange="")
+        deactivate_data = CompanyDataModel(
+            active=False
+        )
         return self._company_repo.update_by_id(company_id, deactivate_data)
