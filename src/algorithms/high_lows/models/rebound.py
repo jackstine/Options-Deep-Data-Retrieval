@@ -35,17 +35,34 @@ class Rebound:
     ticker_history_id: int
     threshold: Decimal
     high_start_price: Decimal
-    high_start_date: date
     low_threshold_price: Decimal
-    low_threshold_date: date
     lowest_price: Decimal
-    lowest_date: date
     high_threshold_price: Decimal
-    high_threshold_date: date
     rebound_price: Decimal
-    rebound_date: date
-    number_of_high_thresholds: int
+    high_start_date: date | None = None
+    low_threshold_date: date | None = None
+    lowest_date: date | None = None
+    high_threshold_date: date | None = None
+    rebound_date: date | None = None
+    number_of_high_thresholds: int | None  = None
     id: int | None = None
+
+    def __post_init__(self) -> None:
+        """Validate required fields are set."""
+        if self.ticker_history_id is None:
+            raise ValueError("ticker_history_id is required and cannot be None")
+        if self.high_start_date is None:
+            raise ValueError("high_start_date is required and cannot be None")
+        if self.low_threshold_date is None:
+            raise ValueError("low_threshold_date is required and cannot be None")
+        if self.lowest_date is None:
+            raise ValueError("lowest_date is required and cannot be None")
+        if self.high_threshold_date is None:
+            raise ValueError("high_threshold_date is required and cannot be None")
+        if self.rebound_date is None:
+            raise ValueError("rebound_date is required and cannot be None")
+        if self.number_of_high_thresholds is None:
+            raise ValueError("number_of_high_thresholds is required and cannot be None")
 
     def days_from_low_to_rebound(self) -> int:
         """Calculate number of days from low threshold to rebound.

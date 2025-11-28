@@ -39,8 +39,8 @@ class High:
     ticker_history_id: int
     threshold: Decimal
     low_start_price: Decimal
-    low_start_date: date
-    last_updated: date
+    low_start_date: date | None = None
+    last_updated: date | None = None
     high_threshold_price: Decimal | None = None
     high_threshold_date: date | None = None
     highest_price: Decimal | None = None
@@ -48,9 +48,18 @@ class High:
     low_threshold_price: Decimal | None = None
     low_threshold_date: date | None = None
     number_of_low_thresholds: int = 0
-    spawned: bool = False
-    expired: bool = False
+    spawned: bool | None = False
+    expired: bool | None = False
     id: int | None = None
+
+    def __post_init__(self) -> None:
+        """Validate required fields are set."""
+        if self.ticker_history_id is None:
+            raise ValueError("ticker_history_id is required and cannot be None")
+        if self.low_start_date is None:
+            raise ValueError("low_start_date is required and cannot be None")
+        if self.last_updated is None:
+            raise ValueError("last_updated is required and cannot be None")
 
     def is_complete(self) -> bool:
         """Check if pattern is complete (ready to become a reversal).
