@@ -179,7 +179,7 @@ def _read_csv_from_file(f: Any) -> list[dict]:
                 if j < len(row):
                     d[headers[j]] = row[j]
                 else:
-                    d[headers[j]] = ""  # Handle missing values
+                    d[headers[j]] = None  # Handle missing values
             data.append(d)
     return data
 
