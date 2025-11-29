@@ -74,9 +74,7 @@ class TickerHistoryRepository(
 
     def get_ticker_history_by_symbol(self, symbol: str) -> list[TickerHistoryDataModel]:
         """Get all ticker history records for a symbol using base repository."""
-        symbol_filter = TickerHistoryDataModel(
-            symbol=symbol, valid_from=date.today()
-        )
+        symbol_filter = TickerHistoryDataModel(symbol=symbol)
         options = QueryOptions(order_by="valid_from")
         return self.get_filter(symbol_filter, options)
 
@@ -95,7 +93,7 @@ class TickerHistoryRepository(
 
     def get_all_ticker_histories(self) -> list[TickerHistoryDataModel]:
         """Retrieve all ticker histories from the database using base repository."""
-        return self.get_filter()  # Uses base repository get_filter() method
+        return self.get_all()
 
     def create_ticker_history_for_company(
         self,
