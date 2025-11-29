@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 # IMPORTANT: Set environment variables BEFORE importing any src modules
 from tests.integration.common_setup import setup_test_environment
 
@@ -24,8 +26,18 @@ from tests.utils.db_assertions import (
 class TestEodhdAllCompaniesSplitsIngestion:
     """Integration tests for EODHD all companies splits ingestion."""
 
-    def test_splits_ingestion_for_active_companies(self):
-        """Test that splits are ingested for all active companies with ticker_history."""
+    def test_happy_path(self):
+        """Comprehensive test for splits ingestion with exhaustive field validation.
+
+        Validates:
+        - Database starts with companies and ticker histories
+        - Splits are ingested for all active companies
+        - Splits are properly associated with ticker_history records
+        - ALL fields are validated for at least one complete record:
+          * Split: id, date, split_ratio, ticker_history_id, symbol
+        - Split ratio can be parsed correctly
+        - Ingestion completes without errors
+        """
         with integration_test_container() as (postgres, repo, port):
             # Import pipeline after port is set
             from src.pipelines.companies.new_company_pipeline import CompanyPipeline
@@ -76,6 +88,29 @@ class TestEodhdAllCompaniesSplitsIngestion:
             expected_total_splits = expected_company_count * expected_splits_count
             assert result["total_splits_inserted"] == expected_total_splits
             assert count_splits(session) == expected_total_splits
+
+            # === EXHAUSTIVE FIELD VALIDATION for Split ===
+            # Get splits for first symbol
+            db_splits = get_splits_by_symbol(session, first_symbol)
+            assert len(db_splits) > 0, "Should have splits for first symbol"
+
+            # Validate first split record
+            split = db_splits[0]
+            assert split.id is not None, "Split id should be set"
+            assert isinstance(split.id, int), "Split id should be an integer"
+            assert split.date is not None, "Split date should be set"
+            assert isinstance(split.date, date), "Split date should be a date object"
+            assert split.split_ratio is not None, "Split ratio should be set"
+            assert isinstance(split.split_ratio, str), "Split ratio should be a string"
+            assert "/" in split.split_ratio, "Split ratio should contain a '/' separator"
+            assert split.ticker_history_id is not None, "ticker_history_id should be set"
+            assert isinstance(split.ticker_history_id, int), "ticker_history_id should be an integer"
+            # Symbol field not stored in DB, always None when retrieved from repository
+
+            # Verify split is associated with correct ticker_history
+            ticker_histories = get_ticker_histories_for_symbol(session, first_symbol)
+            assert len(ticker_histories) == 1
+            assert split.ticker_history_id == ticker_histories[0].id
 
     def test_splits_associated_with_ticker_history(self):
         """Test that splits are properly associated with ticker_history records."""

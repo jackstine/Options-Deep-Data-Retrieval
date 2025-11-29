@@ -12,13 +12,20 @@ from sqlalchemy.exc import SQLAlchemyError
 from src.algorithms.low_highs.models.reversal import Reversal as ReversalDataModel
 from src.config.configuration import CONFIG
 from src.database.algorithms.tables.low_highs.reversals import Reversal as ReversalDBModel
+from src.pipelines.algorithms.base.interfaces import CompletedPatternRepository
 from src.repos.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class ReversalsRepository(BaseRepository[ReversalDataModel, ReversalDBModel]):
-    """Repository for reversals pattern database operations."""
+class ReversalsRepository(
+    BaseRepository[ReversalDataModel, ReversalDBModel],
+    CompletedPatternRepository[ReversalDataModel],
+):
+    """Repository for reversals pattern database operations.
+
+    Implements both BaseRepository and CompletedPatternRepository interfaces.
+    """
 
     def __init__(self) -> None:
         """Initialize reversals repository."""
@@ -28,27 +35,78 @@ class ReversalsRepository(BaseRepository[ReversalDataModel, ReversalDBModel]):
             db_model_class=ReversalDBModel,
         )
 
-    def _create_id_filter(self, id: int) -> ReversalDataModel:
-        """Create a Reversal filter model for ID lookups."""
+    @staticmethod
+    def from_db_model(db_model: ReversalDBModel) -> ReversalDataModel:
+        """Create data model from SQLAlchemy database model.
+
+        Args:
+            db_model: SQLAlchemy Reversal instance from database
+
+        Returns:
+            Reversal: Data model instance
+        """
+        from src.database.algorithms.tables.low_highs.reversals import PRICE_MULTIPLIER
+
+        # Convert threshold from basis points to decimal (2000 -> 0.20)
+        threshold = Decimal(db_model.threshold) / Decimal("10000")
+
         return ReversalDataModel(
-            ticker_history_id=0,  # Will be ignored
-            threshold=Decimal("0"),  # Will be ignored
-            low_start_price=Decimal("0"),  # Will be ignored
-            low_start_date=date(1900, 1, 1),  # Will be ignored
-            high_threshold_price=Decimal("0"),  # Will be ignored
-            high_threshold_date=date(1900, 1, 1),  # Will be ignored
-            highest_price=Decimal("0"),  # Will be ignored
-            highest_date=date(1900, 1, 1),  # Will be ignored
-            low_threshold_price=Decimal("0"),  # Will be ignored
-            low_threshold_date=date(1900, 1, 1),  # Will be ignored
-            reversal_price=Decimal("0"),  # Will be ignored
-            reversal_date=date(1900, 1, 1),  # Will be ignored
-            id=id,  # Will be used as filter
+            id=db_model.id,
+            ticker_history_id=db_model.ticker_history_id,
+            threshold=threshold,
+            low_start_price=Decimal(db_model.low_start_price) / PRICE_MULTIPLIER,
+            low_start_date=db_model.low_start_date,
+            high_threshold_price=Decimal(db_model.high_threshold_price)
+            / PRICE_MULTIPLIER,
+            high_threshold_date=db_model.high_threshold_date,
+            highest_price=Decimal(db_model.highest_price) / PRICE_MULTIPLIER,
+            highest_date=db_model.highest_date,
+            low_threshold_price=Decimal(db_model.low_threshold_price)
+            / PRICE_MULTIPLIER,
+            low_threshold_date=db_model.low_threshold_date,
+            reversal_price=Decimal(db_model.reversal_price) / PRICE_MULTIPLIER,
+            reversal_date=db_model.reversal_date,
+            number_of_low_thresholds=db_model.number_of_low_thresholds,
         )
 
-    # TODO I thought this was handeled by the base class?
+    @staticmethod
+    def to_db_model(data_model: ReversalDataModel) -> ReversalDBModel:
+        """Convert data model to SQLAlchemy database model.
+
+        Args:
+            data_model: Reversal data model instance
+
+        Returns:
+            ReversalDBModel: SQLAlchemy model instance ready for database operations
+        """
+        from src.database.algorithms.tables.low_highs.reversals import PRICE_MULTIPLIER
+
+        # Convert threshold from decimal to basis points (0.20 -> 2000)
+        threshold_bp = int(data_model.threshold * Decimal("10000"))
+
+        db_model = ReversalDBModel(
+            ticker_history_id=data_model.ticker_history_id,
+            threshold=threshold_bp,
+            low_start_price=int(data_model.low_start_price * PRICE_MULTIPLIER),
+            low_start_date=data_model.low_start_date,
+            high_threshold_price=int(data_model.high_threshold_price * PRICE_MULTIPLIER),
+            high_threshold_date=data_model.high_threshold_date,
+            highest_price=int(data_model.highest_price * PRICE_MULTIPLIER),
+            highest_date=data_model.highest_date,
+            low_threshold_price=int(data_model.low_threshold_price * PRICE_MULTIPLIER),
+            low_threshold_date=data_model.low_threshold_date,
+            reversal_price=int(data_model.reversal_price * PRICE_MULTIPLIER),
+            reversal_date=data_model.reversal_date,
+            number_of_low_thresholds=data_model.number_of_low_thresholds,
+        )
+
+        if data_model.id is not None:
+            db_model.id = data_model.id
+
+        return db_model
+
     def bulk_insert_reversals(self, reversals: list[ReversalDataModel]) -> int:
-        """Bulk insert reversal patterns.
+        """Bulk insert reversal patterns using base repository.
 
         Args:
             reversals: List of Reversal data models to insert
@@ -56,186 +114,21 @@ class ReversalsRepository(BaseRepository[ReversalDataModel, ReversalDBModel]):
         Returns:
             Number of records inserted
         """
-        if not reversals:
-            return 0
+        return self.insert_many(reversals)
 
-        try:
-            with self._SessionLocal() as session:
-                db_models = [reversal.to_db_model() for reversal in reversals]
-                session.add_all(db_models)
-                session.commit()
+    # =========================================================================
+    # CompletedPatternRepository Interface Implementation
+    # =========================================================================
 
-                logger.info(f"Bulk inserted {len(reversals)} reversals")
-                return len(reversals)
+    def bulk_insert(self, patterns: list[ReversalDataModel]) -> int:
+        """Bulk insert completed patterns.
 
-        except SQLAlchemyError as e:
-            logger.error(f"Database error during bulk insert of reversals: {e}")
-            raise
-
-    def get_reversals_by_ticker(
-        self, ticker_history_id: int, threshold: Decimal | None = None
-    ) -> list[ReversalDataModel]:
-        """Get all reversals for a ticker.
+        Unified interface method that delegates to bulk_insert_reversals().
 
         Args:
-            ticker_history_id: ID of ticker_history record
-            threshold: Optional threshold filter (e.g., Decimal("0.20") for 20%)
+            patterns: List of completed patterns to insert
 
         Returns:
-            List of Reversal patterns
+            Count of patterns inserted
         """
-        try:
-            with self._SessionLocal() as session:
-                stmt = select(ReversalDBModel).where(
-                    ReversalDBModel.ticker_history_id == ticker_history_id
-                )
-
-                if threshold is not None:
-                    # Convert threshold to basis points
-                    threshold_bp = int(threshold * Decimal("10000"))
-                    stmt = stmt.where(ReversalDBModel.threshold == threshold_bp)
-
-                # Order by reversal date descending (most recent first)
-                stmt = stmt.order_by(ReversalDBModel.reversal_date.desc())
-
-                result = session.execute(stmt)
-                db_models = result.scalars().all()
-
-                return [
-                    ReversalDataModel.from_db_model(db_model) for db_model in db_models
-                ]
-
-        except SQLAlchemyError as e:
-            logger.error(
-                f"Database error retrieving reversals for ticker_history_id {ticker_history_id}: {e}"
-            )
-            raise
-
-    def get_reversals_by_date_range(
-        self, from_date: date, to_date: date, threshold: Decimal | None = None
-    ) -> list[ReversalDataModel]:
-        """Get reversals that completed within a date range.
-
-        Args:
-            from_date: Start date (inclusive)
-            to_date: End date (inclusive)
-            threshold: Optional threshold filter
-
-        Returns:
-            List of Reversal patterns within the date range
-        """
-        try:
-            with self._SessionLocal() as session:
-                stmt = select(ReversalDBModel).where(
-                    ReversalDBModel.reversal_date >= from_date,
-                    ReversalDBModel.reversal_date <= to_date,
-                )
-
-                if threshold is not None:
-                    # Convert threshold to basis points
-                    threshold_bp = int(threshold * Decimal("10000"))
-                    stmt = stmt.where(ReversalDBModel.threshold == threshold_bp)
-
-                # Order by reversal date
-                stmt = stmt.order_by(ReversalDBModel.reversal_date)
-
-                result = session.execute(stmt)
-                db_models = result.scalars().all()
-
-                return [
-                    ReversalDataModel.from_db_model(db_model) for db_model in db_models
-                ]
-
-        except SQLAlchemyError as e:
-            logger.error(
-                f"Database error retrieving reversals for date range {from_date} to {to_date}: {e}"
-            )
-            raise
-
-    def get_recent_reversals(self, days_back: int = 30) -> list[ReversalDataModel]:
-        """Get reversals that completed in the last N days.
-
-        Args:
-            days_back: Number of days to look back from today
-
-        Returns:
-            List of recent Reversal patterns
-        """
-        from datetime import timedelta
-
-        to_date = date.today()
-        from_date = to_date - timedelta(days=days_back)
-
-        return self.get_reversals_by_date_range(from_date, to_date)
-
-    # TODO when writing to Postgres do we lose precision?  can we trust that we can search a
-    # decimal value in a Postgres Database?
-    def get_reversals_by_ticker_and_threshold(
-        self, ticker_history_id: int, threshold: Decimal
-    ) -> list[ReversalDataModel]:
-        """Get all reversals for a specific ticker and threshold.
-
-        Args:
-            ticker_history_id: ID of ticker_history record
-            threshold: Threshold as decimal (e.g., Decimal("0.20") for 20%)
-
-        Returns:
-            List of Reversal patterns matching criteria
-        """
-        try:
-            with self._SessionLocal() as session:
-                # Convert threshold to basis points
-                threshold_bp = int(threshold * Decimal("10000"))
-
-                stmt = select(ReversalDBModel).where(
-                    ReversalDBModel.ticker_history_id == ticker_history_id,
-                    ReversalDBModel.threshold == threshold_bp,
-                )
-
-                # Order by reversal date descending
-                stmt = stmt.order_by(ReversalDBModel.reversal_date.desc())
-
-                result = session.execute(stmt)
-                db_models = result.scalars().all()
-
-                return [
-                    ReversalDataModel.from_db_model(db_model) for db_model in db_models
-                ]
-
-        except SQLAlchemyError as e:
-            logger.error(
-                f"Database error retrieving reversals for ticker {ticker_history_id}, threshold {threshold}: {e}"
-            )
-            raise
-
-    def count_reversals_by_ticker(
-        self, ticker_history_id: int, threshold: Decimal | None = None
-    ) -> int:
-        """Count reversals for a ticker.
-
-        Args:
-            ticker_history_id: ID of ticker_history record
-            threshold: Optional threshold filter
-
-        Returns:
-            Number of reversals for the ticker
-        """
-        try:
-            with self._SessionLocal() as session:
-                stmt = select(ReversalDBModel).where(
-                    ReversalDBModel.ticker_history_id == ticker_history_id
-                )
-
-                if threshold is not None:
-                    # Convert threshold to basis points
-                    threshold_bp = int(threshold * Decimal("10000"))
-                    stmt = stmt.where(ReversalDBModel.threshold == threshold_bp)
-
-                result = session.execute(stmt)
-                return len(result.scalars().all())
-
-        except SQLAlchemyError as e:
-            logger.error(
-                f"Database error counting reversals for ticker_history_id {ticker_history_id}: {e}"
-            )
-            raise
+        return self.bulk_insert_reversals(patterns)

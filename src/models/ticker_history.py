@@ -4,21 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from src.database.equities.tables.ticker_history import (
-        TickerHistory as DBTickerHistory,
-    )
+from typing import Any
 
 
 @dataclass
 class TickerHistory:
     """Historical ticker symbol model with temporal validity tracking."""
 
-    symbol: str
-    company_id: int
-    valid_from: date = date(1900, 1, 1)
+    symbol: str | None = None
+    company_id: int | None = None
+    valid_from: date | None = None
     valid_to: date | None = None
     id: int | None = None
 
@@ -36,7 +31,7 @@ class TickerHistory:
     def from_dict(cls, data: dict[str, Any]) -> TickerHistory:
         """Create TickerHistory instance from dictionary."""
         # Parse dates from ISO format strings
-        valid_from = date(1900, 1, 1)  # Default
+        valid_from = None  # Default
         if data.get("valid_from"):
             if isinstance(data["valid_from"], str):
                 valid_from = date.fromisoformat(data["valid_from"])
@@ -67,7 +62,8 @@ class TickerHistory:
         Returns:
             True if ticker was valid on the given date
         """
-        if check_date < self.valid_from:
+        # If valid_from is None, assume valid from beginning of time
+        if self.valid_from is not None and check_date < self.valid_from:
             return False
         if self.valid_to is not None and check_date > self.valid_to:
             return False
@@ -91,7 +87,7 @@ class TickerHistory:
         Returns:
             String representation of validity period
         """
-        start = self.valid_from.strftime("%Y-%m-%d")
+        start = self.valid_from.strftime("%Y-%m-%d") if self.valid_from else "unknown"
         if self.valid_to:
             end = self.valid_to.strftime("%Y-%m-%d")
             return f"{start} to {end}"
@@ -112,49 +108,3 @@ class TickerHistory:
     def __repr__(self) -> str:
         """Detailed string representation of ticker history."""
         return self.__str__()
-
-    def to_db_model(self) -> DBTickerHistory:
-        """Convert data model to SQLAlchemy database model.
-
-        Returns:
-            DBTickerHistory: SQLAlchemy model instance ready for database operations
-        """
-        from src.database.equities.tables.ticker_history import (
-            TickerHistory as DBTickerHistory,
-        )
-
-        return DBTickerHistory(
-            symbol=self.symbol,
-            company_id=self.company_id,
-            valid_from=self.valid_from,
-            valid_to=self.valid_to,
-        )
-
-    @classmethod
-    def from_db_model(cls, db_model: DBTickerHistory) -> TickerHistory:
-        """Create data model from SQLAlchemy database model.
-
-        Args:
-            db_model: SQLAlchemy TickerHistory instance from database
-
-        Returns:
-            TickerHistory: Data model instance
-        """
-        return cls(
-            id=db_model.id,
-            symbol=db_model.symbol,
-            company_id=db_model.company_id,
-            valid_from=db_model.valid_from,
-            valid_to=db_model.valid_to,
-        )
-
-    def update_db_model(self, db_model: DBTickerHistory) -> None:
-        """Update existing SQLAlchemy database model with data from this model.
-
-        Args:
-            db_model: SQLAlchemy TickerHistory instance to update
-        """
-        db_model.symbol = self.symbol
-        db_model.company_id = self.company_id
-        db_model.valid_from = self.valid_from
-        db_model.valid_to = self.valid_to

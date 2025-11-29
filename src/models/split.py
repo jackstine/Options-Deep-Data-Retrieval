@@ -5,10 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from src.database.equities.tables.splits import Split as DBSplit
+from typing import Any
 
 
 @dataclass
@@ -23,10 +20,10 @@ class Split:
     while the ticker table only contains currently active symbols.
     """
 
-    date: date
-    split_ratio: str
+    date: date | None = None
+    split_ratio: str | None = None
     ticker_history_id: int | None = None
-    symbol: str = ""  # For display purposes only, not stored in DB
+    symbol: str | None = None  # For display purposes only, not stored in DB
     id: int | None = None
 
     def get_split_ratio(self) -> Decimal:
@@ -88,7 +85,7 @@ class Split:
         return cls(
             id=data.get("id"),
             ticker_history_id=data.get("ticker_history_id"),
-            symbol=data.get("symbol", ""),
+            symbol=data.get("symbol"),
             date=split_date,
             split_ratio=str(data["split_ratio"]),
         )
@@ -102,44 +99,3 @@ class Split:
     def __repr__(self) -> str:
         """Detailed string representation of split data."""
         return self.__str__()
-
-    def to_db_model(self) -> DBSplit:
-        """Convert data model to SQLAlchemy database model.
-
-        Returns:
-            DBSplit: SQLAlchemy model instance ready for database operations
-
-        Raises:
-            ValueError: If ticker_history_id is None
-        """
-        if self.ticker_history_id is None:
-            raise ValueError(
-                "ticker_history_id must be set before converting to database model"
-            )
-
-        from src.database.equities.tables.splits import Split as DBSplit
-
-        return DBSplit(
-            id=self.id,
-            ticker_history_id=self.ticker_history_id,
-            date=self.date,
-            split_ratio=self.split_ratio,
-        )
-
-    @classmethod
-    def from_db_model(cls, db_model: DBSplit) -> Split:
-        """Create data model from SQLAlchemy database model.
-
-        Args:
-            db_model: SQLAlchemy Split instance from database
-
-        Returns:
-            Split: Data model instance
-        """
-        return cls(
-            id=db_model.id,
-            ticker_history_id=db_model.ticker_history_id,
-            symbol="",  # Symbol not stored in DB, must be set separately if needed
-            date=db_model.date,
-            split_ratio=db_model.split_ratio,
-        )

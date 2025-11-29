@@ -11,7 +11,7 @@ install-dev:
 # run all unit tests
 PHONY: unit-test
 unit-test:
-	PYTHONPATH=. python -m unittest discover -s src -p "test_*.py" -v
+	OPTIONS_DEEP_ENV=unittest PYTHONPATH=. python -m unittest discover -s src -p "test_*.py" -v
 
 # run integration tests
 PHONY: integration-test

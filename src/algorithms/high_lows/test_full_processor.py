@@ -115,7 +115,7 @@ class TestFullLifecycleMultiplePatterns(unittest.TestCase):
         ]
 
         # Act
-        result = process_high_low_patterns([initial_pattern], new_prices, self.threshold)
+        result = process_high_low_patterns([initial_pattern], new_prices, self.threshold, self.ticker_history_id)
 
         # Assert: Should have 2 completed rebounds (Pattern A and Pattern B)
         self.assertEqual(len(result.completed_rebounds), 2,

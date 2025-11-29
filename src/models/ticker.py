@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from src.database.equities.tables.ticker import Ticker as DBTicker
+from typing import Any
 
 
 @dataclass
@@ -17,7 +14,7 @@ class Ticker:
     All tickers must have a corresponding ticker_history record referenced by ticker_history_id.
     """
 
-    symbol: str
+    symbol: str | None = None
     company_id: int | None = (
         None  # not required because it can be retrieved from sources that have just the symbol
     )
@@ -56,54 +53,3 @@ class Ticker:
     def __repr__(self) -> str:
         """Detailed string representation of ticker."""
         return self.__str__()
-
-    def to_db_model(self) -> DBTicker:
-        """Convert data model to SQLAlchemy database model.
-
-        Returns:
-            DBTicker: SQLAlchemy model instance ready for database operations
-
-        Raises:
-            ValueError: If ticker_history_id is None
-        """
-        from src.database.equities.tables.ticker import Ticker as DBTicker
-
-        if self.ticker_history_id is None:
-            raise ValueError(
-                "ticker_history_id must be set before converting to database model"
-            )
-
-        return DBTicker(
-            symbol=self.symbol,
-            company_id=self.company_id,
-            ticker_history_id=self.ticker_history_id,
-        )
-
-    @classmethod
-    def from_db_model(cls, db_model: DBTicker) -> Ticker:
-        """Create data model from SQLAlchemy database model.
-
-        Args:
-            db_model: SQLAlchemy Ticker instance from database
-
-        Returns:
-            Ticker: Data model instance
-        """
-        return cls(
-            id=db_model.id,
-            symbol=db_model.symbol,
-            company_id=db_model.company_id,
-            ticker_history_id=db_model.ticker_history_id,
-        )
-
-    def update_db_model(self, db_model: DBTicker) -> None:
-        """Update existing SQLAlchemy database model with data from this model.
-
-        Args:
-            db_model: SQLAlchemy Ticker instance to update
-        """
-        db_model.symbol = self.symbol
-        if self.company_id is not None:
-            db_model.company_id = self.company_id
-        if self.ticker_history_id is not None:
-            db_model.ticker_history_id = self.ticker_history_id

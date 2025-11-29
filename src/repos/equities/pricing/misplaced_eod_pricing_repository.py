@@ -41,79 +41,51 @@ class MisplacedEodPricingRepository(
             db_model_class=MisplacedEodPricingDBModel,
         )
 
-    def _create_id_filter(self, id: int) -> MisplacedEodPricingDataModel:
-        """Create a MisplacedEodPricing filter model for ID lookups."""
-        from datetime import date as date_type
-        from decimal import Decimal
-
-        from src.database.equities.enums import DataSourceEnum
-
-        return MisplacedEodPricingDataModel(
-            symbol="",  # Will be ignored
-            date=date_type(1900, 1, 1),  # Will be ignored
-            open=Decimal("0"),  # Will be ignored
-            high=Decimal("0"),  # Will be ignored
-            low=Decimal("0"),  # Will be ignored
-            close=Decimal("0"),  # Will be ignored
-            adjusted_close=Decimal("0"),  # Will be ignored
-            volume=0,  # Will be ignored
-            source=DataSourceEnum.EODHD,  # Will be ignored
-        )
-
-    # Domain-specific methods
-
-    def get_pricing_by_symbol(
-        self,
-        symbol: str,
-        from_date: date | None = None,
-        to_date: date | None = None,
-        limit: int | None = None,
-    ) -> list[MisplacedEodPricingDataModel]:
-        """Get pricing data for a symbol within a date range.
+    @staticmethod
+    def from_db_model(db_model: MisplacedEodPricingDBModel) -> MisplacedEodPricingDataModel:
+        """Create data model from SQLAlchemy database model.
 
         Args:
-            symbol: Stock symbol
-            from_date: Start date (inclusive), None for no lower bound
-            to_date: End date (inclusive), None for no upper bound
-            limit: Maximum number of records to return
+            db_model: SQLAlchemy MisplacedEodPricing instance from database
 
         Returns:
-            List of pricing data models, ordered by date descending
+            MisplacedEndOfDayPricing: Data model instance
         """
-        try:
-            with self._SessionLocal() as session:
-                query = select(MisplacedEodPricingDBModel).where(
-                    MisplacedEodPricingDBModel.symbol == symbol
-                )
+        from src.database.equities.tables.misplaced_eod_pricing import PRICE_MULTIPLIER
+        from decimal import Decimal
 
-                # Apply date filters
-                if from_date:
-                    query = query.where(MisplacedEodPricingDBModel.date >= from_date)
-                if to_date:
-                    query = query.where(MisplacedEodPricingDBModel.date <= to_date)
+        return MisplacedEodPricingDataModel(
+            symbol=db_model.symbol,
+            date=db_model.date,
+            open=Decimal(db_model.open) / PRICE_MULTIPLIER,
+            high=Decimal(db_model.high) / PRICE_MULTIPLIER,
+            low=Decimal(db_model.low) / PRICE_MULTIPLIER,
+            close=Decimal(db_model.close) / PRICE_MULTIPLIER,
+            adjusted_close=Decimal(db_model.adjusted_close) / PRICE_MULTIPLIER,
+            volume=db_model.volume,
+            source=db_model.source,
+        )
 
-                # Order by date descending (most recent first)
-                query = query.order_by(MisplacedEodPricingDBModel.date.desc())
+    @staticmethod
+    def to_db_model(data_model: MisplacedEodPricingDataModel) -> MisplacedEodPricingDBModel:
+        """Convert data model to SQLAlchemy database model.
 
-                # Apply limit
-                if limit:
-                    query = query.limit(limit)
+        Returns:
+            DBMisplacedEodPricing: SQLAlchemy model instance ready for database operations
+        """
+        from src.database.equities.tables.misplaced_eod_pricing import PRICE_MULTIPLIER
 
-                result = session.execute(query)
-                db_models = result.scalars().all()
-
-                data_models = [
-                    MisplacedEodPricingDataModel.from_db_model(db_model)
-                    for db_model in db_models
-                ]
-                logger.info(
-                    f"Retrieved {len(data_models)} misplaced pricing records for symbol={symbol}"
-                )
-                return data_models
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error retrieving misplaced pricing by symbol: {e}")
-            raise
+        return MisplacedEodPricingDBModel(
+            symbol=data_model.symbol,
+            date=data_model.date,
+            open=int(data_model.open * PRICE_MULTIPLIER),
+            high=int(data_model.high * PRICE_MULTIPLIER),
+            low=int(data_model.low * PRICE_MULTIPLIER),
+            close=int(data_model.close * PRICE_MULTIPLIER),
+            adjusted_close=int(data_model.adjusted_close * PRICE_MULTIPLIER),
+            volume=data_model.volume,
+            source=data_model.source,
+        )
 
     def get_pricing_for_date(
         self, symbol: str, target_date: date
@@ -141,7 +113,7 @@ class MisplacedEodPricingRepository(
 
                 if db_model:
                     logger.debug(f"Found misplaced pricing for {symbol} on {target_date}")
-                    return MisplacedEodPricingDataModel.from_db_model(db_model)
+                    return self.from_db_model(db_model)
                 else:
                     logger.debug(
                         f"No misplaced pricing found for {symbol} on {target_date}"
@@ -173,7 +145,7 @@ class MisplacedEodPricingRepository(
         try:
             with self._SessionLocal() as session:
                 # Convert data models to DB models
-                db_models = [pricing.to_db_model() for pricing in pricing_data]
+                db_models = [self.to_db_model(pricing) for pricing in pricing_data]
 
                 # Prepare values for upsert
                 values = [
@@ -218,90 +190,4 @@ class MisplacedEodPricingRepository(
 
         except SQLAlchemyError as e:
             logger.error(f"Database error in bulk_upsert_pricing: {e}")
-            raise
-
-    def delete_pricing_by_symbol(
-        self, symbol: str, from_date: date | None = None, to_date: date | None = None
-    ) -> int:
-        """Delete misplaced pricing data for a symbol within an optional date range.
-
-        Args:
-            symbol: Stock symbol
-            from_date: Start date (inclusive), None for no lower bound
-            to_date: End date (inclusive), None for no upper bound
-
-        Returns:
-            Number of records deleted
-        """
-        try:
-            with self._SessionLocal() as session:
-                query = delete(MisplacedEodPricingDBModel).where(
-                    MisplacedEodPricingDBModel.symbol == symbol
-                )
-
-                # Apply date filters
-                if from_date:
-                    query = query.where(MisplacedEodPricingDBModel.date >= from_date)
-                if to_date:
-                    query = query.where(MisplacedEodPricingDBModel.date <= to_date)
-
-                result = session.execute(query)
-                session.commit()
-
-                deleted_count = result.rowcount
-                logger.info(
-                    f"Deleted {deleted_count} misplaced pricing records for symbol={symbol}"
-                )
-                return deleted_count
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error in delete_pricing_by_symbol: {e}")
-            raise
-
-    def get_all_symbols(self) -> list[str]:
-        """Get a list of all unique symbols in the misplaced pricing table.
-
-        Returns:
-            List of unique symbols
-        """
-        try:
-            with self._SessionLocal() as session:
-
-                query = select(MisplacedEodPricingDBModel.symbol).distinct()
-                result = session.execute(query)
-                symbols = [row[0] for row in result.all()]
-
-                logger.info(f"Found {len(symbols)} unique symbols in misplaced pricing")
-                return symbols
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error in get_all_symbols: {e}")
-            raise
-
-    def get_date_range_for_symbol(self, symbol: str) -> tuple[date | None, date | None]:
-        """Get the min and max dates available for a symbol.
-
-        Args:
-            symbol: Stock symbol
-
-        Returns:
-            Tuple of (earliest_date, latest_date), or (None, None) if no data
-        """
-        try:
-            with self._SessionLocal() as session:
-                from sqlalchemy import func
-
-                query = select(
-                    func.min(MisplacedEodPricingDBModel.date),
-                    func.max(MisplacedEodPricingDBModel.date),
-                ).where(MisplacedEodPricingDBModel.symbol == symbol)
-
-                result = session.execute(query)
-                min_date, max_date = result.one()
-
-                logger.debug(f"Date range for symbol={symbol}: {min_date} to {max_date}")
-                return (min_date, max_date)
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error in get_date_range_for_symbol: {e}")
             raise

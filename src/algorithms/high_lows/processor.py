@@ -41,6 +41,7 @@ def process_high_low_patterns(
 	current_patterns: list[Low],
 	new_prices: list[DatePrice],
 	threshold: Decimal,
+	ticker_history_id: int,
 ) -> ProcessedPatterns:
 	"""Process high/low patterns with new price data.
 
@@ -51,11 +52,13 @@ def process_high_low_patterns(
 	- Spawned patterns process remaining prices in the same call
 	- Patterns that rebound without spawning create new pattern at rebound price
 	- Multiple rebounds can occur in a single processing call
+	- If current_patterns is empty, creates initial pattern from first price
 
 	Args:
 		current_patterns: List of existing Low patterns to update
 		new_prices: List of new DatePrice data to process (should be chronological)
 		threshold: Threshold as decimal (e.g., Decimal("0.20") for 20%)
+		ticker_history_id: Ticker history ID for creating new patterns
 
 	Returns:
 		ProcessedPatterns with updated active lows and any completed rebounds
@@ -91,6 +94,22 @@ def process_high_low_patterns(
 
 	# Ensure prices are sorted chronologically
 	sorted_prices = sorted(new_prices, key=lambda p: p.date)
+
+	# Create initial pattern if none provided
+	if not current_patterns and sorted_prices:
+		first_price = sorted_prices[0]
+		if first_price.price is not None:
+			initial_low = Low(
+				ticker_history_id=ticker_history_id,
+				threshold=threshold,
+				high_start_price=first_price.price,
+				high_start_date=first_price.date,
+				last_updated=first_price.date,
+			)
+			current_patterns = [initial_low]
+			logger.debug(
+				f"Created initial Low pattern at {first_price.price} on {first_price.date}"
+			)
 
 	# Track currently active patterns (starts with input patterns)
 	currently_active: list[Low] = list(current_patterns)

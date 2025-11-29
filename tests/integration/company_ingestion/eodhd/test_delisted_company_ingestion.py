@@ -24,15 +24,42 @@ from tests.utils.db_assertions import (
 class TestEodhdDelistedCompanyIngestion:
     """Integration tests for EODHD delisted company ingestion."""
 
-    def test_active_symbols_ingestion_and_delisted_fixture_validation(self):
+    def test_happy_path(self):
         """Comprehensive test for EODHD ingestion behavior with active and delisted symbols.
 
-        Validates:
-        - Only active symbols are ingested (not delisted)
+        **Current Behavior**: This test validates that delisted companies are NOT ingested
+        into the database, which is the expected behavior of the current pipeline.
+
+        **Why delisted companies are not ingested**:
+        - They are no longer tradeable on exchanges
+        - Historical data for delisted companies is not relevant for active trading
+        - Including them would pollute the database with inactive securities
+
+        **What this test validates**:
+        - Only active symbols are ingested (delisted symbols are excluded)
         - Active symbols appear in tickers table
         - Active symbols have ticker_history records
-        - Delisted fixture data exists (ready for future implementation)
+        - Delisted fixture data exists and is accessible (ready for future implementation)
         - Tickers table only contains currently active symbols
+        - Database counts match only active symbols, not delisted ones
+
+        **Fields that would be validated IF delisted ingestion were implemented**:
+        If in the future we decide to ingest delisted companies (e.g., for historical
+        analysis or backtesting), we would need to validate:
+        - Company.company_name: matches delisted symbol name
+        - Company.exchange: matches delisted symbol exchange
+        - Company.source: set to "EODHD"
+        - Company.active: explicitly set to False
+        - Company.country: from delisted CSV data
+        - Ticker.symbol: matches delisted symbol code
+        - TickerHistory.valid_from: listing date
+        - TickerHistory.valid_to: delisting date (NOT None)
+        - TickerHistory.symbol: matches delisted symbol code
+
+        TODO: Consider implementing delisted company ingestion if:
+        - Historical backtesting requires delisted company data
+        - Regulatory or compliance reasons require tracking delisted companies
+        - Analytics features need access to delisted company information
         """
         with integration_test_container() as (postgres, repo, port):
             # Import pipeline after port is set
@@ -60,8 +87,10 @@ class TestEodhdDelistedCompanyIngestion:
             assert count_tickers(session) == len(active_companies)
             assert count_ticker_histories(session) == len(active_companies)
 
-            # Verify active symbols are in tickers table
-            ticker = get_ticker_by_symbol(session, "A")  # Agilent Technologies Inc
+            # Verify active symbols are in tickers table using first company from mock
+            first_active_company = active_companies[0]
+            assert first_active_company.ticker is not None, "Expected active company to have ticker"
+            ticker = get_ticker_by_symbol(session, first_active_company.ticker.symbol)
             assert ticker is not None
 
             # Verify active companies have ticker_history

@@ -16,11 +16,10 @@ This document contains critical information about working with this codebase. Fo
    - **pipelines** - merging the repos and the data_sources together using dependency injection to abstract the use of the data sources.
    - **algorithms** - used to define the algorithms of the project. Each algorithm has it's own sub folder.
    
-- test information
-   - **unittests** - unittests are written side by side their respective code.made along side the actual code base, is used with mocks to generate fast running tests. 
-   - **integration tests** - the `/tests` folder, *outside of src folder* is used for non-unit tests this will be integration and e2e tests.
-
 ## Testing
+- **unittests** - unittests are written side by side their respective code.made along side the actual code base, is used with mocks to generate fast running tests. 
+- **integration tests** - the `/tests` folder, *outside of src folder* is used for non-unit tests this will be integration and e2e tests.
+
 ### Unit Test
 To run unit tests please run `make unit-test`.
 #### Test Specific
@@ -36,11 +35,12 @@ To run unit tests please run `make unit-test`.
 
 
 ## Static Type Checking
-### Step 1
-please run `python -m mypy <python_file>` to get the static type checking information.
+**Ensuyre you apply policy**. Please do not use type checking, unless you have been asked.
+
+Run `python -m mypy <python_file>` to get the static type checking information.
 Use this after writing to files to fix common missing behaviours please.
-### Step 2
-then run `uv run pyright <python_file>` to get more static typing checking information, and fix those issues as well.
+
+Run `uv run pyright <python_file>` to get more static typing checking information, and fix those issues as well.
 
 ## Common Packages
 if you need information on SqlAlchemy please conduct context7 resource `https://context7.com/sqlalchemy/sqlalchemy`
