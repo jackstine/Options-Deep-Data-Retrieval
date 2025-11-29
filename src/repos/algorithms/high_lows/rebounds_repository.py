@@ -106,7 +106,7 @@ class ReboundsRepository(
         return db_model
 
     def bulk_insert_rebounds(self, rebounds: list[ReboundDataModel]) -> int:
-        """Bulk insert rebound patterns.
+        """Bulk insert rebound patterns using base repository.
 
         Args:
             rebounds: List of Rebound data models to insert
@@ -114,21 +114,7 @@ class ReboundsRepository(
         Returns:
             Number of records inserted
         """
-        if not rebounds:
-            return 0
-
-        try:
-            with self._SessionLocal() as session:
-                db_models = [self.to_db_model(rebound) for rebound in rebounds]
-                session.add_all(db_models)
-                session.commit()
-
-                logger.info(f"Bulk inserted {len(rebounds)} rebounds")
-                return len(rebounds)
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error during bulk insert of rebounds: {e}")
-            raise
+        return self.insert_many(rebounds)
 
     # =========================================================================
     # CompletedPatternRepository Interface Implementation

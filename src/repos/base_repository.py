@@ -294,6 +294,17 @@ class BaseRepository(Generic[TDataModel, TDBModel]):
             self._logger.error(f"Database error in get_filter(): {e}")
             raise
 
+    def get_all(self, options: QueryOptions | None = None) -> list[TDataModel]:
+        """Get all records.
+
+        Args:
+            options: Query configuration options (pagination, ordering, etc.)
+
+        Returns:
+            List of all data model instances
+        """
+        return self.get_filter(filter_model=None, options=options)
+
     def get_one(self, filter_model: TDataModel) -> TDataModel | None:
         """Get single record matching filter."""
         results = self.get_filter(filter_model, QueryOptions(limit=1))

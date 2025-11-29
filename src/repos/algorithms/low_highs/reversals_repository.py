@@ -105,9 +105,8 @@ class ReversalsRepository(
 
         return db_model
 
-    # TODO I thought this was handeled by the base class?
     def bulk_insert_reversals(self, reversals: list[ReversalDataModel]) -> int:
-        """Bulk insert reversal patterns.
+        """Bulk insert reversal patterns using base repository.
 
         Args:
             reversals: List of Reversal data models to insert
@@ -115,21 +114,7 @@ class ReversalsRepository(
         Returns:
             Number of records inserted
         """
-        if not reversals:
-            return 0
-
-        try:
-            with self._SessionLocal() as session:
-                db_models = [self.to_db_model(reversal) for reversal in reversals]
-                session.add_all(db_models)
-                session.commit()
-
-                logger.info(f"Bulk inserted {len(reversals)} reversals")
-                return len(reversals)
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error during bulk insert of reversals: {e}")
-            raise
+        return self.insert_many(reversals)
 
     # =========================================================================
     # CompletedPatternRepository Interface Implementation
