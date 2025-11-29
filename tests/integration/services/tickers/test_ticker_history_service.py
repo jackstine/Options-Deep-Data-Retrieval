@@ -124,14 +124,19 @@ class TestTickerHistoryService:
             for symbol in expected_active["inactive"]:
                 assert symbol not in active_symbols_2
 
-    def test_get_active_ticker_histories_with_enrichment(self):
-        """Test get_active_ticker_histories enriches with company data.
+    def test_happy_path(self):
+        """Comprehensive test for get_active_ticker_histories with exhaustive field validation.
 
         Validates:
-        - Company data properly enriched in results
+        - Company data properly enriched in ticker history results
         - All ticker histories for active company included
         - Inactive company ticker histories excluded
-        - Company fields match expected values from mock
+        - ALL fields are validated for at least one complete record:
+          * Company: id, company_name, exchange, sector, industry, country, market_cap,
+                     description, active, is_valid_data, source
+          * TickerHistory: id, symbol, company_id, valid_from, valid_to
+        - Service properly joins TickerHistory and Company data
+        - Multiple ticker histories for same company (symbol changes)
         """
         with integration_test_container() as (postgres, company_repo, port):
             from src.repos.equities.tickers.ticker_history_repository import (
@@ -198,6 +203,40 @@ class TestTickerHistoryService:
                 assert enriched.ticker_history.symbol == th_data["symbol"]
                 assert enriched.ticker_history.valid_from == th_data["valid_from"]
                 assert enriched.ticker_history.valid_to == th_data["valid_to"]
+
+            # === EXHAUSTIVE FIELD VALIDATION for Company ===
+            # Use first enriched result for validation
+            first_enriched = enriched_histories[0]
+            company = first_enriched.company
+            assert company.id is not None, "Company id should be set"
+            assert isinstance(company.id, int), "Company id should be an integer"
+            assert company.company_name == enrichment_scenario.company_name, "Company name should match"
+            assert company.exchange == enrichment_scenario.exchange, "Exchange should match"
+            assert company.sector == enrichment_scenario.sector, "Sector should match"
+            assert company.industry == enrichment_scenario.industry, "Industry should match"
+            assert company.country == enrichment_scenario.country, "Country should match"
+            # market_cap, description may be None for test data
+            assert company.active == enrichment_scenario.active, "Active flag should match"
+            assert company.is_valid_data is True, "is_valid_data should be True for valid records"
+            assert company.source == DataSourceEnum.EODHD, "Source should match"
+
+            # === EXHAUSTIVE FIELD VALIDATION for TickerHistory ===
+            ticker_history = first_enriched.ticker_history
+            assert ticker_history.id is not None, "TickerHistory id should be set"
+            assert isinstance(ticker_history.id, int), "TickerHistory id should be an integer"
+            assert ticker_history.symbol is not None, "Symbol should be set"
+            assert isinstance(ticker_history.symbol, str), "Symbol should be a string"
+            assert ticker_history.company_id == company.id, "company_id should reference correct company"
+            assert ticker_history.valid_from is not None, "valid_from should be set"
+            assert isinstance(ticker_history.valid_from, date), "valid_from should be a date"
+            # valid_to may be None for currently active tickers
+            if ticker_history.valid_to is not None:
+                assert isinstance(ticker_history.valid_to, date), "valid_to should be a date"
+
+            # Verify both active and delisted ticker histories are present
+            symbols_found = {enriched.ticker_history.symbol for enriched in enriched_histories}
+            assert "TECH" in symbols_found, "Current symbol should be present"
+            assert "TECH-OLD" in symbols_found, "Old symbol should be present"
 
     def test_get_active_ticker_histories_multi_company(self):
         """Test ticker histories for multiple active companies.

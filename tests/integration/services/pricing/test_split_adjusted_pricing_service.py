@@ -253,8 +253,8 @@ class TestSplitAdjustedPricingService:
             for price_result in result3.prices:
                 assert price_result.price == expected_multi[price_result.date]
 
-    def test_split_adjusted_pricing_ohlc_mode(self):
-        """Test OHLCV data adjustment with splits across multiple pricing records.
+    def test_happy_path(self):
+        """Comprehensive test for split-adjusted OHLCV pricing with exhaustive field validation.
 
         Validates:
         - All OHLC prices adjusted correctly for records before split
@@ -263,6 +263,11 @@ class TestSplitAdjustedPricingService:
         - Records after split remain unchanged
         - Correct count of pricing records
         - Prices sorted by date
+        - ALL fields are validated for at least one complete split-adjusted pricing record:
+          * Date, open, high, low, close, adjusted_close, volume
+        - ALL fields are validated for at least one complete Split record:
+          * id, date, split_ratio, ticker_history_id
+        - Split calculations work correctly
         """
         with integration_test_container() as (postgres, company_repo, port):
             from src.repos.equities.pricing.historical_eod_pricing_repository import (
@@ -363,6 +368,55 @@ class TestSplitAdjustedPricingService:
             # Verify sorted by date
             for i in range(len(result.prices) - 1):
                 assert result.prices[i].date < result.prices[i + 1].date
+
+            # === EXHAUSTIVE FIELD VALIDATION for split-adjusted pricing ===
+            # Validate first pricing record has all fields
+            first_price = result.prices[0]
+            assert first_price.date is not None, "Date should be set"
+            assert isinstance(first_price.date, date), "Date should be a date object"
+            assert first_price.open is not None, "Open price should be set"
+            assert isinstance(first_price.open, Decimal), "Open should be a Decimal"
+            assert first_price.high is not None, "High price should be set"
+            assert isinstance(first_price.high, Decimal), "High should be a Decimal"
+            assert first_price.low is not None, "Low price should be set"
+            assert isinstance(first_price.low, Decimal), "Low should be a Decimal"
+            assert first_price.close is not None, "Close price should be set"
+            assert isinstance(first_price.close, Decimal), "Close should be a Decimal"
+            # Price field should equal close (when include_ohlc=True)
+            assert first_price.price == first_price.close, "Price should equal close"
+            assert first_price.adjusted_close is not None, "Adjusted close should be set"
+            assert isinstance(first_price.adjusted_close, Decimal), "Adjusted close should be a Decimal"
+            assert first_price.volume is not None, "Volume should be set"
+            assert isinstance(first_price.volume, int), "Volume should be an integer"
+
+            # Validate OHLC relationships
+            assert first_price.high >= first_price.low, "High must be >= Low"
+            assert first_price.high >= first_price.open, "High must be >= Open"
+            assert first_price.high >= first_price.close, "High must be >= Close"
+            assert first_price.low <= first_price.open, "Low must be <= Open"
+            assert first_price.low <= first_price.close, "Low must be <= Close"
+
+            # === EXHAUSTIVE FIELD VALIDATION for Split ===
+            # Retrieve splits for validation
+            splits = splits_repo.get_by_ticker_history_id(th_inserted.id)
+            assert len(splits) > 0, "Should have split records"
+
+            first_split = splits[0]
+            assert first_split.id is not None, "Split id should be set"
+            assert isinstance(first_split.id, int), "Split id should be an integer"
+            assert first_split.date is not None, "Split date should be set"
+            assert isinstance(first_split.date, date), "Split date should be a date object"
+            assert first_split.split_ratio is not None, "Split ratio should be set"
+            assert isinstance(first_split.split_ratio, str), "Split ratio should be a string"
+            assert "/" in first_split.split_ratio, "Split ratio should contain a '/' separator"
+            assert first_split.ticker_history_id is not None, "ticker_history_id should be set"
+            assert isinstance(first_split.ticker_history_id, int), "ticker_history_id should be an integer"
+            assert first_split.ticker_history_id == th_inserted.id, "Split should be linked to correct ticker_history"
+
+            # Validate split ratio can be parsed
+            split_ratio_decimal = first_split.get_split_ratio()
+            assert split_ratio_decimal is not None, "Split ratio should be parseable"
+            assert split_ratio_decimal > 0, "Split ratio should be positive"
 
     def test_company_id_pricing_multiple_ticker_histories(self):
         """Test getting pricing for all ticker histories of a company (symbol change).

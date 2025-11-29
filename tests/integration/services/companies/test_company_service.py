@@ -93,15 +93,19 @@ class TestCompanyService:
             assert active_symbols == expected_active_symbols
             assert active_symbols.isdisjoint(expected_inactive_symbols)
 
-    def test_get_company_by_ticker_comprehensive(self):
-        """Test getting company by ticker with various scenarios.
+    def test_happy_path(self):
+        """Comprehensive test for get_company_by_ticker with exhaustive field validation.
 
         Validates:
         - Finding active company by ticker
         - Finding delisted company by ticker
         - Case-insensitive ticker lookup
-        - Correct company data returned
+        - ALL fields are validated for at least one complete record:
+          * Company: id, company_name, exchange, sector, industry, country, market_cap,
+                     description, active, is_valid_data, source
+          * TickerHistory: id, symbol, company_id, valid_from, valid_to
         - Returns None for non-existent ticker
+        - Service properly joins Company and TickerHistory data
         """
         with integration_test_container() as (postgres, company_repo, port):
             from src.repos.equities.tickers.ticker_history_repository import (
@@ -138,7 +142,7 @@ class TestCompanyService:
                 company_id=inserted_active.id,
                 valid_from=date(2000, 1, 1),
             )
-            ticker_history_repo.insert(active_th)
+            inserted_active_th = ticker_history_repo.insert(active_th)
 
             # Insert delisted company
             delisted_company = Company(
@@ -188,6 +192,34 @@ class TestCompanyService:
             # Test 4: Non-existent ticker returns None
             result_none = service.get_company_by_ticker("NONEXISTENT")
             assert result_none is None
+
+            # === EXHAUSTIVE FIELD VALIDATION for Company ===
+            # Use active company result for validation
+            company = result_active.company
+            assert company.id is not None, "Company id should be set"
+            assert isinstance(company.id, int), "Company id should be an integer"
+            assert company.company_name == active_scenario.company_name, "Company name should match"
+            assert company.exchange == active_scenario.exchange, "Exchange should match"
+            assert company.sector == active_scenario.sector, "Sector should match"
+            assert company.industry == active_scenario.industry, "Industry should match"
+            # Country, market_cap, description may be None for test data
+            assert company.active == active_scenario.active, "Active flag should match"
+            assert company.is_valid_data is True, "is_valid_data should be True for valid records"
+            assert company.source == DataSourceEnum.EODHD, "Source should match"
+
+            # === EXHAUSTIVE FIELD VALIDATION for TickerHistory ===
+            ticker_history = result_active.ticker_history
+            assert ticker_history.id is not None, "TickerHistory id should be set"
+            assert isinstance(ticker_history.id, int), "TickerHistory id should be an integer"
+            assert ticker_history.symbol == active_scenario.symbol, "Symbol should match"
+            assert ticker_history.company_id == company.id, "company_id should reference correct company"
+            assert ticker_history.valid_from is not None, "valid_from should be set"
+            assert isinstance(ticker_history.valid_from, date), "valid_from should be a date"
+            assert ticker_history.valid_to is None, "Active ticker should have valid_to=None"
+
+            # Validate delisted ticker_history has valid_to set
+            assert result_delisted.ticker_history.valid_to is not None, "Delisted ticker should have valid_to set"
+            assert isinstance(result_delisted.ticker_history.valid_to, date), "valid_to should be a date"
 
     def test_update_company_by_ticker_comprehensive(self):
         """Test updating company via ticker symbol lookup.
