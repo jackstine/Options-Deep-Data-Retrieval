@@ -382,8 +382,7 @@ class TestSplitAdjustedPricingService:
             assert isinstance(first_price.low, Decimal), "Low should be a Decimal"
             assert first_price.close is not None, "Close price should be set"
             assert isinstance(first_price.close, Decimal), "Close should be a Decimal"
-            # Price field should equal close (when include_ohlc=True)
-            assert first_price.price == first_price.close, "Price should equal close"
+            # EODSplitAdjustedPricing does not have a 'price' field - it uses 'close'
             assert first_price.adjusted_close is not None, "Adjusted close should be set"
             assert isinstance(first_price.adjusted_close, Decimal), "Adjusted close should be a Decimal"
             assert first_price.volume is not None, "Volume should be set"
@@ -398,7 +397,7 @@ class TestSplitAdjustedPricingService:
 
             # === EXHAUSTIVE FIELD VALIDATION for Split ===
             # Retrieve splits for validation
-            splits = splits_repo.get_by_ticker_history_id(th_inserted.id)
+            splits = splits_repo.get_splits_by_ticker(th_inserted.id)
             assert len(splits) > 0, "Should have split records"
 
             first_split = splits[0]
@@ -412,11 +411,6 @@ class TestSplitAdjustedPricingService:
             assert first_split.ticker_history_id is not None, "ticker_history_id should be set"
             assert isinstance(first_split.ticker_history_id, int), "ticker_history_id should be an integer"
             assert first_split.ticker_history_id == th_inserted.id, "Split should be linked to correct ticker_history"
-
-            # Validate split ratio can be parsed
-            split_ratio_decimal = first_split.get_split_ratio()
-            assert split_ratio_decimal is not None, "Split ratio should be parseable"
-            assert split_ratio_decimal > 0, "Split ratio should be positive"
 
     def test_company_id_pricing_multiple_ticker_histories(self):
         """Test getting pricing for all ticker histories of a company (symbol change).

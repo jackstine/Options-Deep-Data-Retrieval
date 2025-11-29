@@ -134,8 +134,8 @@ class TestEodhdActiveHistoricalEodIngestion:
                 HistoricalEodPricingRepository,
             )
 
-            pricing_repo = HistoricalEodPricingRepository(session)
-            pricing_records = pricing_repo.get_by_ticker_history_id(ticker_history.id)
+            pricing_repo = HistoricalEodPricingRepository()
+            pricing_records = pricing_repo.get_pricing_by_ticker(ticker_history.id)
             assert len(pricing_records) > 0, "Should have pricing records"
 
             # Validate first pricing record

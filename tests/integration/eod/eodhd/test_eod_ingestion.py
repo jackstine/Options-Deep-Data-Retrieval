@@ -98,37 +98,39 @@ class TestEodhdDailyEodIngestion:
             assert result["misplaced_pricing_inserted"] == expected_misplaced
 
             # === EXHAUSTIVE FIELD VALIDATION for MisplacedEndOfDayPricing ===
-            # Get misplaced pricing records for validation
-            misplaced_repo = MisplacedEodPricingRepository(session)
-            misplaced_records = misplaced_repo.get_all()
-            assert len(misplaced_records) > 0, "Should have misplaced pricing records"
+            # Validate exhaustive fields only if there are misplaced pricing records
+            if expected_misplaced > 0:
+                # Get misplaced pricing records for validation
+                misplaced_repo = MisplacedEodPricingRepository()
+                misplaced_records = misplaced_repo.get_all()
+                assert len(misplaced_records) > 0, "Should have misplaced pricing records"
 
-            # Validate first misplaced pricing record
-            misplaced = misplaced_records[0]
-            assert misplaced.symbol is not None, "Symbol should be set"
-            assert isinstance(misplaced.symbol, str), "Symbol should be a string"
-            assert misplaced.date is not None, "Date should be set"
-            assert isinstance(misplaced.date, date), "Date should be a date object"
-            assert misplaced.open is not None, "Open price should be set"
-            assert isinstance(misplaced.open, Decimal), "Open should be a Decimal"
-            assert misplaced.high is not None, "High price should be set"
-            assert isinstance(misplaced.high, Decimal), "High should be a Decimal"
-            assert misplaced.low is not None, "Low price should be set"
-            assert isinstance(misplaced.low, Decimal), "Low should be a Decimal"
-            assert misplaced.close is not None, "Close price should be set"
-            assert isinstance(misplaced.close, Decimal), "Close should be a Decimal"
-            assert misplaced.adjusted_close is not None, "Adjusted close should be set"
-            assert isinstance(misplaced.adjusted_close, Decimal), "Adjusted close should be a Decimal"
-            assert misplaced.volume is not None, "Volume should be set"
-            assert isinstance(misplaced.volume, int), "Volume should be an integer"
-            assert misplaced.source is not None, "Source should be set"
+                # Validate first misplaced pricing record
+                misplaced = misplaced_records[0]
+                assert misplaced.symbol is not None, "Symbol should be set"
+                assert isinstance(misplaced.symbol, str), "Symbol should be a string"
+                assert misplaced.date is not None, "Date should be set"
+                assert isinstance(misplaced.date, date), "Date should be a date object"
+                assert misplaced.open is not None, "Open price should be set"
+                assert isinstance(misplaced.open, Decimal), "Open should be a Decimal"
+                assert misplaced.high is not None, "High price should be set"
+                assert isinstance(misplaced.high, Decimal), "High should be a Decimal"
+                assert misplaced.low is not None, "Low price should be set"
+                assert isinstance(misplaced.low, Decimal), "Low should be a Decimal"
+                assert misplaced.close is not None, "Close price should be set"
+                assert isinstance(misplaced.close, Decimal), "Close should be a Decimal"
+                assert misplaced.adjusted_close is not None, "Adjusted close should be set"
+                assert isinstance(misplaced.adjusted_close, Decimal), "Adjusted close should be a Decimal"
+                assert misplaced.volume is not None, "Volume should be set"
+                assert isinstance(misplaced.volume, int), "Volume should be an integer"
+                assert misplaced.source is not None, "Source should be set"
 
-            # Validate OHLC relationships
-            assert misplaced.high >= misplaced.low, "High must be >= Low"
-            assert misplaced.high >= misplaced.open, "High must be >= Open"
-            assert misplaced.high >= misplaced.close, "High must be >= Close"
-            assert misplaced.low <= misplaced.open, "Low must be <= Open"
-            assert misplaced.low <= misplaced.close, "Low must be <= Close"
+                # Validate OHLC relationships
+                assert misplaced.high >= misplaced.low, "High must be >= Low"
+                assert misplaced.high >= misplaced.open, "High must be >= Open"
+                assert misplaced.high >= misplaced.close, "High must be >= Close"
+                assert misplaced.low <= misplaced.open, "Low must be <= Open"
+                assert misplaced.low <= misplaced.close, "Low must be <= Close"
 
     def test_known_tickers_go_to_historical_pricing(self):
         """Test that EOD data for known tickers goes to historical_eod_pricing."""

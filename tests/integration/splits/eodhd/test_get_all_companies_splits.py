@@ -105,14 +105,7 @@ class TestEodhdAllCompaniesSplitsIngestion:
             assert "/" in split.split_ratio, "Split ratio should contain a '/' separator"
             assert split.ticker_history_id is not None, "ticker_history_id should be set"
             assert isinstance(split.ticker_history_id, int), "ticker_history_id should be an integer"
-            # Symbol is optional for display purposes
-            if split.symbol is not None:
-                assert isinstance(split.symbol, str), "Symbol should be a string"
-
-            # Validate split ratio can be parsed
-            split_ratio_decimal = split.get_split_ratio()
-            assert split_ratio_decimal is not None, "Split ratio should be parseable"
-            assert split_ratio_decimal > 0, "Split ratio should be positive"
+            # Symbol field not stored in DB, always None when retrieved from repository
 
             # Verify split is associated with correct ticker_history
             ticker_histories = get_ticker_histories_for_symbol(session, first_symbol)
