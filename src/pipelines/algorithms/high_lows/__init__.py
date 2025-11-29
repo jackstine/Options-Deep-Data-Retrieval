@@ -16,6 +16,7 @@ from src.algorithms.high_lows.processor_wrapper import HighLowProcessor
 from src.pipelines.algorithms.base import BackfillPipeline, DailyPipeline
 from src.repos.algorithms.high_lows.lows_repository import LowsRepository
 from src.repos.algorithms.high_lows.rebounds_repository import ReboundsRepository
+from src.repos.equities.companies.company_repository import CompanyRepository
 from src.repos.equities.pricing.historical_eod_pricing_repository import (
     HistoricalEodPricingRepository,
 )
@@ -81,6 +82,8 @@ def get_daily_pipeline(
         configs=configs,
         pricing_repo=HistoricalEodPricingRepository(),
         ticker_repo=TickerRepository(),
+        ticker_history_repo=TickerHistoryRepository(),
+        company_repo=CompanyRepository(),
         logger=logging.getLogger(__name__),
     )
 

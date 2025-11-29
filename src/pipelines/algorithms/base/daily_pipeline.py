@@ -20,10 +20,15 @@ from src.pipelines.algorithms.base.interfaces import (
     TCompleted,
     TConfig,
 )
+from src.repos.equities.companies.company_repository import CompanyRepository
 from src.repos.equities.pricing.historical_eod_pricing_repository import (
     HistoricalEodPricingRepository,
 )
+from src.repos.equities.tickers.ticker_history_repository import (
+    TickerHistoryRepository,
+)
 from src.repos.equities.tickers.ticker_repository import TickerRepository
+from src.services.tickers.ticker_history_service import TickerHistoryService
 
 
 class DailyResult(TypedDict):
@@ -65,6 +70,8 @@ class DailyPipeline(Generic[TActive, TCompleted, TConfig]):
         configs: list[TConfig],
         pricing_repo: HistoricalEodPricingRepository,
         ticker_repo: TickerRepository,
+        ticker_history_repo: TickerHistoryRepository,
+        company_repo: CompanyRepository,
         logger: logging.Logger | None = None,
     ) -> None:
         """Initialize daily pipeline.
@@ -76,6 +83,8 @@ class DailyPipeline(Generic[TActive, TCompleted, TConfig]):
             configs: List of configs to process (e.g., different thresholds)
             pricing_repo: Repository for pricing data
             ticker_repo: Repository for ticker data
+            ticker_history_repo: Repository for ticker history operations
+            company_repo: Repository for company operations
             logger: Logger instance (optional)
 
         Raises:
@@ -90,6 +99,10 @@ class DailyPipeline(Generic[TActive, TCompleted, TConfig]):
         self.configs = configs
         self.pricing_repo = pricing_repo
         self.ticker_repo = ticker_repo
+        self.ticker_history_service = TickerHistoryService(
+            ticker_history_repository=ticker_history_repo,
+            company_repository=company_repo,
+        )
         self.logger = logger or logging.getLogger(__name__)
 
     def run(self, calculation_date: date | None = None) -> DailyResult:
@@ -115,7 +128,26 @@ class DailyPipeline(Generic[TActive, TCompleted, TConfig]):
         }
 
         try:
-            # Step 1: Get all active patterns
+            # Step 1: Get all active ticker_history_ids from service
+            self.logger.info("Fetching all active ticker histories...")
+            active_histories = self.ticker_history_service.get_active_ticker_histories()
+            ticker_history_ids = [
+                th.ticker_history.id
+                for th in active_histories
+                if th.ticker_history.id is not None
+            ]
+
+            if not ticker_history_ids:
+                self.logger.info("No active ticker histories found. Nothing to process.")
+                return result
+
+            # Step 2: Bulk-fetch pricing for all active tickers (1 query!)
+            self.logger.info(f"Fetching pricing for {len(ticker_history_ids)} tickers...")
+            pricing_map = self.pricing_repo.get_pricing_for_date_bulk(
+                ticker_history_ids, calc_date
+            )
+
+            # Step 3: Get all active patterns
             self.logger.info("Fetching all active patterns...")
             all_active_patterns = self.active_repo.get_all_active()
             result["total_patterns_processed"] = len(all_active_patterns)
@@ -124,21 +156,19 @@ class DailyPipeline(Generic[TActive, TCompleted, TConfig]):
                 self.logger.info("No active patterns found. Nothing to process.")
                 return result
 
-            # Step 2: Group patterns by ticker_history_id for batch processing
+            # Step 4: Group patterns by ticker_history_id for batch processing
             patterns_by_ticker = self._group_patterns_by_ticker(all_active_patterns)
             result["total_tickers_processed"] = len(patterns_by_ticker)
 
-            # Step 3: Process each ticker's patterns
+            # Step 5: Process each ticker's patterns
             all_updated_patterns = []
             all_completed_patterns = []
             completed_pattern_ids = []
 
             for ticker_history_id, ticker_patterns in patterns_by_ticker.items():
                 try:
-                    # Get today's pricing data for this ticker
-                    pricing = self.pricing_repo.get_pricing_for_date(
-                        ticker_history_id, calc_date
-                    )
+                    # Get pricing data from the bulk-fetched map (O(1) lookup, no query!)
+                    pricing = pricing_map.get(ticker_history_id)
 
                     if not pricing:
                         self.logger.debug(

@@ -192,6 +192,50 @@ class HistoricalEodPricingRepository(
             logger.error(f"Database error retrieving pricing for date: {e}")
             raise
 
+    def get_pricing_for_date_bulk(
+        self, ticker_history_ids: list[int], target_date: date
+    ) -> dict[int, HistoricalEodPricingDataModel]:
+        """Get pricing data for multiple tickers on a specific date.
+
+        Args:
+            ticker_history_ids: List of ticker_history IDs
+            target_date: The specific date
+
+        Returns:
+            Dict mapping ticker_history_id to pricing data.
+            Tickers without pricing data are omitted from dict.
+        """
+        if not ticker_history_ids:
+            return {}
+
+        try:
+            with self._SessionLocal() as session:
+                query = select(HistoricalEodPricingDBModel).where(
+                    and_(
+                        HistoricalEodPricingDBModel.ticker_history_id.in_(ticker_history_ids),
+                        HistoricalEodPricingDBModel.date == target_date,
+                    )
+                )
+
+                result = session.execute(query)
+                db_models = result.scalars().all()
+
+                # Convert to dict for O(1) lookup
+                pricing_map = {
+                    db_model.ticker_history_id: self.from_db_model(db_model)
+                    for db_model in db_models
+                }
+
+                logger.info(
+                    f"Retrieved pricing for {len(pricing_map)}/{len(ticker_history_ids)} "
+                    f"tickers on {target_date}"
+                )
+                return pricing_map
+
+        except SQLAlchemyError as e:
+            logger.error(f"Database error retrieving bulk pricing for date: {e}")
+            raise
+
     def bulk_upsert_pricing(
         self,
         ticker_history_id: int,
