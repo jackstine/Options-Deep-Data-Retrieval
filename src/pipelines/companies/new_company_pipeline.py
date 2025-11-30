@@ -6,7 +6,6 @@ import logging
 from datetime import date
 from typing import TypedDict
 
-from src.config.configuration import CONFIG
 from src.data_sources.base.company_data_source import CompanyDataSource
 from src.models.company import Company
 from src.models.ticker import Ticker as TickerDataModel
@@ -102,12 +101,6 @@ class CompanyPipeline:
         if not all_companies:
             self.logger.warning("No companies found from any source")
             return results
-
-        # Apply test limits if configured
-        test_limit = CONFIG.get_test_limits()
-        if test_limit is not None:
-            self.logger.info(f"Applying test limit: {test_limit} companies")
-            all_companies = all_companies[:test_limit]
 
         # Step 2: Clean and validate data
         clean_companies = self._clean_companies(all_companies)
