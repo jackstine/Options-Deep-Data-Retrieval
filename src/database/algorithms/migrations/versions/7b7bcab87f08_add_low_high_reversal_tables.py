@@ -19,6 +19,7 @@ depends_on = None
 def upgrade() -> None:
     """Create highs and reversals tables for low/high algorithm."""
     # Create highs table
+    # Note: No FK constraint on ticker_history_id - references equities database
     op.create_table(
         'highs',
         sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -35,12 +36,6 @@ def upgrade() -> None:
         sa.Column('last_updated', sa.Date(), nullable=False),
         sa.Column('spawned', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('expired', sa.Boolean(), nullable=False, server_default='false'),
-        sa.ForeignKeyConstraint(
-            ['ticker_history_id'],
-            ['equities.ticker_history.id'],
-            name='fk_highs_ticker_history_id',
-            ondelete='CASCADE'
-        ),
         sa.PrimaryKeyConstraint('id', name='pk_highs'),
         schema='algorithms'
     )
@@ -52,6 +47,7 @@ def upgrade() -> None:
     op.create_index('ix_highs_expired', 'highs', ['expired'], schema='algorithms')
 
     # Create reversals table
+    # Note: No FK constraint on ticker_history_id - references equities database
     op.create_table(
         'reversals',
         sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -67,12 +63,6 @@ def upgrade() -> None:
         sa.Column('low_threshold_date', sa.Date(), nullable=False),
         sa.Column('reversal_price', sa.BigInteger(), nullable=False),
         sa.Column('reversal_date', sa.Date(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ['ticker_history_id'],
-            ['equities.ticker_history.id'],
-            name='fk_reversals_ticker_history_id',
-            ondelete='CASCADE'
-        ),
         sa.PrimaryKeyConstraint('id', name='pk_reversals'),
         schema='algorithms'
     )

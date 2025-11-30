@@ -18,6 +18,7 @@ depends_on = None
 def upgrade() -> None:
     """Create lows and rebounds tables for high/low algorithm."""
     # Create lows table
+    # Note: No FK constraint on ticker_history_id - references equities database
     op.create_table(
         'lows',
         sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -34,12 +35,6 @@ def upgrade() -> None:
         sa.Column('last_updated', sa.Date(), nullable=False),
         sa.Column('spawned', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('expired', sa.Boolean(), nullable=False, server_default='false'),
-        sa.ForeignKeyConstraint(
-            ['ticker_history_id'],
-            ['equities.ticker_history.id'],
-            name='fk_lows_ticker_history_id',
-            ondelete='CASCADE'
-        ),
         sa.PrimaryKeyConstraint('id', name='pk_lows'),
         schema='algorithms'
     )
@@ -51,6 +46,7 @@ def upgrade() -> None:
     op.create_index('ix_lows_expired', 'lows', ['expired'], schema='algorithms')
 
     # Create rebounds table
+    # Note: No FK constraint on ticker_history_id - references equities database
     op.create_table(
         'rebounds',
         sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
@@ -66,12 +62,6 @@ def upgrade() -> None:
         sa.Column('high_threshold_date', sa.Date(), nullable=False),
         sa.Column('rebound_price', sa.BigInteger(), nullable=False),
         sa.Column('rebound_date', sa.Date(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ['ticker_history_id'],
-            ['equities.ticker_history.id'],
-            name='fk_rebounds_ticker_history_id',
-            ondelete='CASCADE'
-        ),
         sa.PrimaryKeyConstraint('id', name='pk_rebounds'),
         schema='algorithms'
     )
