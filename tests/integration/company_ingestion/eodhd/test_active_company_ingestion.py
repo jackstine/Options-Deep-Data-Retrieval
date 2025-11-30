@@ -10,9 +10,12 @@ setup_test_environment()
 # NOW safe to import src modules
 from tests.integration.common_setup import integration_test_container, create_test_session
 from tests.data_source_mocks.eodhd.mock_symbols import MockEodhdSymbolsSource
-from tests.utils.db_assertions import (
+from tests.integration.db.db_assertions import (
     assert_company_exists,
+    assert_company_fields_complete,
     assert_ticker_exists,
+    assert_ticker_fields_complete,
+    assert_ticker_history_fields_complete,
     assert_ticker_history_valid,
     count_companies,
     count_ticker_histories,
@@ -116,38 +119,44 @@ class TestEodhdActiveCompanyIngestion:
             assert ticker_history.company_id == db_company.id
             assert ticker_history.is_currently_valid()
 
-            # === EXHAUSTIVE FIELD VALIDATION for one complete record ===
-            # Validate ALL Company fields
-            assert db_company.id is not None, "Company id should be set"
-            assert isinstance(db_company.id, int), "Company id should be an integer"
-            assert db_company.company_name == first_company.company_name, "Company name should match"
-            assert db_company.exchange == first_company.exchange, "Exchange should match"
-            assert db_company.sector is None, "EODHD does not provide sector data"
-            assert db_company.industry is None, "EODHD does not provide industry data"
-            assert db_company.country == first_company.country, "Country should match mock data"
-            assert db_company.market_cap is None, "Market cap not provided in initial ingestion"
-            assert db_company.description is None, "Description not provided in initial ingestion"
-            assert db_company.active is True, "Active companies should have active=True"
-            assert db_company.is_valid_data is True, "Valid data from source should be marked as such"
-            assert db_company.source == "EODHD", "Source should be EODHD"
+            # === EXHAUSTIVE FIELD VALIDATION using helpers ===
+            # Validate ALL Company fields using helper
+            assert_company_fields_complete(
+                db_company,
+                expected_values={
+                    "company_name": first_company.company_name,
+                    "exchange": first_company.exchange,
+                    "sector": None,  # EODHD does not provide sector data
+                    "industry": None,  # EODHD does not provide industry data
+                    "country": first_company.country,
+                    "market_cap": None,  # Not provided in initial ingestion
+                    "description": None,  # Not provided in initial ingestion
+                    "active": True,
+                    "is_valid_data": True,
+                    "source": "EODHD",
+                }
+            )
 
-            # Validate ALL Ticker fields
+            # Validate ALL Ticker fields using helper
             db_ticker = assert_ticker_exists(session, first_symbol)
-            assert db_ticker is not None, "Ticker should exist"
-            assert db_ticker.id is not None, "Ticker id should be set"
-            assert isinstance(db_ticker.id, int), "Ticker id should be an integer"
-            assert db_ticker.symbol == first_symbol, "Ticker symbol should match"
-            assert db_ticker.company_id == db_company.id, "Ticker company_id should reference correct company"
-            assert db_ticker.ticker_history_id is not None, "Ticker should reference ticker_history"
-            assert isinstance(db_ticker.ticker_history_id, int), "ticker_history_id should be an integer"
+            assert_ticker_fields_complete(
+                db_ticker,
+                expected_values={
+                    "symbol": first_symbol,
+                    "company_id": db_company.id,
+                    "ticker_history_id": ticker_history.id,
+                }
+            )
 
-            # Validate ALL TickerHistory fields
-            assert ticker_history.id is not None, "TickerHistory id should be set"
-            assert isinstance(ticker_history.id, int), "TickerHistory id should be an integer"
-            assert ticker_history.symbol == first_symbol, "TickerHistory symbol should match"
-            assert ticker_history.company_id == db_company.id, "TickerHistory company_id should reference correct company"
-            assert ticker_history.valid_from is not None, "TickerHistory valid_from should be set"
-            assert ticker_history.valid_to is None, "Active ticker should have valid_to=None"
+            # Validate ALL TickerHistory fields using helper
+            assert_ticker_history_fields_complete(
+                ticker_history,
+                expected_values={
+                    "symbol": first_symbol,
+                    "company_id": db_company.id,
+                    "valid_to": None,  # Active ticker should have valid_to=None
+                }
+            )
 
             # Validate Foreign Key relationships
             assert db_ticker.company_id == db_company.id, "Ticker.company_id should match Company.id"

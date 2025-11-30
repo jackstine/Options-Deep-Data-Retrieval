@@ -11,7 +11,7 @@ setup_test_environment()
 from src.database.equities.enums import DataSourceEnum
 from tests.integration.common_setup import integration_test_container, create_test_session
 from tests.data_source_mocks.nasdaq.mock_screener import MockNasdaqScreenerSource
-from tests.utils.db_assertions import (
+from tests.integration.db.db_assertions import (
     assert_company_exists,
     assert_ticker_exists,
     assert_ticker_history_valid,
