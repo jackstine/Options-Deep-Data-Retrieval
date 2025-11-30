@@ -246,30 +246,6 @@ class ConfigurationManager:
             )
         return api_key
 
-    def get_test_limits(self) -> int | None:
-        """Get test limits from environment variable.
-
-        This is an optional environment variable used for testing to limit
-        the number of companies/symbols processed in ingestion pipelines.
-
-        Returns:
-            Test limit count or None if not set
-
-        Raises:
-            No exceptions - returns None if not set or invalid
-        """
-        limit_str = os.getenv(ENV_VARS.TEST_LIMITS)
-        if limit_str is None:
-            return None
-
-        try:
-            limit = int(limit_str)
-            if limit <= 0:
-                return None
-            return limit
-        except ValueError:
-            return None
-
     def _get_database_password(self) -> str:
         """Get database password from environment variable.
 

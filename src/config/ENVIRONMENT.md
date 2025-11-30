@@ -9,7 +9,7 @@ This document describes all environment variables used in the Options Deep stock
 - `OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD` - Database password for PostgreSQL connection
 - `NASDAQ_API_KEY` - API key for accessing NASDAQ company data
 - `EODHD_API_KEY` - API key for accessing EODHD market data
-- `OPTIONS_DEEP_TEST_LIMITS` - (Optional) Limits the number of companies/symbols processed in ingestion pipelines for testing purposes. Set to a positive integer (e.g., `10`, `100`). If not set or invalid, no limit is applied
+- `OPTIONS_DEEP_TEST_DB_PORT` - (Optional) Overrides the database port for integration tests using testcontainers. Set automatically by testcontainer fixtures to use dynamically assigned Docker ports. Should not be set manually in normal usage
 
 ## Environment File Selection
 
@@ -31,11 +31,6 @@ python src/cmd/my_script.py
 # Use production environment file
 export OPTIONS_DEEP_ENV=prod
 python src/cmd/my_script.py
-
-# Limit processing to 10 companies for testing
-export OPTIONS_DEEP_ENV=local
-export OPTIONS_DEEP_TEST_LIMITS=10
-python -m src.cmd.eod.eodhd.eod_ingestion
 ```
 
 ## Configuration Architecture
@@ -145,11 +140,6 @@ api_key = CONFIG.get_nasdaq_api_key()
 
 # Get database config (combines env vars + JSON config)
 db_config = CONFIG.get_equities_config()
-
-# Get test limits (optional, returns None if not set)
-test_limit = CONFIG.get_test_limits()
-if test_limit:
-    print(f"Processing limited to {test_limit} items")
 ```
 
 ## Type Safety
