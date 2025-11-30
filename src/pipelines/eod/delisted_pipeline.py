@@ -23,6 +23,7 @@ from src.repos.equities.tickers.ticker_history_stats_repository import (
     TickerHistoryStatsRepository,
 )
 from src.repos.equities.tickers.ticker_repository import TickerRepository
+from src.services.companies.company_service import CompanyService
 from src.utils.trading_calendar import get_missing_trading_days
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,7 @@ class DelistedCompanyPipeline:
         ticker_history_repo: TickerHistoryRepository | None = None,
         ticker_history_stats_repo: TickerHistoryStatsRepository | None = None,
         pricing_repo: HistoricalEodPricingRepository | None = None,
+        company_service: CompanyService | None = None,
         logger_instance: logging.Logger | None = None,
     ) -> None:
         """Initialize delisted company pipeline with dependency injection.
@@ -82,6 +84,7 @@ class DelistedCompanyPipeline:
             ticker_history_repo: Repository for ticker history operations
             ticker_history_stats_repo: Repository for ticker history stats operations
             pricing_repo: Repository for historical pricing operations
+            company_service: Service for company operations involving joins
             logger_instance: Logger instance for this pipeline
         """
         self.company_repo = company_repo or CompanyRepository()
@@ -91,6 +94,9 @@ class DelistedCompanyPipeline:
             ticker_history_stats_repo or TickerHistoryStatsRepository()
         )
         self.pricing_repo = pricing_repo or HistoricalEodPricingRepository()
+        self.company_service = company_service or CompanyService(
+            self.company_repo, self.ticker_history_repo
+        )
         self.logger = logger_instance or logger
 
     def ingest_delisted_companies(
@@ -208,9 +214,9 @@ class DelistedCompanyPipeline:
                 }
 
                 # Insert company record anyway
-                existing_company = self.company_repo.get_company_by_ticker(symbol)
-                if existing_company:
-                    self.company_repo.update_company(symbol, company)
+                existing_company_data = self.company_service.get_company_by_ticker(symbol)
+                if existing_company_data:
+                    self.company_service.update_company(symbol, company)
                     result["company_updated"] = True
                 else:
                     self.company_repo.insert(company)
@@ -233,9 +239,9 @@ class DelistedCompanyPipeline:
                 }
 
                 # Insert company record anyway
-                existing_company = self.company_repo.get_company_by_ticker(symbol)
-                if existing_company:
-                    self.company_repo.update_company(symbol, company)
+                existing_company_data = self.company_service.get_company_by_ticker(symbol)
+                if existing_company_data:
+                    self.company_service.update_company(symbol, company)
                     result["company_updated"] = True
                 else:
                     self.company_repo.insert(company)
@@ -247,12 +253,12 @@ class DelistedCompanyPipeline:
             company.is_valid_data = self._calculate_is_valid_data(company.exchange, metrics)
 
             # Insert or update company
-            existing_company = self.company_repo.get_company_by_ticker(symbol)
-            if existing_company:
-                company.id = existing_company.id
-                self.company_repo.update_company(symbol, company)
+            existing_company_data = self.company_service.get_company_by_ticker(symbol)
+            if existing_company_data:
+                company.id = existing_company_data.company.id
+                self.company_service.update_company(symbol, company)
                 result["company_updated"] = True
-                company_id = existing_company.id
+                company_id = existing_company_data.company.id
             else:
                 # Use insert() instead of bulk_insert to get the ID back
                 inserted_company = self.company_repo.insert(company)
@@ -324,9 +330,9 @@ class DelistedCompanyPipeline:
             # Try to insert company with is_valid_data=False
             try:
                 company.is_valid_data = False
-                existing_company = self.company_repo.get_company_by_ticker(symbol)
-                if existing_company:
-                    self.company_repo.update_company(symbol, company)
+                existing_company_data = self.company_service.get_company_by_ticker(symbol)
+                if existing_company_data:
+                    self.company_service.update_company(symbol, company)
                     result["company_updated"] = True
                 else:
                     self.company_repo.insert(company)

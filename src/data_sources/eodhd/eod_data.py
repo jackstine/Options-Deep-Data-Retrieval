@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date
+from decimal import Decimal
 from typing import Any
 
 import requests
@@ -13,6 +14,35 @@ from src.data_sources.base.historical_data_source import HistoricalDataSource
 from src.models.historical_eod_pricing import HistoricalEndOfDayPricing
 
 logger = logging.getLogger(__name__)
+
+
+def transform_eodhd_eod_to_pricing(data: dict[str, Any]) -> HistoricalEndOfDayPricing:
+    """Transform EODHD API EOD data to HistoricalEndOfDayPricing model.
+
+    Handles EODHD API snake_case format for EOD pricing data.
+
+    Args:
+        data: Dictionary from EODHD API with EOD pricing fields
+
+    Returns:
+        HistoricalEndOfDayPricing: Pricing model instance
+    """
+    # Parse date from string if needed
+    pricing_date = data["date"]
+    if isinstance(pricing_date, str):
+        pricing_date = date.fromisoformat(pricing_date)
+
+    return HistoricalEndOfDayPricing(
+        ticker_history_id=data.get("ticker_history_id"),
+        symbol=data.get("symbol"),
+        date=pricing_date,
+        open=Decimal(str(data["open"])),
+        high=Decimal(str(data["high"])),
+        low=Decimal(str(data["low"])),
+        close=Decimal(str(data["close"])),
+        adjusted_close=Decimal(str(data["adjusted_close"])),
+        volume=int(data["volume"]),
+    )
 
 
 class EodhdDataSource(HistoricalDataSource):
@@ -109,7 +139,7 @@ class EodhdDataSource(HistoricalDataSource):
             pricing_data = []
             for record in data:
                 record["symbol"] = original_symbol
-                pricing_data.append(HistoricalEndOfDayPricing.from_dict(record))
+                pricing_data.append(transform_eodhd_eod_to_pricing(record))
 
             logger.info(
                 f"Retrieved {len(pricing_data)} EOD records for {symbol}"
@@ -152,10 +182,10 @@ class EodhdDataSource(HistoricalDataSource):
             data: Any = response.json()
             if isinstance(data, list) and len(data) > 0:
                 data[0]["symbol"] = original_symbol
-                return HistoricalEndOfDayPricing.from_dict(data[0])
+                return transform_eodhd_eod_to_pricing(data[0])
             elif isinstance(data, dict):
                 data["symbol"] = original_symbol
-                return HistoricalEndOfDayPricing.from_dict(data)
+                return transform_eodhd_eod_to_pricing(data)
             else:
                 logger.warning(f"No data available for {symbol}")
                 return None

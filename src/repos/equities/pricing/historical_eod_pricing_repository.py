@@ -43,23 +43,58 @@ class HistoricalEodPricingRepository(
             db_model_class=HistoricalEodPricingDBModel,
         )
 
-    def _create_id_filter(self, id: int) -> HistoricalEodPricingDataModel:
-        """Create a HistoricalEodPricing filter model for ID lookups."""
-        from datetime import date as date_type
+    @staticmethod
+    def from_db_model(db_model: HistoricalEodPricingDBModel) -> HistoricalEodPricingDataModel:
+        """Create data model from SQLAlchemy database model.
+
+        Args:
+            db_model: SQLAlchemy HistoricalEodPricing instance from database
+
+        Returns:
+            HistoricalEndOfDayPricing: Data model instance
+        """
+        from src.database.equities.tables.historical_eod_pricing import PRICE_MULTIPLIER
         from decimal import Decimal
 
         return HistoricalEodPricingDataModel(
-            date=date_type(1900, 1, 1),  # Will be ignored
-            open=Decimal("0"),  # Will be ignored
-            high=Decimal("0"),  # Will be ignored
-            low=Decimal("0"),  # Will be ignored
-            close=Decimal("0"),  # Will be ignored
-            adjusted_close=Decimal("0"),  # Will be ignored
-            volume=0,  # Will be ignored
-            id=id,  # Will be used as filter
+            ticker_history_id=db_model.ticker_history_id,
+            symbol=None,  # Symbol not stored in DB, must be set separately if needed
+            date=db_model.date,
+            open=Decimal(db_model.open) / PRICE_MULTIPLIER,
+            high=Decimal(db_model.high) / PRICE_MULTIPLIER,
+            low=Decimal(db_model.low) / PRICE_MULTIPLIER,
+            close=Decimal(db_model.close) / PRICE_MULTIPLIER,
+            adjusted_close=Decimal(db_model.adjusted_close) / PRICE_MULTIPLIER,
+            volume=db_model.volume,
         )
 
-    # Domain-specific methods
+    @staticmethod
+    def to_db_model(data_model: HistoricalEodPricingDataModel) -> HistoricalEodPricingDBModel:
+        """Convert data model to SQLAlchemy database model.
+
+        Returns:
+            DBHistoricalEodPricing: SQLAlchemy model instance ready for database operations
+
+        Raises:
+            ValueError: If ticker_history_id is None
+        """
+        if data_model.ticker_history_id is None:
+            raise ValueError(
+                "ticker_history_id must be set before converting to database model"
+            )
+
+        from src.database.equities.tables.historical_eod_pricing import PRICE_MULTIPLIER
+
+        return HistoricalEodPricingDBModel(
+            ticker_history_id=data_model.ticker_history_id,
+            date=data_model.date,
+            open=int(data_model.open * PRICE_MULTIPLIER),
+            high=int(data_model.high * PRICE_MULTIPLIER),
+            low=int(data_model.low * PRICE_MULTIPLIER),
+            close=int(data_model.close * PRICE_MULTIPLIER),
+            adjusted_close=int(data_model.adjusted_close * PRICE_MULTIPLIER),
+            volume=data_model.volume,
+        )
 
     def get_pricing_by_ticker(
         self,
@@ -106,7 +141,7 @@ class HistoricalEodPricingRepository(
                 db_models = result.scalars().all()
 
                 data_models = [
-                    HistoricalEodPricingDataModel.from_db_model(db_model)
+                    self.from_db_model(db_model)
                     for db_model in db_models
                 ]
                 logger.info(
@@ -117,20 +152,6 @@ class HistoricalEodPricingRepository(
         except SQLAlchemyError as e:
             logger.error(f"Database error retrieving pricing by ticker: {e}")
             raise
-
-    def get_latest_pricing(
-        self, ticker_history_id: int
-    ) -> HistoricalEodPricingDataModel | None:
-        """Get the most recent pricing data for a ticker_history.
-
-        Args:
-            ticker_history_id: ID of the ticker_history record
-
-        Returns:
-            Most recent pricing data model, or None if no data exists
-        """
-        results = self.get_pricing_by_ticker(ticker_history_id, limit=1)
-        return results[0] if results else None
 
     def get_pricing_for_date(
         self, ticker_history_id: int, target_date: date
@@ -160,7 +181,7 @@ class HistoricalEodPricingRepository(
                     logger.debug(
                         f"Found pricing for ticker_history_id={ticker_history_id} on {target_date}"
                     )
-                    return HistoricalEodPricingDataModel.from_db_model(db_model)
+                    return self.from_db_model(db_model)
                 else:
                     logger.debug(
                         f"No pricing found for ticker_history_id={ticker_history_id} on {target_date}"
@@ -169,6 +190,50 @@ class HistoricalEodPricingRepository(
 
         except SQLAlchemyError as e:
             logger.error(f"Database error retrieving pricing for date: {e}")
+            raise
+
+    def get_pricing_for_date_bulk(
+        self, ticker_history_ids: list[int], target_date: date
+    ) -> dict[int, HistoricalEodPricingDataModel]:
+        """Get pricing data for multiple tickers on a specific date.
+
+        Args:
+            ticker_history_ids: List of ticker_history IDs
+            target_date: The specific date
+
+        Returns:
+            Dict mapping ticker_history_id to pricing data.
+            Tickers without pricing data are omitted from dict.
+        """
+        if not ticker_history_ids:
+            return {}
+
+        try:
+            with self._SessionLocal() as session:
+                query = select(HistoricalEodPricingDBModel).where(
+                    and_(
+                        HistoricalEodPricingDBModel.ticker_history_id.in_(ticker_history_ids),
+                        HistoricalEodPricingDBModel.date == target_date,
+                    )
+                )
+
+                result = session.execute(query)
+                db_models = result.scalars().all()
+
+                # Convert to dict for O(1) lookup
+                pricing_map = {
+                    db_model.ticker_history_id: self.from_db_model(db_model)
+                    for db_model in db_models
+                }
+
+                logger.info(
+                    f"Retrieved pricing for {len(pricing_map)}/{len(ticker_history_ids)} "
+                    f"tickers on {target_date}"
+                )
+                return pricing_map
+
+        except SQLAlchemyError as e:
+            logger.error(f"Database error retrieving bulk pricing for date: {e}")
             raise
 
     def bulk_upsert_pricing(
@@ -199,7 +264,7 @@ class HistoricalEodPricingRepository(
                     pricing.ticker_history_id = ticker_history_id
 
                 # Convert data models to DB models
-                db_models = [pricing.to_db_model() for pricing in pricing_data]
+                db_models = [self.to_db_model(pricing) for pricing in pricing_data]
 
                 # Prepare values for upsert
                 values = [
@@ -244,76 +309,4 @@ class HistoricalEodPricingRepository(
 
         except SQLAlchemyError as e:
             logger.error(f"Database error in bulk_upsert_pricing: {e}")
-            raise
-
-    def delete_pricing_by_ticker(
-        self, ticker_history_id: int, from_date: date | None = None, to_date: date | None = None
-    ) -> int:
-        """Delete pricing data for a ticker_history within an optional date range.
-
-        Args:
-            ticker_history_id: ID of the ticker_history record
-            from_date: Start date (inclusive), None for no lower bound
-            to_date: End date (inclusive), None for no upper bound
-
-        Returns:
-            Number of records deleted
-        """
-        try:
-            with self._SessionLocal() as session:
-                query = delete(HistoricalEodPricingDBModel).where(
-                    HistoricalEodPricingDBModel.ticker_history_id == ticker_history_id
-                )
-
-                # Apply date filters
-                if from_date:
-                    query = query.where(
-                        HistoricalEodPricingDBModel.date >= from_date
-                    )
-                if to_date:
-                    query = query.where(
-                        HistoricalEodPricingDBModel.date <= to_date
-                    )
-
-                result = session.execute(query)
-                session.commit()
-
-                deleted_count = result.rowcount
-                logger.info(
-                    f"Deleted {deleted_count} pricing records for ticker_history_id={ticker_history_id}"
-                )
-                return deleted_count
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error in delete_pricing_by_ticker: {e}")
-            raise
-
-    def get_date_range_for_ticker(self, ticker_history_id: int) -> tuple[date | None, date | None]:
-        """Get the min and max dates available for a ticker_history.
-
-        Args:
-            ticker_history_id: ID of the ticker_history record
-
-        Returns:
-            Tuple of (earliest_date, latest_date), or (None, None) if no data
-        """
-        try:
-            with self._SessionLocal() as session:
-                from sqlalchemy import func
-
-                query = select(
-                    func.min(HistoricalEodPricingDBModel.date),
-                    func.max(HistoricalEodPricingDBModel.date),
-                ).where(HistoricalEodPricingDBModel.ticker_history_id == ticker_history_id)
-
-                result = session.execute(query)
-                min_date, max_date = result.one()
-
-                logger.debug(
-                    f"Date range for ticker_history_id={ticker_history_id}: {min_date} to {max_date}"
-                )
-                return (min_date, max_date)
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error in get_date_range_for_ticker: {e}")
             raise

@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 from typing import TypedDict
 
 from src.data_sources.base.company_data_source import CompanyDataSource
 from src.data_sources.base.historical_data_source import HistoricalDataSource
-from src.models.company import Company
 from src.models.historical_eod_pricing import HistoricalEndOfDayPricing
 from src.models.ticker_history import TickerHistory
 from src.models.ticker_history_stats import TickerHistoryStats
@@ -24,6 +23,7 @@ from src.repos.equities.tickers.ticker_history_stats_repository import (
     TickerHistoryStatsRepository,
 )
 from src.repos.equities.tickers.ticker_repository import TickerRepository
+from src.services.companies.company_service import CompanyService
 
 
 class CompanyStats(TypedDict):
@@ -69,6 +69,7 @@ class ActiveNewListingPipeline:
         ticker_history_repo: TickerHistoryRepository | None = None,
         pricing_repo: HistoricalEodPricingRepository | None = None,
         stats_repo: TickerHistoryStatsRepository | None = None,
+        company_service: CompanyService | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         """Initialize pipeline with data sources and repositories.
@@ -81,6 +82,7 @@ class ActiveNewListingPipeline:
             ticker_history_repo: Repository for ticker history operations
             pricing_repo: Repository for EOD pricing operations
             stats_repo: Repository for ticker history stats operations
+            company_service: Service for company operations involving joins
             logger: Logger instance for pipeline operations
         """
         self.company_source = company_source
@@ -90,6 +92,9 @@ class ActiveNewListingPipeline:
         self.ticker_history_repo = ticker_history_repo or TickerHistoryRepository()
         self.pricing_repo = pricing_repo or HistoricalEodPricingRepository()
         self.stats_repo = stats_repo or TickerHistoryStatsRepository()
+        self.company_service = company_service or CompanyService(
+            self.company_repo, self.ticker_history_repo
+        )
         self.logger = logger or logging.getLogger(__name__)
 
     def _calculate_eod_stats(
@@ -134,6 +139,14 @@ class ActiveNewListingPipeline:
         # Calculate average price
         average_price = sum(prices) / len(prices)
 
+        decimal_average_price: Decimal
+        if isinstance(average_price, float):
+            decimal_average_price = Decimal.from_float(average_price)
+        elif isinstance(average_price, int):
+            decimal_average_price = Decimal(average_price)
+        else:
+            decimal_average_price = average_price
+
         # Calculate median price
         sorted_prices = sorted(prices)
         n = len(sorted_prices)
@@ -162,13 +175,14 @@ class ActiveNewListingPipeline:
         else:
             coverage = 0
 
+
         return CompanyStats(
             code=symbol,
             name="",
             exchange="",
             min_price=min_price,
             max_price=max_price,
-            average_price=average_price,
+            average_price=decimal_average_price,
             median_price=median_price,
             missing_days_count=missing_days_count,
             total_trading_days=total_trading_days,
@@ -259,13 +273,14 @@ class ActiveNewListingPipeline:
                 self.logger.info(f"Inserting company {symbol}")
 
                 # 1. Insert/update company
-                existing_company = self.company_repo.get_company_by_ticker(symbol)
+                existing_company_data = self.company_service.get_company_by_ticker(symbol)
                 company_id : int
-                if existing_company:
-                    self.company_repo.update_company(symbol, company)
-                    if existing_company.id is None:
+                if existing_company_data:
+                    self.company_service.update_company(symbol, company)
+
+                    if existing_company_data.company.id is None:
                         raise ValueError("id of existing company cannot be None")
-                    company_id = existing_company.id
+                    company_id = existing_company_data.company.id
                 else:
                     # Insert company - need to get ID
                     inserted = self.company_repo.bulk_insert_companies([company])

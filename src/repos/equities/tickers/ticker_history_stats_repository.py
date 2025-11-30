@@ -33,45 +33,55 @@ class TickerHistoryStatsRepository(
             db_model_class=TickerHistoryStatsDBModel,
         )
 
-    def _create_id_filter(self, id: int) -> TickerHistoryStatsDataModel:
-        """Create a TickerHistoryStats filter model for ID lookups."""
-        return TickerHistoryStatsDataModel(
-            ticker_history_id=0,  # Will be ignored
-            id=id,  # Will be used as filter
-        )
-
-    # Domain-specific methods
-
-    def get_stats_by_ticker_history_id(
-        self, ticker_history_id: int
-    ) -> TickerHistoryStatsDataModel | None:
-        """Get stats for a ticker history.
+    @staticmethod
+    def from_db_model(db_model: TickerHistoryStatsDBModel) -> TickerHistoryStatsDataModel:
+        """Create data model from SQLAlchemy database model.
 
         Args:
-            ticker_history_id: ID of the ticker history
+            db_model: SQLAlchemy TickerHistoryStats instance from database
 
         Returns:
-            Stats data model, or None if no stats exist
+            TickerHistoryStats: Data model instance
         """
-        try:
-            with self._SessionLocal() as session:
-                query = select(TickerHistoryStatsDBModel).where(
-                    TickerHistoryStatsDBModel.ticker_history_id == ticker_history_id
-                )
+        from src.database.equities.tables.ticker_history_stats import PRICE_MULTIPLIER
+        from decimal import Decimal
 
-                result = session.execute(query)
-                db_model = result.scalar_one_or_none()
+        return TickerHistoryStatsDataModel(
+            id=db_model.id,
+            ticker_history_id=db_model.ticker_history_id,
+            data_coverage_pct=db_model.data_coverage_pct,
+            min_price=Decimal(db_model.min_price) / PRICE_MULTIPLIER if db_model.min_price is not None else None,
+            max_price=Decimal(db_model.max_price) / PRICE_MULTIPLIER if db_model.max_price is not None else None,
+            average_price=Decimal(db_model.average_price) / PRICE_MULTIPLIER if db_model.average_price is not None else None,
+            median_price=Decimal(db_model.median_price) / PRICE_MULTIPLIER if db_model.median_price is not None else None,
+            has_insufficient_coverage=db_model.has_insufficient_coverage,
+            low_suspicious_price=db_model.low_suspicious_price,
+            high_suspicious_price=db_model.high_suspicious_price,
+            created_at=db_model.created_at,
+            updated_at=db_model.updated_at,
+        )
 
-                if db_model:
-                    logger.debug(f"Found stats for ticker_history_id={ticker_history_id}")
-                    return TickerHistoryStatsDataModel.from_db_model(db_model)
-                else:
-                    logger.debug(f"No stats found for ticker_history_id={ticker_history_id}")
-                    return None
+    @staticmethod
+    def to_db_model(data_model: TickerHistoryStatsDataModel) -> TickerHistoryStatsDBModel:
+        """Convert data model to SQLAlchemy database model.
 
-        except SQLAlchemyError as e:
-            logger.error(f"Database error retrieving stats by ticker history ID: {e}")
-            raise
+        Returns:
+            DBTickerHistoryStats: SQLAlchemy model instance ready for database operations
+        """
+        from src.database.equities.tables.ticker_history_stats import PRICE_MULTIPLIER
+
+        return TickerHistoryStatsDBModel(
+            id=data_model.id,
+            ticker_history_id=data_model.ticker_history_id,
+            data_coverage_pct=data_model.data_coverage_pct,
+            min_price=int(data_model.min_price * PRICE_MULTIPLIER) if data_model.min_price is not None else None,
+            max_price=int(data_model.max_price * PRICE_MULTIPLIER) if data_model.max_price is not None else None,
+            average_price=int(data_model.average_price * PRICE_MULTIPLIER) if data_model.average_price is not None else None,
+            median_price=int(data_model.median_price * PRICE_MULTIPLIER) if data_model.median_price is not None else None,
+            has_insufficient_coverage=data_model.has_insufficient_coverage,
+            low_suspicious_price=data_model.low_suspicious_price,
+            high_suspicious_price=data_model.high_suspicious_price,
+        )
 
     def upsert_stats(
         self, stats: TickerHistoryStatsDataModel
@@ -90,7 +100,7 @@ class TickerHistoryStatsRepository(
         try:
             with self._SessionLocal() as session:
                 # Convert data model to DB model
-                db_model = stats.to_db_model()
+                db_model = self.to_db_model(stats)
 
                 # Prepare values for upsert
                 values = {
@@ -139,24 +149,3 @@ class TickerHistoryStatsRepository(
         except SQLAlchemyError as e:
             logger.error(f"Database error in upsert_stats: {e}")
             raise
-
-    def delete_stats_by_ticker_history_id(self, ticker_history_id: int) -> bool:
-        """Delete stats for a ticker history.
-
-        Args:
-            ticker_history_id: ID of the ticker history
-
-        Returns:
-            True if stats were deleted, False if no stats existed
-        """
-        filter_data = TickerHistoryStatsDataModel(
-            ticker_history_id=ticker_history_id
-        )
-        deleted_count = self.delete(filter_data)
-
-        if deleted_count > 0:
-            logger.info(f"Deleted stats for ticker_history_id={ticker_history_id}")
-            return True
-        else:
-            logger.debug(f"No stats to delete for ticker_history_id={ticker_history_id}")
-            return False

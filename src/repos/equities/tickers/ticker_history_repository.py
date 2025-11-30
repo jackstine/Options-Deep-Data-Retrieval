@@ -5,9 +5,6 @@ from __future__ import annotations
 import logging
 from datetime import date
 
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
-
 from src.config.configuration import CONFIG
 from src.database.equities.tables.ticker_history import (
     TickerHistory as TickerHistoryDBModel,
@@ -33,72 +30,53 @@ class TickerHistoryRepository(
             db_model_class=TickerHistoryDBModel,
         )
 
-    def _create_id_filter(self, id: int) -> TickerHistoryDataModel:
-        """Create a TickerHistory filter model for ID lookups."""
-        return TickerHistoryDataModel(
-            symbol="",  # Will be ignored
-            company_id=0,  # Will be ignored
-            valid_from=date.today(),  # Will be ignored
-            id=id,  # Will be used as filter
-        )
+    @staticmethod
+    def from_db_model(db_model: TickerHistoryDBModel) -> TickerHistoryDataModel:
+        """Create data model from SQLAlchemy database model.
 
-    def get_active_ticker_history_symbols(self) -> set[str]:
-        """Get all currently active ticker symbols from ticker history.
-
-        Filters by:
-        - Date validity (valid_from <= today <= valid_to or valid_to is None)
-        - Company active status (via join with companies table)
+        Args:
+            db_model: SQLAlchemy TickerHistory instance from database
 
         Returns:
-            Set of currently active ticker symbols
+            TickerHistory: Data model instance
         """
-        try:
-            with self._SessionLocal() as session:
-                from src.database.equities.tables.company import Company
+        return TickerHistoryDataModel(
+            id=db_model.id,
+            symbol=db_model.symbol,
+            company_id=db_model.company_id,
+            valid_from=db_model.valid_from,
+            valid_to=db_model.valid_to,
+        )
 
-                today = date.today()
-                result = session.execute(
-                    select(TickerHistoryDBModel.symbol)
-                    .join(Company, TickerHistoryDBModel.company_id == Company.id)
-                    .where(
-                        (TickerHistoryDBModel.valid_from <= today)
-                        & (
-                            (TickerHistoryDBModel.valid_to.is_(None))
-                            | (TickerHistoryDBModel.valid_to >= today)
-                        )
-                        & Company.active
-                    )
-                )
-                symbols = {row[0] for row in result.fetchall()}
-                logger.info(
-                    f"Retrieved {len(symbols)} active ticker history symbols from database"
-                )
-                return symbols
+    @staticmethod
+    def to_db_model(data_model: TickerHistoryDataModel) -> TickerHistoryDBModel:
+        """Convert data model to SQLAlchemy database model.
 
-        except SQLAlchemyError as e:
-            logger.error(
-                f"Database error retrieving active ticker history symbols: {e}"
-            )
-            raise
+        Returns:
+            DBTickerHistory: SQLAlchemy model instance ready for database operations
+        """
+        return TickerHistoryDBModel(
+            symbol=data_model.symbol,
+            company_id=data_model.company_id,
+            valid_from=data_model.valid_from,
+            valid_to=data_model.valid_to,
+        )
 
-    # Domain-specific methods using base repository functionality
     def get_ticker_history_for_company(
         self, company_id: int
     ) -> list[TickerHistoryDataModel]:
         """Get all ticker history records for a specific company using base repository."""
         company_filter = TickerHistoryDataModel(
-            symbol="", company_id=company_id, valid_from=date.today()
+           company_id=company_id
         )
         options = QueryOptions(order_by="valid_from")
-        return self.get(company_filter, options)
+        return self.get_filter(company_filter, options)
 
     def get_ticker_history_by_symbol(self, symbol: str) -> list[TickerHistoryDataModel]:
         """Get all ticker history records for a symbol using base repository."""
-        symbol_filter = TickerHistoryDataModel(
-            symbol=symbol, company_id=0, valid_from=date.today()
-        )
+        symbol_filter = TickerHistoryDataModel(symbol=symbol)
         options = QueryOptions(order_by="valid_from")
-        return self.get(symbol_filter, options)
+        return self.get_filter(symbol_filter, options)
 
     def bulk_insert_ticker_histories(
         self, ticker_histories: list[TickerHistoryDataModel]
@@ -115,7 +93,7 @@ class TickerHistoryRepository(
 
     def get_all_ticker_histories(self) -> list[TickerHistoryDataModel]:
         """Retrieve all ticker histories from the database using base repository."""
-        return self.get()  # Uses base repository get() method
+        return self.get_all()
 
     def create_ticker_history_for_company(
         self,
@@ -136,48 +114,3 @@ class TickerHistoryRepository(
         )
         return self.insert(ticker_history_data)
 
-    def get_active_ticker_histories(self) -> list[TickerHistoryDataModel]:
-        """Get all active ticker history records.
-
-        Returns ticker histories where the associated company is active.
-        """
-        try:
-            with self._SessionLocal() as session:
-                from src.database.equities.tables.company import Company
-
-                result = session.execute(
-                    select(TickerHistoryDBModel)
-                    .join(Company, TickerHistoryDBModel.company_id == Company.id)
-                    .where(Company.active)
-                )
-                db_models = result.scalars().all()
-                return [
-                    TickerHistoryDataModel.from_db_model(db_model)
-                    for db_model in db_models
-                ]
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error retrieving active ticker histories: {e}")
-            raise
-
-    def deactivate_ticker_history(
-        self, symbol: str, company_id: int, end_date: date | None = None
-    ) -> bool:
-        """Set the end date for a ticker history record using base repository update."""
-        if end_date is None:
-            end_date = date.today()
-
-        filter_data = TickerHistoryDataModel(
-            symbol=symbol,
-            company_id=company_id,
-            valid_from=date.today(),  # Will be ignored in filter
-        )
-
-        update_data = TickerHistoryDataModel(
-            symbol="",  # Will be ignored
-            company_id=0,  # Will be ignored
-            valid_from=date.today(),  # Will be ignored
-            valid_to=end_date,  # Will be used to update
-        )
-
-        return self.update(filter_data, update_data) > 0

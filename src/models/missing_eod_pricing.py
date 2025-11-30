@@ -4,12 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from src.database.equities.tables.missing_eod_pricing import (
-        MissingEodPricing as DBMissingEodPricing,
-    )
+from typing import Any
 
 
 @dataclass
@@ -66,45 +61,3 @@ class MissingEndOfDayPricing:
     def __repr__(self) -> str:
         """Detailed string representation of missing pricing data."""
         return self.__str__()
-
-    def to_db_model(self) -> DBMissingEodPricing:
-        """Convert data model to SQLAlchemy database model.
-
-        Returns:
-            DBMissingEodPricing: SQLAlchemy model instance ready for database operations
-        """
-        from src.database.equities.tables.missing_eod_pricing import (
-            MissingEodPricing as DBMissingEodPricing,
-        )
-
-        return DBMissingEodPricing(
-            company_id=self.company_id,
-            ticker_history_id=self.ticker_history_id,
-            date=self.date,
-        )
-
-    @classmethod
-    def from_db_model(cls, db_model: DBMissingEodPricing) -> MissingEndOfDayPricing:
-        """Create data model from SQLAlchemy database model.
-
-        Args:
-            db_model: SQLAlchemy MissingEodPricing instance from database
-
-        Returns:
-            MissingEndOfDayPricing: Data model instance
-        """
-        return cls(
-            company_id=db_model.company_id,
-            ticker_history_id=db_model.ticker_history_id,
-            date=db_model.date,
-        )
-
-    def update_db_model(self, db_model: DBMissingEodPricing) -> None:
-        """Update existing SQLAlchemy database model with data from this model.
-
-        Args:
-            db_model: SQLAlchemy MissingEodPricing instance to update
-        """
-        db_model.company_id = self.company_id
-        db_model.ticker_history_id = self.ticker_history_id
-        db_model.date = self.date

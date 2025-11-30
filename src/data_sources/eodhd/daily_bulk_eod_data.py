@@ -102,8 +102,8 @@ class EodhdDailyBulkEodData(BulkEodDataSource):
             for record in data:
                 try:
                     # Extract symbol (remove .US suffix if present)
-                    code = record.get("code", "")
-                    symbol = code.split(".")[0] if "." in code else code
+                    code = record.get("code")
+                    symbol = code.split(".")[0] if code and "." in code else code
 
                     if not symbol:
                         logger.warning(f"Skipping record with missing symbol: {record}")

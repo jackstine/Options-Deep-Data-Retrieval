@@ -11,7 +11,55 @@ install-dev:
 # run all unit tests
 PHONY: unit-test
 unit-test:
-	PYTHONPATH=. python -m unittest discover -s src -p "test_*.py" -v
+	OPTIONS_DEEP_ENV=unittest PYTHONPATH=. python -m unittest discover -s src -p "test_*.py" -v
+
+# run integration tests
+PHONY: integration-test
+integration-test:
+	@echo "🧪 Running integration tests..."
+	@bash tests/run_integration_tests.sh
+
+# run all tests (unit + integration)
+PHONY: test-all
+test-all: unit-test integration-test
+	@echo "✅ All tests completed!"
+
+# Docker Commands - Multi-Stage Build
+
+# build base image with dependencies (rarely rebuilt)
+PHONY: build-base-image
+build-base-image:
+	@echo "🐳 Building base Docker image (dependencies only)..."
+	@docker build --target base -t options-deep-test-base:latest -f dockerfiles/test/Dockerfile .
+	@echo "✅ Base image built successfully!"
+
+# rebuild base image (force rebuild without cache)
+PHONY: rebuild-base-image
+rebuild-base-image:
+	@echo "🐳 Rebuilding base Docker image (no cache)..."
+	@docker build --no-cache --target base -t options-deep-test-base:latest -f dockerfiles/test/Dockerfile .
+	@echo "✅ Base image rebuilt successfully!"
+
+# build test Docker image with pre-applied migrations (uses cached base)
+PHONY: build-test-image
+build-test-image:
+	@echo "🐳 Building test Docker image..."
+	@bash scripts/build_test_image.sh
+
+# rebuild test image (force rebuild without cache)
+PHONY: rebuild-test-image
+rebuild-test-image:
+	@echo "🐳 Rebuilding test Docker image (no cache)..."
+	@docker build --no-cache -t options-deep-test:latest -f dockerfiles/test/Dockerfile .
+	@echo "✅ Test image rebuilt successfully!"
+
+# remove test Docker images (both base and migration)
+PHONY: clean-test-image
+clean-test-image:
+	@echo "🗑️  Removing test Docker images..."
+	@docker rmi options-deep-test:latest || true
+	@docker rmi options-deep-test-base:latest || true
+	@echo "✅ Test images removed!"
 
 # Linting Commands
 
