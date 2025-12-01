@@ -21,22 +21,20 @@ def upgrade() -> None:
     # Add number_of_low_thresholds to highs table
     op.add_column(
         'highs',
-        sa.Column('number_of_low_thresholds', sa.Integer(), nullable=False, server_default='0'),
-        schema='algorithms'
+        sa.Column('number_of_low_thresholds', sa.Integer(), nullable=False, server_default='0')
     )
 
     # Add number_of_low_thresholds to reversals table
     op.add_column(
         'reversals',
-        sa.Column('number_of_low_thresholds', sa.Integer(), nullable=False, server_default='0'),
-        schema='algorithms'
+        sa.Column('number_of_low_thresholds', sa.Integer(), nullable=False, server_default='0')
     )
 
 
 def downgrade() -> None:
     """Remove number_of_low_thresholds column from highs and reversals tables."""
     # Remove number_of_low_thresholds from reversals table
-    op.drop_column('reversals', 'number_of_low_thresholds', schema='algorithms')
+    op.drop_column('reversals', 'number_of_low_thresholds')
 
     # Remove number_of_low_thresholds from highs table
-    op.drop_column('highs', 'number_of_low_thresholds', schema='algorithms')
+    op.drop_column('highs', 'number_of_low_thresholds')
