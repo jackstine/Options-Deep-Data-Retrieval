@@ -1,0 +1,25 @@
+# Dockerfile for test image with pre-populated fixture data
+# Built FROM options-deep-test:latest (which contains schema from migrations)
+# Adds test fixture data for backfill pipeline integration tests
+
+FROM options-deep-test:latest
+
+# Copy additional src modules needed by fixture script
+# Base image only has src/database/, but fixtures need models and repos
+COPY src /opt/options-deep/src
+
+# Fix permissions for postgres user
+RUN chmod -R 755 /opt/options-deep/src/
+
+ENV DOCKER_INIT=true
+
+# Copy fixture seeding script with read permissions for all
+COPY --chmod=0644 dockerfiles/test/seed_test_fixtures.py /opt/options-deep/dockerfiles/test/seed_test_fixtures.py
+
+# Copy entrypoint script with executable permissions
+COPY --chmod=0755 dockerfiles/test/docker-entrypoint-fixtures.sh /docker-entrypoint-initdb.d/20-load-fixtures.sh
+
+# Image metadata
+LABEL maintainer="Options Deep Team"
+LABEL description="PostgreSQL test database with schema and fixture data for backfill pipeline testing"
+LABEL version="1.0"

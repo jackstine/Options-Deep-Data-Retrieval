@@ -151,7 +151,74 @@ Integration tests use a custom Docker image (`options-deep-test:latest`) that ha
    - Adds initialization script to `/docker-entrypoint-initdb.d/`
    - **Rebuilt frequently** - whenever migrations or models change
 
-### 2. Migration Build Process (Unix Socket Connection)
+### 2. Test Data Docker Image (options-deep-test-data:latest)
+
+For backfill pipeline testing and other scenarios requiring pre-populated data, there is a second Docker image that extends the base test image with fixture data.
+
+**Build the data image:**
+
+```bash
+# Build the test data image (requires options-deep-test:latest)
+make build-test-data-image
+
+# Or build manually
+./scripts/build_test_data_image.sh
+
+# Force rebuild without cache
+make rebuild-test-data-image
+
+# Remove data image
+make clean-test-data-image
+```
+
+**Contents:**
+- Everything from `options-deep-test:latest` (schema + migrations)
+- Pre-populated test companies:
+  - **TESTSPLIT**: Active company with 30 days pricing + 2:1 split on day 15
+  - **TESTDELIST**: Delisted company with 25 days pricing (delisted 2025-11-25)
+  - **TESTACTIVE**: Active company with 30 days pricing (no splits)
+
+**Using the data image in tests:**
+
+```python
+# Use the pre-populated data image
+with integration_test_container("options-deep-test-data:latest") as (postgres, repo, port):
+    from src.repos.equities.tickers.ticker_history_repository import TickerHistoryRepository
+
+    ticker_history_repo = TickerHistoryRepository()
+
+    # Test data already exists
+    testsplit_th = ticker_history_repo.get_by_symbol("TESTSPLIT")
+    assert testsplit_th is not None
+
+    # Run backfill pipeline on pre-existing data
+    from src.pipelines.algorithms.high_lows import get_backfill_pipeline
+    pipeline = get_backfill_pipeline(configs)
+    result = pipeline._process_single_ticker(testsplit_th.id)
+```
+
+**When to use:**
+- Backfill pipeline integration tests (requires multi-day pricing data)
+- Split adjustment testing (TESTSPLIT has a split event)
+- Delisted company testing (TESTDELIST has valid_to date)
+- Pattern generation testing (realistic price volatility)
+
+**When to rebuild:**
+- After modifying `/dockerfiles/test/seed_test_fixtures.py`
+- After changes to fixture data generation logic
+- When `options-deep-test:latest` is rebuilt
+
+**Fixture Details:**
+
+| Company | Symbol | Days | Split | Delisted | Price Range | Pattern |
+|---------|--------|------|-------|----------|-------------|---------|
+| Test Split Company | TESTSPLIT | 30 | 2:1 on day 15 | No | $95-$120 | Volatile |
+| Test Delisted Company | TESTDELIST | 25 | No | 2025-11-25 | $70-$95 | Volatile |
+| Test Active Company | TESTACTIVE | 30 | No | No | $80-$110 | Volatile |
+
+All pricing data runs from 2025-11-01 to 2025-11-30 (or delisting date).
+
+### 3. Migration Build Process (Unix Socket Connection)
 
 During Docker image build, migrations are applied using a **Unix socket connection**:
 
@@ -182,7 +249,12 @@ postgresql+psycopg2://test:test@/test?host=/var/run/postgresql
 - `docker-entrypoint-init.sh` - Migration execution script
 - `src/database/equities/migrations/env.py` - Connection logic with `DOCKER_INIT` check
 
-### 3. Test Container Startup (TCP Connection)
+**For data image:**
+- `dockerfiles/test/Dockerfile.data` - Extends options-deep-test:latest
+- `dockerfiles/test/seed_test_fixtures.py` - Fixture seeding logic
+- `dockerfiles/test/docker-entrypoint-fixtures.sh` - Fixture loading script
+
+### 4. Test Container Startup (TCP Connection)
 
 When you run integration tests, **testcontainers-python** starts the pre-migrated image:
 
@@ -205,7 +277,7 @@ postgresql+psycopg2://test:test@localhost:55432/test  # port is dynamic
 - **Build time** (Unix socket): PostgreSQL initialization only supports Unix socket
 - **Test time** (TCP): testcontainers requires TCP to expose ports to host machine
 
-### 4. Test Execution with Function-Scoped Containers
+### 5. Test Execution with Function-Scoped Containers
 
 Each test gets its own PostgreSQL container for complete isolation:
 
@@ -248,7 +320,7 @@ def test_something():
 - Requires `TESTCONTAINERS_RYUK_DISABLED=true` environment variable
 - ~3x faster execution with parallel workers
 
-### 5. Cleanup
+### 6. Cleanup
 
 After each test completes:
 

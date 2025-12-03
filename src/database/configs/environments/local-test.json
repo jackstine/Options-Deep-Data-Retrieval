@@ -3,13 +3,13 @@
     "equities": {
       "host": "localhost",
       "port": 5432,
-      "database": "test",
+      "database": "equities-test",
       "username": "test"
     },
     "algorithm": {
       "host": "localhost",
       "port": 5432,
-      "database": "test",
+      "database": "algorithm-test",
       "username": "test"
     }
   }
