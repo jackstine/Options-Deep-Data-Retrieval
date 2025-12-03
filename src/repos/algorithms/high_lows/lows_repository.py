@@ -331,3 +331,28 @@ class LowsRepository(
             Count of patterns deleted
         """
         return self.delete_lows_by_ids(pattern_ids)
+
+    def get_by_ticker_history_id(self, ticker_history_id: int) -> list[LowDataModel]:
+        """Get all low patterns for a specific ticker history.
+
+        Args:
+            ticker_history_id: The ticker history ID to filter by
+
+        Returns:
+            List of Low patterns for the specified ticker history
+        """
+        try:
+            with self._SessionLocal() as session:
+                stmt = select(LowDBModel).where(
+                    LowDBModel.ticker_history_id == ticker_history_id
+                )
+                result = session.execute(stmt)
+                db_models = result.scalars().all()
+
+                return [self.from_db_model(db_model) for db_model in db_models]
+
+        except SQLAlchemyError as e:
+            logger.error(
+                f"Database error retrieving lows for ticker_history_id={ticker_history_id}: {e}"
+            )
+            raise

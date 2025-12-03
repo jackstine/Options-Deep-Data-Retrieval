@@ -14,7 +14,7 @@ setup_test_environment()
 from tests.data_source_mocks.eodhd.mock_eod_data import MockEodhdDataSource
 from tests.data_source_mocks.eodhd.mock_symbols import MockEodhdSymbolsSource
 from tests.integration.common_setup import create_test_session, integration_test_container
-from tests.utils.db_assertions import (
+from tests.integration.db.db_assertions import (
     assert_company_exists,
     count_companies,
     count_historical_eod_pricing,

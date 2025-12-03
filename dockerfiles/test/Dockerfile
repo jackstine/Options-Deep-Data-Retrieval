@@ -61,7 +61,7 @@ ENV OPTIONS_DEEP_ENV=local-test \
     EODHD_API_KEY=test_key \
     PGUSER=test \
     PGPASSWORD=test \
-    PGDATABASE=test
+    PGDATABASE=equities-test
 
 # Copy entrypoint script that will run Alembic migrations
 # Scripts in /docker-entrypoint-initdb.d/ are automatically executed

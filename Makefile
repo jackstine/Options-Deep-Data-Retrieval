@@ -61,6 +61,31 @@ clean-test-image:
 	@docker rmi options-deep-test-base:latest || true
 	@echo "✅ Test images removed!"
 
+# build test data Docker image with pre-populated fixtures (builds on options-deep-test:latest)
+PHONY: build-test-data-image
+build-test-data-image:
+	@echo "🐳 Building test data Docker image with fixtures..."
+	@bash scripts/build_test_data_image.sh
+
+# rebuild test data image (force rebuild without cache)
+PHONY: rebuild-test-data-image
+rebuild-test-data-image:
+	@echo "🐳 Rebuilding test data Docker image (no cache)..."
+	@docker build --no-cache -t options-deep-test-data:latest -f dockerfiles/test/Dockerfile.data .
+	@echo "✅ Test data image rebuilt successfully!"
+
+# remove test data Docker image
+PHONY: clean-test-data-image
+clean-test-data-image:
+	@echo "🗑️  Removing test data Docker image..."
+	@docker rmi options-deep-test-data:latest || true
+	@echo "✅ Test data image removed!"
+
+# remove all test Docker images (base, schema, and data)
+PHONY: clean-all-test-images
+clean-all-test-images: clean-test-data-image clean-test-image
+	@echo "✅ All test images removed!"
+
 # Linting Commands
 
 # run ruff linter with automatic fixes

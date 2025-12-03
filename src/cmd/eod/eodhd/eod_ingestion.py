@@ -23,7 +23,6 @@ Examples:
 import logging
 import sys
 
-from src.config.configuration import CONFIG
 from src.data_sources.eodhd.daily_bulk_eod_data import EodhdDailyBulkEodData
 from src.pipelines.eod.current_day_eod_pricings import DailyEodIngestionPipeline
 
@@ -51,11 +50,6 @@ def main() -> int:
         logger.info("DAILY EOD INGESTION - EODHD")
         logger.info("=" * 80)
 
-        # Get test limit from environment
-        test_limit = CONFIG.get_test_limits()
-        if test_limit:
-            logger.info(f"TEST LIMIT ENABLED: Will process max {test_limit} symbols")
-
         # Initialize data source
         logger.info("Initializing EODHD bulk data source...")
         bulk_source = EodhdDailyBulkEodData()
@@ -75,7 +69,7 @@ def main() -> int:
         # Run ingestion
         logger.info("Starting daily EOD ingestion process...")
         result = pipeline.run(
-            exchange="US", filter_common_stock=True, test_limit=test_limit
+            exchange="US", filter_common_stock=True, test_limit=None
         )
 
         # Display results
