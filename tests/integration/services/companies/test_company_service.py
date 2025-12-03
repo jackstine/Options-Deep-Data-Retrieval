@@ -16,12 +16,15 @@ import pytest
 
 from src.database.equities.enums import DataSourceEnum
 from src.models.company import Company
-from src.models.ticker import Ticker
-from src.models.ticker_history import TickerHistory
 from tests.integration.common_setup import integration_test_container
+from tests.integration.data.setup_helpers import create_company_with_ticker
 from tests.integration.services.companies.company_scenarios import CompanyTestScenario
 from tests.integration.services.companies.mock_company_data_source import (
     MockCompanyDataSource,
+)
+from tests.integration.db.db_assertions import (
+    assert_company_fields_complete,
+    assert_ticker_history_fields_complete,
 )
 
 
@@ -57,29 +60,17 @@ class TestCompanyService:
 
             inserted_companies = {}
             for scenario in all_scenarios:
-                company = Company(
+                company, ticker, ticker_history = create_company_with_ticker(
+                    company_repo=company_repo,
+                    ticker_repo=ticker_repo,
+                    ticker_history_repo=ticker_history_repo,
                     company_name=scenario.company_name,
+                    symbol=scenario.symbol,
                     exchange=scenario.exchange,
                     active=scenario.active,
                     source=DataSourceEnum.EODHD,
                 )
-                inserted = company_repo.insert(company)
-                inserted_companies[scenario.symbol] = inserted
-
-                # Create ticker history and ticker
-                th = TickerHistory(
-                    symbol=scenario.symbol,
-                    company_id=inserted.id,
-                    valid_from=date(2020, 1, 1),
-                )
-                th_inserted = ticker_history_repo.insert(th)
-
-                ticker = Ticker(
-                    symbol=scenario.symbol,
-                    company_id=inserted.id,
-                    ticker_history_id=th_inserted.id,
-                )
-                ticker_repo.insert(ticker)
+                inserted_companies[scenario.symbol] = company
 
             # Test service method
             active_symbols = service.get_active_company_symbols()
@@ -111,10 +102,12 @@ class TestCompanyService:
             from src.repos.equities.tickers.ticker_history_repository import (
                 TickerHistoryRepository,
             )
+            from src.repos.equities.tickers.ticker_repository import TickerRepository
             from src.services.companies.company_service import CompanyService
 
             mock_data = MockCompanyDataSource()
             ticker_history_repo = TickerHistoryRepository()
+            ticker_repo = TickerRepository()
             service = CompanyService(company_repo, ticker_history_repo)
 
             # Seed active and delisted companies
@@ -126,40 +119,34 @@ class TestCompanyService:
                 symbol="DLIST",
             )
 
-            # Insert active company
-            active_company = Company(
+            # Insert active company using fixture
+            inserted_active, _, inserted_active_th = create_company_with_ticker(
+                company_repo=company_repo,
+                ticker_repo=ticker_repo,
+                ticker_history_repo=ticker_history_repo,
                 company_name=active_scenario.company_name,
+                symbol=active_scenario.symbol,
                 exchange=active_scenario.exchange,
                 sector=active_scenario.sector,
                 industry=active_scenario.industry,
                 active=active_scenario.active,
                 source=DataSourceEnum.EODHD,
-            )
-            inserted_active = company_repo.insert(active_company)
-
-            active_th = TickerHistory(
-                symbol=active_scenario.symbol,
-                company_id=inserted_active.id,
                 valid_from=date(2000, 1, 1),
             )
-            inserted_active_th = ticker_history_repo.insert(active_th)
 
-            # Insert delisted company
-            delisted_company = Company(
+            # Insert delisted company using fixture
+            inserted_delisted, _, delisted_th = create_company_with_ticker(
+                company_repo=company_repo,
+                ticker_repo=ticker_repo,
+                ticker_history_repo=ticker_history_repo,
                 company_name=delisted_scenario.company_name,
+                symbol=delisted_scenario.symbol,
                 exchange=delisted_scenario.exchange,
                 active=delisted_scenario.active,
                 source=DataSourceEnum.EODHD,
-            )
-            inserted_delisted = company_repo.insert(delisted_company)
-
-            delisted_th = TickerHistory(
-                symbol=delisted_scenario.symbol,
-                company_id=inserted_delisted.id,
                 valid_from=date(2015, 1, 1),
                 valid_to=date(2020, 12, 31),
             )
-            ticker_history_repo.insert(delisted_th)
 
             # Test 1: Find active company by ticker
             result_active = service.get_company_by_ticker(active_scenario.symbol)
@@ -193,33 +180,39 @@ class TestCompanyService:
             result_none = service.get_company_by_ticker("NONEXISTENT")
             assert result_none is None
 
-            # === EXHAUSTIVE FIELD VALIDATION for Company ===
+            # === EXHAUSTIVE FIELD VALIDATION using helpers ===
             # Use active company result for validation
             company = result_active.company
-            assert company.id is not None, "Company id should be set"
-            assert isinstance(company.id, int), "Company id should be an integer"
-            assert company.company_name == active_scenario.company_name, "Company name should match"
-            assert company.exchange == active_scenario.exchange, "Exchange should match"
-            assert company.sector == active_scenario.sector, "Sector should match"
-            assert company.industry == active_scenario.industry, "Industry should match"
-            # Country, market_cap, description may be None for test data
-            assert company.active == active_scenario.active, "Active flag should match"
-            assert company.is_valid_data is True, "is_valid_data should be True for valid records"
-            assert company.source == DataSourceEnum.EODHD, "Source should match"
+            assert_company_fields_complete(
+                company,
+                expected_values={
+                    "company_name": active_scenario.company_name,
+                    "exchange": active_scenario.exchange,
+                    "sector": active_scenario.sector,
+                    "industry": active_scenario.industry,
+                    "active": active_scenario.active,
+                    "source": DataSourceEnum.EODHD,
+                }
+            )
 
-            # === EXHAUSTIVE FIELD VALIDATION for TickerHistory ===
+            # Validate TickerHistory using helper
             ticker_history = result_active.ticker_history
-            assert ticker_history.id is not None, "TickerHistory id should be set"
-            assert isinstance(ticker_history.id, int), "TickerHistory id should be an integer"
-            assert ticker_history.symbol == active_scenario.symbol, "Symbol should match"
-            assert ticker_history.company_id == company.id, "company_id should reference correct company"
-            assert ticker_history.valid_from is not None, "valid_from should be set"
-            assert isinstance(ticker_history.valid_from, date), "valid_from should be a date"
-            assert ticker_history.valid_to is None, "Active ticker should have valid_to=None"
+            assert_ticker_history_fields_complete(
+                ticker_history,
+                expected_values={
+                    "symbol": active_scenario.symbol,
+                    "company_id": company.id,
+                    "valid_to": None,  # Active ticker should have valid_to=None
+                }
+            )
 
             # Validate delisted ticker_history has valid_to set
-            assert result_delisted.ticker_history.valid_to is not None, "Delisted ticker should have valid_to set"
-            assert isinstance(result_delisted.ticker_history.valid_to, date), "valid_to should be a date"
+            assert_ticker_history_fields_complete(
+                result_delisted.ticker_history,
+                expected_values={
+                    "valid_to": date(2020, 12, 31),
+                }
+            )
 
     def test_update_company_by_ticker_comprehensive(self):
         """Test updating company via ticker symbol lookup.
@@ -234,32 +227,30 @@ class TestCompanyService:
             from src.repos.equities.tickers.ticker_history_repository import (
                 TickerHistoryRepository,
             )
+            from src.repos.equities.tickers.ticker_repository import TickerRepository
             from src.services.companies.company_service import CompanyService
 
             mock_data = MockCompanyDataSource()
             ticker_history_repo = TickerHistoryRepository()
+            ticker_repo = TickerRepository()
             service = CompanyService(company_repo, ticker_history_repo)
 
             # Get scenarios for original and updated data
             original_scenario = mock_data.get_scenario_by_symbol("TECH")
             update_scenario = mock_data.get_scenario_by_symbol("FINC")
 
-            # Insert company with original data
-            company = Company(
+            # Insert company with original data using fixture
+            inserted_company, _, _ = create_company_with_ticker(
+                company_repo=company_repo,
+                ticker_repo=ticker_repo,
+                ticker_history_repo=ticker_history_repo,
                 company_name=original_scenario.company_name,
+                symbol=original_scenario.symbol,
                 exchange=original_scenario.exchange,
                 sector=original_scenario.sector,
                 active=original_scenario.active,
                 source=DataSourceEnum.EODHD,
             )
-            inserted_company = company_repo.insert(company)
-
-            ticker_history = TickerHistory(
-                symbol=original_scenario.symbol,
-                company_id=inserted_company.id,
-                valid_from=date(2020, 1, 1),
-            )
-            ticker_history_repo.insert(ticker_history)
 
             # Create update data from different scenario
             update_data = Company(
@@ -296,30 +287,28 @@ class TestCompanyService:
             from src.repos.equities.tickers.ticker_history_repository import (
                 TickerHistoryRepository,
             )
+            from src.repos.equities.tickers.ticker_repository import TickerRepository
             from src.services.companies.company_service import CompanyService
 
             mock_data = MockCompanyDataSource()
             ticker_history_repo = TickerHistoryRepository()
+            ticker_repo = TickerRepository()
             service = CompanyService(company_repo, ticker_history_repo)
 
             # Get scenario for company to deactivate
             scenario = mock_data.get_active_scenario()
 
-            # Insert active company
-            company = Company(
+            # Insert active company using fixture
+            inserted_company, _, _ = create_company_with_ticker(
+                company_repo=company_repo,
+                ticker_repo=ticker_repo,
+                ticker_history_repo=ticker_history_repo,
                 company_name=scenario.company_name,
+                symbol=scenario.symbol,
                 exchange=scenario.exchange,
                 active=True,
                 source=DataSourceEnum.EODHD,
             )
-            inserted_company = company_repo.insert(company)
-
-            ticker_history = TickerHistory(
-                symbol=scenario.symbol,
-                company_id=inserted_company.id,
-                valid_from=date(2020, 1, 1),
-            )
-            ticker_history_repo.insert(ticker_history)
 
             # Test 1: Successful deactivation
             success = service.deactivate_company(scenario.symbol)

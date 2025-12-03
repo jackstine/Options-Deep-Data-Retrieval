@@ -3,16 +3,11 @@
 from __future__ import annotations
 
 from datetime import date as date_type
-from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, Boolean, Date, ForeignKey, Integer
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from src.database.algorithms.base import Base
-
-# Import for relationship type hint
-if TYPE_CHECKING:
-    from src.database.equities.tables.ticker_history import TickerHistory
 
 # Price multiplier constant: $1.00 = 1,000,000 (6 decimal places, penny = 10,000)
 PRICE_MULTIPLIER = 1000000
@@ -41,11 +36,12 @@ class Low(Base):
     # Primary key
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
 
-    # Foreign key to ticker_history table
+    # Reference to ticker_history table (in equities database - no FK constraint)
     ticker_history_id: Mapped[int] = mapped_column(
-        ForeignKey("ticker_history.id", ondelete="CASCADE"),
+        Integer,
         nullable=False,
         index=True,
+        comment="References ticker_history.id in equities database (no FK constraint across databases)",
     )
 
     # Threshold as basis points (2000 = 20%, 1500 = 15%)
@@ -77,10 +73,8 @@ class Low(Base):
     spawned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     expired: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
 
-    # Relationships
-    ticker_history: Mapped[TickerHistory] = relationship(
-        "TickerHistory", foreign_keys=[ticker_history_id]
-    )
+    # Note: No SQLAlchemy relationship to TickerHistory - it's in a different database (equities)
+    # Use ticker_history_id foreign key for joins at the application level
 
     def __repr__(self) -> str:
         """String representation of Low."""

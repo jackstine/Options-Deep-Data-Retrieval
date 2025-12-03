@@ -132,3 +132,30 @@ class ReboundsRepository(
             Count of patterns inserted
         """
         return self.bulk_insert_rebounds(patterns)
+
+    def get_by_ticker_history_id(
+        self, ticker_history_id: int
+    ) -> list[ReboundDataModel]:
+        """Get all rebound patterns for a specific ticker history.
+
+        Args:
+            ticker_history_id: The ticker history ID to filter by
+
+        Returns:
+            List of Rebound patterns for the specified ticker history
+        """
+        try:
+            with self._SessionLocal() as session:
+                stmt = select(ReboundDBModel).where(
+                    ReboundDBModel.ticker_history_id == ticker_history_id
+                )
+                result = session.execute(stmt)
+                db_models = result.scalars().all()
+
+                return [self.from_db_model(db_model) for db_model in db_models]
+
+        except SQLAlchemyError as e:
+            logger.error(
+                f"Database error retrieving rebounds for ticker_history_id={ticker_history_id}: {e}"
+            )
+            raise

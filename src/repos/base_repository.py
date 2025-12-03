@@ -71,8 +71,21 @@ class BaseRepository(Generic[TDataModel, TDBModel]):
             data_model_class: Data model class for this repository
             db_model_class: SQLAlchemy model class for this repository
         """
+        import os  # noqa: F401
+
         self._config = config_getter()
-        self._engine = create_engine(self._config.database.get_connection_string())
+        connection_string = self._config.database.get_connection_string()
+
+        # Check if we need Unix socket connection during Docker initialization
+        if os.getenv("DOCKER_INIT") == "true":
+            # Use connect_args to specify Unix socket host
+            self._engine = create_engine(
+                connection_string, connect_args={"host": "/var/run/postgresql"}
+            )
+        else:
+            # Normal TCP connection
+            self._engine = create_engine(connection_string)
+
         self._SessionLocal = sessionmaker(bind=self._engine)
         self._data_model_class = data_model_class
         self._db_model_class = db_model_class

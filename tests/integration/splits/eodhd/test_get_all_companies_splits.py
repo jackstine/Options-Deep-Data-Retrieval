@@ -13,7 +13,7 @@ setup_test_environment()
 from tests.data_source_mocks.eodhd.mock_splits import MockEodhdSplitsDataSource
 from tests.data_source_mocks.eodhd.mock_symbols import MockEodhdSymbolsSource
 from tests.integration.common_setup import create_test_session, integration_test_container
-from tests.utils.db_assertions import (
+from tests.integration.db.db_assertions import (
     count_companies,
     count_splits,
     count_ticker_histories,

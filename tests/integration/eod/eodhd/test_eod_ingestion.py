@@ -14,7 +14,9 @@ setup_test_environment()
 from tests.data_source_mocks.eodhd.mock_bulk_eod_data import MockEodhdDailyBulkEodData
 from tests.data_source_mocks.eodhd.mock_symbols import MockEodhdSymbolsSource
 from tests.integration.common_setup import create_test_session, integration_test_container
-from tests.utils.db_assertions import (
+from tests.integration.db.db_assertions import (
+    assert_misplaced_pricing_fields_complete,
+    assert_ohlc_relationships,
     count_companies,
     count_historical_eod_pricing,
     count_misplaced_eod_pricing,
@@ -27,21 +29,17 @@ class TestEodhdDailyEodIngestion:
     """Integration tests for EODHD daily EOD ingestion."""
 
     def test_happy_path(self):
-        """Comprehensive test for bulk EOD data ingestion with exhaustive field validation.
+        """Comprehensive test for bulk EOD data ingestion.
 
         Validates:
         - Database starts with companies and ticker histories
         - Bulk EOD data is routed to correct tables:
           * Known tickers → historical_eod_pricing
           * Unknown tickers → misplaced_eod_pricing
-        - ALL fields are validated for at least one complete record:
-          * MisplacedEndOfDayPricing: symbol, date, open, high, low, close,
-                                       adjusted_close, volume, source
-        - OHLC relationships: high >= low, etc.
         - Ingestion completes without errors
 
-        Note: HistoricalEndOfDayPricing fields were validated in
-        test_active_historical_eod_ingestion.py
+        Note: Field validation is tested separately in test_misplaced_pricing_fields_validation.
+        HistoricalEndOfDayPricing fields were validated in test_active_historical_eod_ingestion.py
         """
         with integration_test_container() as (postgres, repo, port):
             # Import pipeline after port is set
@@ -49,9 +47,6 @@ class TestEodhdDailyEodIngestion:
                 DailyEodIngestionPipeline,
             )
             from src.pipelines.companies.new_company_pipeline import CompanyPipeline
-            from src.repos.equities.pricing.misplaced_eod_pricing_repository import (
-                MisplacedEodPricingRepository,
-            )
 
             # Create mock sources
             mock_symbols_source = MockEodhdSymbolsSource()
@@ -97,40 +92,57 @@ class TestEodhdDailyEodIngestion:
             expected_misplaced = expected_bulk_symbols - expected_company_count
             assert result["misplaced_pricing_inserted"] == expected_misplaced
 
-            # === EXHAUSTIVE FIELD VALIDATION for MisplacedEndOfDayPricing ===
-            # Validate exhaustive fields only if there are misplaced pricing records
-            if expected_misplaced > 0:
-                # Get misplaced pricing records for validation
-                misplaced_repo = MisplacedEodPricingRepository()
-                misplaced_records = misplaced_repo.get_all()
-                assert len(misplaced_records) > 0, "Should have misplaced pricing records"
+    def test_misplaced_pricing_fields_validation(self):
+        """Test exhaustive field validation for MisplacedEndOfDayPricing records.
 
-                # Validate first misplaced pricing record
-                misplaced = misplaced_records[0]
-                assert misplaced.symbol is not None, "Symbol should be set"
-                assert isinstance(misplaced.symbol, str), "Symbol should be a string"
-                assert misplaced.date is not None, "Date should be set"
-                assert isinstance(misplaced.date, date), "Date should be a date object"
-                assert misplaced.open is not None, "Open price should be set"
-                assert isinstance(misplaced.open, Decimal), "Open should be a Decimal"
-                assert misplaced.high is not None, "High price should be set"
-                assert isinstance(misplaced.high, Decimal), "High should be a Decimal"
-                assert misplaced.low is not None, "Low price should be set"
-                assert isinstance(misplaced.low, Decimal), "Low should be a Decimal"
-                assert misplaced.close is not None, "Close price should be set"
-                assert isinstance(misplaced.close, Decimal), "Close should be a Decimal"
-                assert misplaced.adjusted_close is not None, "Adjusted close should be set"
-                assert isinstance(misplaced.adjusted_close, Decimal), "Adjusted close should be a Decimal"
-                assert misplaced.volume is not None, "Volume should be set"
-                assert isinstance(misplaced.volume, int), "Volume should be an integer"
-                assert misplaced.source is not None, "Source should be set"
+        This test explicitly ensures misplaced records are created by running ingestion
+        without any companies in the database, then validates ALL fields for at least
+        one complete record:
+        * MisplacedEndOfDayPricing: symbol, date, open, high, low, close,
+                                     adjusted_close, volume, source
+        * OHLC relationships: high >= low, etc.
+        """
+        with integration_test_container() as (postgres, repo, port):
+            # Import pipeline after port is set
+            from src.pipelines.eod.current_day_eod_pricings import (
+                DailyEodIngestionPipeline,
+            )
+            from src.repos.equities.pricing.misplaced_eod_pricing_repository import (
+                MisplacedEodPricingRepository,
+            )
 
-                # Validate OHLC relationships
-                assert misplaced.high >= misplaced.low, "High must be >= Low"
-                assert misplaced.high >= misplaced.open, "High must be >= Open"
-                assert misplaced.high >= misplaced.close, "High must be >= Close"
-                assert misplaced.low <= misplaced.open, "Low must be <= Open"
-                assert misplaced.low <= misplaced.close, "Low must be <= Close"
+            # Create mock source (don't ingest companies first)
+            mock_bulk_source = MockEodhdDailyBulkEodData()
+
+            # Create database session for assertions
+            session = create_test_session(postgres, port)
+
+            # Verify database is empty (no companies to match against)
+            assert count_companies(session) == 0
+            assert count_ticker_histories(session) == 0
+
+            # Run EOD ingestion without any companies in database
+            # This guarantees all records will go to misplaced_eod_pricing
+            eod_pipeline = DailyEodIngestionPipeline(bulk_eod_source=mock_bulk_source)
+            result = eod_pipeline.run(
+                exchange="US", filter_common_stock=True, test_limit=None
+            )
+
+            # Verify misplaced pricing records were created
+            misplaced_count = count_misplaced_eod_pricing(session)
+            assert misplaced_count > 0, "Expected misplaced pricing records to be created"
+
+            # Get misplaced pricing records for validation
+            misplaced_repo = MisplacedEodPricingRepository()
+            misplaced_records = misplaced_repo.get_all()
+            assert len(misplaced_records) > 0, "Should have misplaced pricing records"
+
+            # Use helper function for exhaustive field validation
+            misplaced = misplaced_records[0]
+            assert_misplaced_pricing_fields_complete(misplaced)
+
+            # Validate OHLC relationships using helper
+            assert_ohlc_relationships(misplaced)
 
     def test_known_tickers_go_to_historical_pricing(self):
         """Test that EOD data for known tickers goes to historical_eod_pricing."""

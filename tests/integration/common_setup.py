@@ -76,7 +76,7 @@ def create_test_session(postgres: PostgresContainer, port: int) -> Session:
             company = session.query(Company).filter_by(name="Apple Inc.").first()
             assert company is not None
     """
-    connection_string = f"postgresql+psycopg2://test:test@{postgres.get_container_host_ip()}:{port}/test"
+    connection_string = f"postgresql+psycopg2://test:test@{postgres.get_container_host_ip()}:{port}/equities-test"
     engine = create_engine(connection_string, pool_pre_ping=True)
     SessionLocal = sessionmaker(bind=engine)
     session = SessionLocal()
@@ -94,7 +94,9 @@ def create_test_session(postgres: PostgresContainer, port: int) -> Session:
 
 
 @contextmanager
-def integration_test_container() -> Generator[tuple[PostgresContainer, CompanyRepository, int], None, None]:
+def integration_test_container(
+    container_type: str = "options-deep-test:latest"
+) -> Generator[tuple[PostgresContainer, CompanyRepository, int], None, None]:
     """Context manager for integration test PostgreSQL container setup.
 
     This context manager:
@@ -107,7 +109,13 @@ def integration_test_container() -> Generator[tuple[PostgresContainer, CompanyRe
     7. Automatically cleans up the container when the context exits
 
     NOTE: You must build the test Docker image first:
-        make build-test-image
+        make build-test-image                    # For schema-only image
+        make build-test-data-image              # For schema + fixtures image
+
+    Args:
+        container_type: Docker image to use for the container.
+            - "options-deep-test:latest" (default): Schema only, empty database
+            - "options-deep-test-data:latest": Schema + pre-populated fixtures
 
     Yields:
         tuple containing:
@@ -116,15 +124,24 @@ def integration_test_container() -> Generator[tuple[PostgresContainer, CompanyRe
         - int: The dynamic port number assigned to the container
 
     Example:
+        # Empty database (default)
         with integration_test_container() as (postgres, repo, port):
             company = Company(...)
             inserted = repo.insert(company)
             assert inserted.id is not None
+
+        # Pre-populated database with fixtures
+        with integration_test_container("options-deep-test-data:latest") as (postgres, repo, port):
+            # TESTSPLIT, TESTDELIST, TESTACTIVE companies already exist
+            ticker_history_repo = TickerHistoryRepository()
+            th = ticker_history_repo.get_by_symbol("TESTSPLIT")
+            assert th is not None
     """
     # Start PostgreSQL container with pre-applied migrations
-    # Image: options-deep-test:latest (built via make build-test-image)
+    # Default image: options-deep-test:latest (built via make build-test-image)
+    # Optional image: options-deep-test-data:latest (built via make build-test-data-image)
     with PostgresContainer(
-        "options-deep-test:latest", username="test", password="test", dbname="test"
+        container_type, username="test", password="test", dbname="equities-test"
     ) as postgres:
 
         # Get dynamic port assigned by testcontainers

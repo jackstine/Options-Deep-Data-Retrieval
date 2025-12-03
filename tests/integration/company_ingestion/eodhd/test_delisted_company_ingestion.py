@@ -10,7 +10,7 @@ setup_test_environment()
 # NOW safe to import src modules
 from tests.integration.common_setup import integration_test_container, create_test_session
 from tests.data_source_mocks.eodhd.mock_symbols import MockEodhdSymbolsSource
-from tests.utils.db_assertions import (
+from tests.integration.db.db_assertions import (
     assert_company_exists,
     count_companies,
     count_ticker_histories,
