@@ -1,0 +1,16 @@
+{
+  "databases": {
+    "equities": {
+      "host": "localhost",
+      "port": 5455,
+      "database": "equities-dev",
+      "username": "e_user"
+    },
+    "algorithm": {
+      "host": "localhost",
+      "port": 5455,
+      "database": "algorithms-dev",
+      "username": "dev_user"
+    }
+  }
+}

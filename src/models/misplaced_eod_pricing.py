@@ -5,14 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from src.database.equities.enums import DataSourceEnum
-
-if TYPE_CHECKING:
-    from src.database.equities.tables.misplaced_eod_pricing import (
-        MisplacedEodPricing as DBMisplacedEodPricing,
-    )
 
 
 @dataclass
@@ -97,68 +92,3 @@ class MisplacedEndOfDayPricing:
     def __repr__(self) -> str:
         """Detailed string representation of pricing data."""
         return self.__str__()
-
-    def to_db_model(self) -> DBMisplacedEodPricing:
-        """Convert data model to SQLAlchemy database model.
-
-        Returns:
-            DBMisplacedEodPricing: SQLAlchemy model instance ready for database operations
-        """
-        from src.database.equities.tables.misplaced_eod_pricing import PRICE_MULTIPLIER
-        from src.database.equities.tables.misplaced_eod_pricing import (
-            MisplacedEodPricing as DBMisplacedEodPricing,
-        )
-
-        return DBMisplacedEodPricing(
-            symbol=self.symbol,
-            date=self.date,
-            open=int(self.open * PRICE_MULTIPLIER),
-            high=int(self.high * PRICE_MULTIPLIER),
-            low=int(self.low * PRICE_MULTIPLIER),
-            close=int(self.close * PRICE_MULTIPLIER),
-            adjusted_close=int(self.adjusted_close * PRICE_MULTIPLIER),
-            volume=self.volume,
-            source=self.source,
-        )
-
-    @classmethod
-    def from_db_model(cls, db_model: DBMisplacedEodPricing) -> MisplacedEndOfDayPricing:
-        """Create data model from SQLAlchemy database model.
-
-        Args:
-            db_model: SQLAlchemy MisplacedEodPricing instance from database
-
-        Returns:
-            MisplacedEndOfDayPricing: Data model instance
-        """
-        from src.database.equities.tables.misplaced_eod_pricing import PRICE_MULTIPLIER
-
-        return cls(
-            symbol=db_model.symbol,
-            date=db_model.date,
-            open=Decimal(db_model.open) / PRICE_MULTIPLIER,
-            high=Decimal(db_model.high) / PRICE_MULTIPLIER,
-            low=Decimal(db_model.low) / PRICE_MULTIPLIER,
-            close=Decimal(db_model.close) / PRICE_MULTIPLIER,
-            adjusted_close=Decimal(db_model.adjusted_close) / PRICE_MULTIPLIER,
-            volume=db_model.volume,
-            source=db_model.source,
-        )
-
-    def update_db_model(self, db_model: DBMisplacedEodPricing) -> None:
-        """Update existing SQLAlchemy database model with data from this model.
-
-        Args:
-            db_model: SQLAlchemy MisplacedEodPricing instance to update
-        """
-        from src.database.equities.tables.misplaced_eod_pricing import PRICE_MULTIPLIER
-
-        db_model.symbol = self.symbol
-        db_model.date = self.date
-        db_model.open = int(self.open * PRICE_MULTIPLIER)
-        db_model.high = int(self.high * PRICE_MULTIPLIER)
-        db_model.low = int(self.low * PRICE_MULTIPLIER)
-        db_model.close = int(self.close * PRICE_MULTIPLIER)
-        db_model.adjusted_close = int(self.adjusted_close * PRICE_MULTIPLIER)
-        db_model.volume = self.volume
-        db_model.source = self.source

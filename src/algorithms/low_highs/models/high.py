@@ -1,0 +1,271 @@
+"""High pattern data model for low/high algorithm."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
+from typing import Any
+
+from src.algorithms.low_highs.constants import EXPIRED_DAYS_OUT
+from src.algorithms.low_highs.derived_data import LowHighDerivedData
+from src.utils.date_utils import days_between, get_year_month
+
+# Days until a pattern expires
+EXPIRATION_DAYS = 1200
+
+
+@dataclass
+class High:
+    """Data model for an active high pattern in the low/high algorithm.
+
+    A high pattern tracks a stock's price movement from a trough (low_start)
+    through a rise (high_threshold), to the highest point, and potential pullback.
+
+    Pattern lifecycle:
+    1. low_start: The trough price before a rise
+    2. high_threshold: First price at or above low_start * (1 + threshold)
+    3. highest: The actual highest point reached
+    4. low_threshold: Decline to highest / (1 + threshold)
+    5. Pattern spawns a new high when hitting low_threshold
+    6. Pattern completes (becomes reversal) when price returns to low_start
+
+    Threshold is stored as a decimal (e.g., 0.20 for 20%)
+    """
+
+    ticker_history_id: int
+    threshold: Decimal
+    low_start_price: Decimal
+    low_start_date: date | None = None
+    last_updated: date | None = None
+    high_threshold_price: Decimal | None = None
+    high_threshold_date: date | None = None
+    highest_price: Decimal | None = None
+    highest_date: date | None = None
+    low_threshold_price: Decimal | None = None
+    low_threshold_date: date | None = None
+    number_of_low_thresholds: int = 0
+    spawned: bool | None = False
+    expired: bool | None = False
+    id: int | None = None
+
+    def __post_init__(self) -> None:
+        """Validate required fields are set."""
+        if self.ticker_history_id is None:
+            raise ValueError("ticker_history_id is required and cannot be None")
+        if self.low_start_date is None:
+            raise ValueError("low_start_date is required and cannot be None")
+        if self.last_updated is None:
+            raise ValueError("last_updated is required and cannot be None")
+
+    def is_complete(self) -> bool:
+        """Check if pattern is complete (ready to become a reversal).
+
+        A pattern is complete when it has a reversal price (price returned to low_start).
+        This is determined externally - this model only tracks up to low_threshold.
+
+        Returns:
+            bool: Always False for High patterns (completeness is checked in processor)
+        """
+        return False
+
+    def is_expired(self) -> bool:
+        """Check if pattern has expired (800 days from high_threshold_date).
+
+        Returns:
+            bool: True if pattern has exceeded expiration period
+        """
+        if not self.high_threshold_date:
+            return False
+
+        days_since_high = (date.today() - self.high_threshold_date).days
+        return days_since_high > EXPIRATION_DAYS
+
+    def has_high_threshold(self) -> bool:
+        """Check if high threshold has been set.
+
+        Returns:
+            bool: True if high_threshold_price and high_threshold_date are set
+        """
+        return (
+            self.high_threshold_price is not None
+            and self.high_threshold_date is not None
+        )
+
+    def has_low_threshold(self) -> bool:
+        """Check if low threshold has been set.
+
+        Returns:
+            bool: True if low_threshold_price and low_threshold_date are set
+        """
+        return (
+            self.low_threshold_price is not None
+            and self.low_threshold_date is not None
+        )
+
+    def should_spawn(self) -> bool:
+        """Check if pattern should spawn a new high.
+
+        Pattern spawns when it hits low_threshold but hasn't spawned yet.
+
+        Returns:
+            bool: True if should spawn a new pattern
+        """
+        return self.has_low_threshold() and not self.spawned
+
+    def days_since_high_threshold(self) -> int | None:
+        """Calculate days since high threshold was reached.
+
+        Returns:
+            int | None: Number of days, or None if high_threshold_date not set
+        """
+        if not self.high_threshold_date:
+            return None
+        return (date.today() - self.high_threshold_date).days
+
+    def get_derived_data(self) -> LowHighDerivedData:
+        """Calculate derived data from the pattern.
+
+        This includes days between key points, status flags, and temporal metadata.
+        Mimics the old repository's get_data() function.
+
+        Returns:
+            LowHighDerivedData: TypedDict with all derived metrics
+        """
+        # High patterns never have a reversal (they're still active)
+        is_complete = False
+
+        # Calculate days between all combinations of key points
+        days_ls_ht = (
+            days_between(self.low_start_date, self.high_threshold_date)
+            if self.high_threshold_date
+            else None
+        )
+        days_ls_h = (
+            days_between(self.low_start_date, self.highest_date)
+            if self.highest_date
+            else None
+        )
+        days_ls_lt = (
+            days_between(self.low_start_date, self.low_threshold_date)
+            if self.low_threshold_date
+            else None
+        )
+        days_ht_h = (
+            days_between(self.high_threshold_date, self.highest_date)
+            if self.high_threshold_date and self.highest_date
+            else None
+        )
+        days_ht_lt = (
+            days_between(self.high_threshold_date, self.low_threshold_date)
+            if self.high_threshold_date and self.low_threshold_date
+            else None
+        )
+        days_h_lt = (
+            days_between(self.highest_date, self.low_threshold_date)
+            if self.highest_date and self.low_threshold_date
+            else None
+        )
+
+        # Days since high threshold (for active patterns only)
+        days_ht_now = self.days_since_high_threshold()
+
+        # Temporal metadata for high threshold
+        ht_year = self.high_threshold_date.year if self.high_threshold_date else None
+        ht_year_month = (
+            get_year_month(self.high_threshold_date)
+            if self.high_threshold_date
+            else None
+        )
+        ht_month = self.high_threshold_date.month if self.high_threshold_date else None
+
+        # Status flags
+        still_high = not is_complete and not self.is_expired()
+
+        return LowHighDerivedData(
+            # Base fields
+            ticker_history_id=self.ticker_history_id,
+            threshold=self.threshold,
+            low_start_price=self.low_start_price,
+            low_start_date=self.low_start_date,
+            # Price and date fields
+            high_threshold_price=self.high_threshold_price,
+            high_threshold_date=self.high_threshold_date,
+            highest_price=self.highest_price,
+            highest_date=self.highest_date,
+            low_threshold_price=self.low_threshold_price,
+            low_threshold_date=self.low_threshold_date,
+            reversal_price=None,  # High patterns don't have reversal
+            reversal_date=None,
+            # Counter
+            number_of_low_thresholds=self.number_of_low_thresholds,
+            # Status flags
+            is_high=not is_complete,
+            is_reversal=is_complete,
+            still_high=still_high,
+            expired=self.is_expired(),
+            # Days between key points
+            days_ls_ht=days_ls_ht,
+            days_ls_h=days_ls_h,
+            days_ls_lt=days_ls_lt,
+            days_ls_r=None,  # No reversal for High patterns
+            days_ht_h=days_ht_h,
+            days_ht_lt=days_ht_lt,
+            days_ht_r=None,  # No reversal for High patterns
+            days_h_lt=days_h_lt,
+            days_h_r=None,  # No reversal for High patterns
+            days_lt_r=None,  # No reversal for High patterns
+            days_ht_now=days_ht_now,
+            # Temporal metadata
+            ht_year=ht_year,
+            ht_year_month=ht_year_month,
+            ht_month=ht_month,
+            r_year=None,  # No reversal for High patterns
+            r_year_month=None,
+            r_month=None,
+            # Constants
+            days_till_expiration=EXPIRED_DAYS_OUT,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for serialization.
+
+        Returns:
+            dict: Dictionary representation of the high pattern
+        """
+        return {
+            "id": self.id,
+            "ticker_history_id": self.ticker_history_id,
+            "threshold": float(self.threshold),
+            "low_start_price": float(self.low_start_price),
+            "low_start_date": self.low_start_date.isoformat(),
+            "high_threshold_price": (
+                float(self.high_threshold_price) if self.high_threshold_price else None
+            ),
+            "high_threshold_date": (
+                self.high_threshold_date.isoformat() if self.high_threshold_date else None
+            ),
+            "highest_price": float(self.highest_price) if self.highest_price else None,
+            "highest_date": self.highest_date.isoformat() if self.highest_date else None,
+            "low_threshold_price": (
+                float(self.low_threshold_price) if self.low_threshold_price else None
+            ),
+            "low_threshold_date": (
+                self.low_threshold_date.isoformat() if self.low_threshold_date else None
+            ),
+            "number_of_low_thresholds": self.number_of_low_thresholds,
+            "last_updated": self.last_updated.isoformat(),
+            "spawned": self.spawned,
+            "expired": self.expired,
+        }
+
+    def __str__(self) -> str:
+        """String representation of High pattern."""
+        return (
+            f"High(id={self.id}, ticker_history_id={self.ticker_history_id}, "
+            f"threshold={self.threshold}, last_updated={self.last_updated})"
+        )
+
+    def __repr__(self) -> str:
+        """Detailed string representation of High pattern."""
+        return self.__str__()

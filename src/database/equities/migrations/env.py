@@ -1,3 +1,4 @@
+import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
@@ -10,7 +11,7 @@ sys.path.insert(0, str(project_root))
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from src.config.configuration import CONFIG
+from src.database.config import get_database_config
 from src.database.equities.base import Base
 
 # this is the Alembic Config object, which provides
@@ -28,8 +29,21 @@ target_metadata = Base.metadata
 
 # Set the database URL from environment configuration
 # Default to equities database for migrations
-db_config = CONFIG.get_database_config("equities")
-config.set_main_option("sqlalchemy.url", db_config.get_connection_string())
+db_config = get_database_config("equities")
+
+# Check if running during Docker initialization (when only Unix socket is available)
+if os.getenv("DOCKER_INIT") == "true":
+    # Use Unix socket connection for Docker initialization
+    # PostgreSQL in docker-entrypoint-initdb.d only listens on Unix socket, not TCP
+    # Using a dummy connection string and overriding via connect_args in run_migrations_online()
+    connection_string = f"postgresql+psycopg2://{db_config.username}:{db_config.password}@/{db_config.database}"
+    config.set_main_option("sqlalchemy.url", connection_string)
+    # Store the Unix socket path as an attribute for use in run_migrations_online()
+    config.attributes["unix_socket"] = "/var/run/postgresql"
+else:
+    # Use normal TCP connection (localhost or dynamic port from testcontainers)
+    config.set_main_option("sqlalchemy.url", db_config.get_connection_string(driver="psycopg2"))
+    config.attributes["unix_socket"] = None
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -68,11 +82,24 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    # Check if we need to use Unix socket connection
+    unix_socket = config.attributes.get("unix_socket")
+
+    if unix_socket:
+        # For Unix socket connections, pass host parameter via connect_args
+        connectable = engine_from_config(
+            config.get_section(config.config_ini_section, {}),
+            prefix="sqlalchemy.",
+            poolclass=pool.NullPool,
+            connect_args={"host": unix_socket},
+        )
+    else:
+        # Normal TCP connection
+        connectable = engine_from_config(
+            config.get_section(config.config_ini_section, {}),
+            prefix="sqlalchemy.",
+            poolclass=pool.NullPool,
+        )
 
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)

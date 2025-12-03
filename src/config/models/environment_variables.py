@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 
 class EnvironmentVariables(TypedDict):
@@ -16,6 +16,7 @@ class EnvironmentVariables(TypedDict):
     OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD: str
     NASDAQ_API_KEY: str
     EODHD_API_KEY: str
+    OPTIONS_DEEP_TEST_DB_PORT: NotRequired[str]  # Optional: testcontainers dynamic port
 
 
 class ENV_VARS:
@@ -32,4 +33,5 @@ class ENV_VARS:
     DB_PASSWORD = "OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD"
     NASDAQ_API_KEY = "NASDAQ_API_KEY"
     EODHD_API_KEY = "EODHD_API_KEY"
+    TEST_LIMITS = "OPTIONS_DEEP_TEST_LIMITS"
     TEST_DB_PORT = "OPTIONS_DEEP_TEST_DB_PORT"

@@ -2,60 +2,6 @@
 
 This document contains critical information about working with this codebase. Follow these guidelines precisely.
 
-## Core Development Rules
-
-1. Code Quality
-   - Type hints required for all code
-   - Functions must be focused and small
-   - Follow existing patterns exactly
-
-2. Testing Requirements
-   - Framework: `unittest`
-      - use `make unit-test` to run unit tests.
-      - running integration and e2e tests to come later.
-   - Async testing: use anyio, not asyncio
-   - Coverage: test edge cases and errors
-   - New features require tests
-   - Bug fixes require regression tests
-
-3. Code Style
-    - PEP 8 naming (snake_case for functions/variables)
-    - Class names in PascalCase
-    - Constants in UPPER_SNAKE_CASE
-    - Document with docstrings
-    - Use f-strings for formatting
-
-
-## TypeDicts
-Do not return `dict[str, int]`  but instead return TypeDict classes that define the attributes please.
-
-## Development Philosophy
-
-- **Simplicity**: Write simple, straightforward code
-- **Readability**: Make code easy to understand
-- **Performance**: Consider performance without sacrificing readability
-- **Maintainability**: Write code that's easy to update
-- **Testability**: Ensure code is testable
-- **Reusability**: Create reusable components and functions
-- **Less Code = Less Debt**: Minimize code footprint
-
-## Coding Best Practices
-
-- **Early Returns**: Use to avoid nested conditions
-- **Descriptive Names**: Use clear variable/function names
-- **Constants Over Functions**: Use constants where possible
-- **DRY Code**: Don't repeat yourself
-- **Functional Style**: Prefer functional, immutable approaches when not verbose
-- **Minimal Changes**: Only modify code related to the task at hand
-- **Function Ordering**: Define composing functions before their components
-- **TODO Comments**: Mark issues in existing code with "TODO:" prefix
-- **Simplicity**: Prioritize simplicity and readability over clever solutions
-- **Build Iteratively** Start with minimal functionality and verify it works before adding complexity
-- **Run Tests**: Test your code frequently with realistic inputs and validate outputs
-- **Build Test Environments**: Create testing environments for components that are difficult to validate directly
-- **Functional Code**: Use functional and stateless approaches where they improve clarity
-- **Clean logic**: Keep core logic clean and push implementation details to the edges
-- **File Organsiation**: Balance file organization with simplicity - use an appropriate number of files for the project scale
 
 ## Core Components 
 
@@ -68,18 +14,39 @@ Do not return `dict[str, int]`  but instead return TypeDict classes that define 
    - **database** - this where database is constructed using alembic.
    - **config** - this is where setting up configurations, environment variables, and the like are stored.
    - **pipelines** - merging the repos and the data_sources together using dependency injection to abstract the use of the data sources.
-- test information
-   - **tests** - the `/tests` folder, *outside of src folder* is used for non-unit tests this will be integration and e2e tests.
-   - **unittests** - made along side the actual code base, is used with mocks to generate fast running tests.
-
+   - **algorithms** - used to define the algorithms of the project. Each algorithm has it's own sub folder.
+   
 ## Testing
-- tests are created in the same sub-directories as the code
-- test data is created in the @tests folder
-- tests utilize `*_mock.py` files to mock out the data from `repos` and `data_sources`
+- **unittests** - unittests are written side by side their respective code.made along side the actual code base, is used with mocks to generate fast running tests. 
+- **integration tests** - the `/tests` folder, *outside of src folder* is used for non-unit tests this will be integration and e2e tests.
 
+### Unit Test
+To run unit tests please run `make unit-test`.
+#### Test Specific
+`PYTHONPATH=. python -m unittest <file>`
+#### Specific test method
+`PYTHONPATH=. python -m unittest src.path.to.test_file.TestClassName.test_m`
 
 ## Environment Variables
 - when adding environment variables you ***MUST*** ensure that you do the following
    - that you add them to `src/config/models/environment_variables.py`
    - that access to the environment variables goes through `src/config/configuration.py`
    - you update the `src/config/ENVIRONMENT.md` with a summary of the variable
+
+
+## Static Type Checking
+**Ensuyre you apply policy**. Please do not use type checking, unless you have been asked.
+
+Run `python -m mypy <python_file>` to get the static type checking information.
+Use this after writing to files to fix common missing behaviours please.
+
+Run `uv run pyright <python_file>` to get more static typing checking information, and fix those issues as well.
+
+## Common Packages
+if you need information on SqlAlchemy please conduct context7 resource `https://context7.com/sqlalchemy/sqlalchemy`
+
+
+## unit testing
+to test a file in this repo,  you will need to set the `OPTIONS_DEEP_ENV=unittest`
+ensure that it is always set to `unittest` this is a ***MUST***.
+`export OPTIONS_DEEP_ENV=unittest && python -m unittest <file> -v`

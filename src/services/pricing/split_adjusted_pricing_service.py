@@ -70,8 +70,8 @@ class SplitAdjustedPricingService:
     def get_split_adjusted_pricing_with_symbol(
         self,
         symbol: str,
-        from_date: date,
-        to_date: date,
+        from_date: date | None = None,
+        to_date: date | None = None,
         include_ohlc: bool = False,
     ) -> SplitAdjustedPricing[DatePrice] | SplitAdjustedPricing[EODSplitAdjustedPricing]:
         """Get split-adjusted pricing data for a stock symbol.
@@ -117,8 +117,8 @@ class SplitAdjustedPricingService:
     def get_split_adjusted_pricing_with_ticker_history_id(
         self,
         ticker_history_id: int,
-        from_date: date,
-        to_date: date,
+        from_date: date | None = None,
+        to_date: date | None = None,
         include_ohlc: bool = False,
     ) -> SplitAdjustedPricing[DatePrice] | SplitAdjustedPricing[EODSplitAdjustedPricing]:
         """Get split-adjusted pricing data for a ticker_history_id.
@@ -327,15 +327,15 @@ class SplitAdjustedPricingService:
         if not prices:
             return []
 
+        # Sort data by date (oldest first) - always sort for consistency
+        sorted_prices = sorted(prices, key=lambda p: p.date)
+
         # If no splits, just convert to DatePrice with close prices
         if not splits:
             return [
                 DatePrice(date=price.date, price=price.close)
-                for price in prices
+                for price in sorted_prices
             ]
-
-        # Sort data by date (oldest first)
-        sorted_prices = sorted(prices, key=lambda p: p.date)
         sorted_splits = sorted(splits, key=lambda s: s.date)
 
         adjusted_prices: list[DatePrice] = []
@@ -378,6 +378,9 @@ class SplitAdjustedPricingService:
         if not prices:
             return []
 
+        # Sort data by date (oldest first) - always sort for consistency
+        sorted_prices = sorted(prices, key=lambda p: p.date)
+
         # If no splits, just convert to EODSplitAdjustedPricing
         if not splits:
             return [
@@ -390,11 +393,8 @@ class SplitAdjustedPricingService:
                     volume=price.volume,
                     adjusted_close=price.adjusted_close,
                 )
-                for price in prices
+                for price in sorted_prices
             ]
-
-        # Sort data by date (oldest first)
-        sorted_prices = sorted(prices, key=lambda p: p.date)
         sorted_splits = sorted(splits, key=lambda s: s.date)
 
         adjusted_prices: list[EODSplitAdjustedPricing] = []
