@@ -21,7 +21,7 @@ cd /opt/options-deep
 export DOCKER_INIT=true
 
 # Run the Python fixture seeding script
-/opt/venv/bin/python /opt/options-deep/dockerfiles/test/seed_test_fixtures.py
+/opt/venv/bin/python /opt/options-deep/dockerfiles/test/data_fill/seed_test_fixtures.py
 
 # Check if seeding was successful
 if [ $? -eq 0 ]; then

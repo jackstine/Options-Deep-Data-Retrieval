@@ -14,7 +14,7 @@ RUN chmod -R 755 /opt/options-deep/src/
 ENV DOCKER_INIT=true
 
 # Copy fixture seeding script with read permissions for all
-COPY --chmod=0644 dockerfiles/test/seed_test_fixtures.py /opt/options-deep/dockerfiles/test/seed_test_fixtures.py
+COPY --chmod=0644 dockerfiles/test/data_fill/seed_test_fixtures.py /opt/options-deep/dockerfiles/test/data_fill/seed_test_fixtures.py
 
 # Copy entrypoint script with executable permissions
 COPY --chmod=0755 dockerfiles/test/docker-entrypoint-fixtures.sh /docker-entrypoint-initdb.d/20-load-fixtures.sh

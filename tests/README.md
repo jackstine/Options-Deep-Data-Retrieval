@@ -204,7 +204,7 @@ with integration_test_container("options-deep-test-data:latest") as (postgres, r
 - Pattern generation testing (realistic price volatility)
 
 **When to rebuild:**
-- After modifying `/dockerfiles/test/seed_test_fixtures.py`
+- After modifying `/dockerfiles/test/data_fill/seed_test_fixtures.py`
 - After changes to fixture data generation logic
 - When `options-deep-test:latest` is rebuilt
 
@@ -251,7 +251,7 @@ postgresql+psycopg2://test:test@/test?host=/var/run/postgresql
 
 **For data image:**
 - `dockerfiles/test/Dockerfile.data` - Extends options-deep-test:latest
-- `dockerfiles/test/seed_test_fixtures.py` - Fixture seeding logic
+- `dockerfiles/test/data_fill/seed_test_fixtures.py` - Fixture seeding logic
 - `dockerfiles/test/docker-entrypoint-fixtures.sh` - Fixture loading script
 
 ### 4. Test Container Startup (TCP Connection)
