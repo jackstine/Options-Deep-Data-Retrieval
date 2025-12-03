@@ -32,11 +32,6 @@ python src/cmd/my_script.py
 # Use production environment file
 export OPTIONS_DEEP_ENV=prod
 python src/cmd/my_script.py
-
-# Limit processing to 10 companies for testing
-export OPTIONS_DEEP_ENV=local
-export OPTIONS_DEEP_TEST_LIMITS=10
-python -m src.cmd.eod.eodhd.eod_ingestion
 ```
 
 ## Configuration Architecture
@@ -146,11 +141,6 @@ api_key = CONFIG.get_nasdaq_api_key()
 
 # Get database config (combines env vars + JSON config)
 db_config = CONFIG.get_equities_config()
-
-# Get test limits (optional, returns None if not set)
-test_limit = CONFIG.get_test_limits()
-if test_limit:
-    print(f"Processing limited to {test_limit} items")
 ```
 
 ## Type Safety
