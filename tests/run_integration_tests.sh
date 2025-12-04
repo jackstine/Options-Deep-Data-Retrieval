@@ -2,7 +2,7 @@
 # Integration test runner script
 # This script sets up the environment and runs integration tests with testcontainers
 # Features:
-# - Smart migration detection: automatically rebuilds Docker image if migrations changed
+# - Smart migration detection: automatically rebuilds both test and test-data Docker images if migrations changed
 # - Parallel execution: runs tests in parallel using all CPU cores by default
 # - Proper environment setup: sets all required variables including TESTCONTAINERS_RYUK_DISABLED
 
@@ -83,6 +83,59 @@ if [ "$NEEDS_REBUILD" = true ]; then
     echo -e "${GREEN}✓ Test Docker image rebuilt successfully${NC}"
 else
     echo -e "${GREEN}✓ Test Docker image is up-to-date (no rebuild needed)${NC}"
+fi
+
+echo ""
+
+# Smart migration detection: check if test data image needs rebuild
+echo -e "${BLUE}🔍 Checking if test data Docker image needs rebuild...${NC}"
+
+DATA_IMAGE_NAME="options-deep-test-data:latest"
+DATA_NEEDS_REBUILD=false
+
+# Check if data image exists
+if ! docker image inspect "$DATA_IMAGE_NAME" > /dev/null 2>&1; then
+    echo -e "${YELLOW}⚠ Docker image '$DATA_IMAGE_NAME' not found${NC}"
+    DATA_NEEDS_REBUILD=true
+else
+    # Get image creation timestamp (Unix timestamp)
+    DATA_IMAGE_CREATED=$(docker image inspect "$DATA_IMAGE_NAME" --format='{{.Created}}' 2>/dev/null)
+    DATA_IMAGE_TIMESTAMP=$(date -j -f "%Y-%m-%dT%H:%M:%S" "$(echo "$DATA_IMAGE_CREATED" | cut -d'.' -f1)" "+%s" 2>/dev/null || echo "0")
+
+    # Find newest migration file in equities migrations
+    MIGRATIONS_DIR="src/database/equities/migrations/versions"
+    if [ -d "$MIGRATIONS_DIR" ]; then
+        # Find the newest migration file (by modification time)
+        NEWEST_MIGRATION=$(find "$MIGRATIONS_DIR" -name "*.py" -type f -exec stat -f "%m %N" {} \; 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
+
+        if [ -n "$NEWEST_MIGRATION" ]; then
+            MIGRATION_TIMESTAMP=$(stat -f "%m" "$NEWEST_MIGRATION" 2>/dev/null || echo "0")
+
+            # Compare timestamps
+            if [ "$MIGRATION_TIMESTAMP" -gt "$DATA_IMAGE_TIMESTAMP" ]; then
+                MIGRATION_FILE=$(basename "$NEWEST_MIGRATION")
+                echo -e "${YELLOW}⚠ Migration file '$MIGRATION_FILE' is newer than Docker data image${NC}"
+                DATA_NEEDS_REBUILD=true
+            fi
+        fi
+    fi
+fi
+
+# Rebuild data image if needed
+if [ "$DATA_NEEDS_REBUILD" = true ]; then
+    echo -e "${BLUE}🔨 Rebuilding test data Docker image (migrations changed)...${NC}"
+    echo ""
+
+    # Call make build-test-data-image
+    if ! make build-test-data-image; then
+        echo -e "${RED}ERROR: Failed to build test data Docker image!${NC}"
+        exit 1
+    fi
+
+    echo ""
+    echo -e "${GREEN}✓ Test data Docker image rebuilt successfully${NC}"
+else
+    echo -e "${GREEN}✓ Test data Docker image is up-to-date (no rebuild needed)${NC}"
 fi
 
 echo ""

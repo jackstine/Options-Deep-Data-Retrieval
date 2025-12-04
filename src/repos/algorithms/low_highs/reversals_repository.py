@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from src.algorithms.low_highs.models.reversal import Reversal as ReversalDataModel
 from src.config.configuration import CONFIG
-from src.database.algorithms.tables.low_highs.reversals import Reversal as ReversalDBModel
+from src.database.equities.tables.algorithms.reversals import Reversal as ReversalDBModel
 from src.pipelines.algorithms.base.interfaces import CompletedPatternRepository
 from src.repos.base_repository import BaseRepository
 
@@ -30,7 +30,7 @@ class ReversalsRepository(
     def __init__(self) -> None:
         """Initialize reversals repository."""
         super().__init__(
-            config_getter=CONFIG.get_algorithm_config,
+            config_getter=CONFIG.get_equities_config,
             data_model_class=ReversalDataModel,
             db_model_class=ReversalDBModel,
         )
@@ -45,7 +45,7 @@ class ReversalsRepository(
         Returns:
             Reversal: Data model instance
         """
-        from src.database.algorithms.tables.low_highs.reversals import PRICE_MULTIPLIER
+        from src.database.equities.tables.algorithms.reversals import PRICE_MULTIPLIER
 
         # Convert threshold from basis points to decimal (2000 -> 0.20)
         threshold = Decimal(db_model.threshold) / Decimal("10000")
@@ -79,7 +79,7 @@ class ReversalsRepository(
         Returns:
             ReversalDBModel: SQLAlchemy model instance ready for database operations
         """
-        from src.database.algorithms.tables.low_highs.reversals import PRICE_MULTIPLIER
+        from src.database.equities.tables.algorithms.reversals import PRICE_MULTIPLIER
 
         # Convert threshold from decimal to basis points (0.20 -> 2000)
         threshold_bp = int(data_model.threshold * Decimal("10000"))
