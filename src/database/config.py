@@ -42,23 +42,32 @@ def get_database_config(database_name: str = "equities") -> DatabaseConfig:
         >>> config = get_database_config("equities")
         >>> connection_string = config.get_connection_string(driver="psycopg2")
     """
+    # Get OPTIONS_DEEP_ENV value (used to determine which .env file to read)
+    options_deep_env = os.getenv("OPTIONS_DEEP_ENV")
+
     # Get environment name
-    environment = os.getenv("ENVIRONMENT", "local").lower()
+    # First try environment variable, then try reading from .env file
+    environment = os.getenv("ENVIRONMENT")
+    if environment is None and options_deep_env:
+        environment = _get_env_var_from_file(options_deep_env, "ENVIRONMENT")
+    if environment is None:
+        environment = "local"
+    environment = environment.lower()
 
     # Get database password
     # First try environment variable
     password = os.getenv("OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD")
 
     # If not in environment, try to read from .{OPTIONS_DEEP_ENV}.env file
-    if password is None:
-        options_deep_env = os.getenv("OPTIONS_DEEP_ENV", environment)
+    if password is None and options_deep_env:
         password = _get_password_from_env_file(options_deep_env)
 
     # If still not found, raise error
     if password is None:
+        env_file_hint = f".{options_deep_env}.env" if options_deep_env else ".local.env"
         raise ValueError(
             "OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD not found in environment variables "
-            f"or .{os.getenv('OPTIONS_DEEP_ENV', environment)}.env file"
+            f"or {env_file_hint} file"
         )
 
     # Load config from JSON file
@@ -111,7 +120,18 @@ def get_available_databases() -> list[str]:
         ValueError: If configuration file is invalid
         FileNotFoundError: If configuration file doesn't exist
     """
-    environment = os.getenv("ENVIRONMENT", "local").lower()
+    # Get OPTIONS_DEEP_ENV value (used to determine which .env file to read)
+    options_deep_env = os.getenv("OPTIONS_DEEP_ENV")
+
+    # Get environment name
+    # First try environment variable, then try reading from .env file
+    environment = os.getenv("ENVIRONMENT")
+    if environment is None and options_deep_env:
+        environment = _get_env_var_from_file(options_deep_env, "ENVIRONMENT")
+    if environment is None:
+        environment = "local"
+    environment = environment.lower()
+
     config_dir = Path(__file__).parent / "configs" / "environments"
     config_file = config_dir / f"{environment}.json"
 
@@ -129,14 +149,15 @@ def get_available_databases() -> list[str]:
 
     return list(config_data["databases"].keys())
 
-def _get_password_from_env_file(options_deep_env: str) -> str | None:
-    """Try to read OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD from env file.
+def _get_env_var_from_file(options_deep_env: str, var_name: str) -> str | None:
+    """Try to read an environment variable from the env file.
 
     Args:
         options_deep_env: The OPTIONS_DEEP_ENV value (e.g., 'local', 'dev')
+        var_name: The environment variable name to look for
 
     Returns:
-        Password string if found, None otherwise
+        Variable value if found, None otherwise
     """
     env_file = Path.cwd() / f".{options_deep_env}.env"
 
@@ -153,11 +174,23 @@ def _get_password_from_env_file(options_deep_env: str) -> str | None:
                 # Parse KEY=VALUE format
                 if "=" in line:
                     key, value = line.split("=", 1)
-                    if key.strip() == "OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD":
+                    if key.strip() == var_name:
                         return value.strip()
     except Exception:
         # If we can't read the file, just return None
         return None
 
     return None
+
+
+def _get_password_from_env_file(options_deep_env: str) -> str | None:
+    """Try to read OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD from env file.
+
+    Args:
+        options_deep_env: The OPTIONS_DEEP_ENV value (e.g., 'local', 'dev')
+
+    Returns:
+        Password string if found, None otherwise
+    """
+    return _get_env_var_from_file(options_deep_env, "OPTIONS_DEEP_DATA_WAREHOUSE_PASSWORD")
 

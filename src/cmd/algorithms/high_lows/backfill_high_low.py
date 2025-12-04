@@ -159,7 +159,7 @@ Examples:
 
     else:  # --all
         logger.info("Starting bulk backfill for all active tickers")
-        results = pipeline.run_bulk_backfill(
+        results = pipeline.run(
             from_date=args.from_date,
             to_date=args.to_date,
         )
