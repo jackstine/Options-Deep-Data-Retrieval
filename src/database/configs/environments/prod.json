@@ -7,7 +7,7 @@
       "username": "e_user"
     },
     "algorithm": {
-      "host": "prod-db-server.example.com",
+      "host": "localhost",
       "port": 5457,
       "database": "algorithms-prod",
       "username": "e_user"
