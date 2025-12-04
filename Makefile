@@ -139,4 +139,17 @@ lint-fix:
 	uv run ruff format .
 	@echo "✅ Auto-fixable issues resolved!"
 
+# Database Commands
+
+# upgrade both algorithms and equities databases
+PHONY: upgrade-databases
+upgrade-databases:
+	@echo "📊 Upgrading equities database..."
+	alembic -c src/database/equities/alembic.ini upgrade head
+	@echo "✅ Equities database upgraded!"
+	@echo "📊 Upgrading algorithms database..."
+	alembic -c src/database/algorithms/alembic.ini upgrade head
+	@echo "✅ Algorithms database upgraded!"
+	@echo "✅ All databases upgraded successfully!"
+
 

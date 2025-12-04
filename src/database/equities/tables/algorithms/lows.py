@@ -1,4 +1,4 @@
-"""SQLAlchemy Highs table for low/high algorithm pattern tracking."""
+"""SQLAlchemy Lows table for high/low algorithm pattern tracking."""
 
 from __future__ import annotations
 
@@ -7,21 +7,21 @@ from datetime import date as date_type
 from sqlalchemy import BigInteger, Boolean, Date, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.database.algorithms.base import Base
+from src.database.equities.base import Base
 
 # Price multiplier constant: $1.00 = 1,000,000 (6 decimal places, penny = 10,000)
 PRICE_MULTIPLIER = 1000000
 
 
-class High(Base):
-    """SQLAlchemy model for active high patterns in the low/high algorithm.
+class Low(Base):
+    """SQLAlchemy model for active low patterns in the high/low algorithm.
 
-    This table tracks active price patterns that have not yet completed (reversed).
+    This table tracks active price patterns that have not yet completed (rebounded).
 
     Pattern lifecycle:
-    1. Starts when price rises by threshold % from low_start
-    2. Tracks highest point and decline
-    3. Moves to reversals table when price returns to low_start
+    1. Starts when price drops by threshold % from high_start
+    2. Tracks lowest point and recovery
+    3. Moves to rebounds table when price returns to high_start
     4. Expires after 800 days if not completed
 
     Prices are stored as integers multiplied by 1,000,000 for precision.
@@ -31,7 +31,8 @@ class High(Base):
     Example: 20% threshold is stored as 2000.
     """
 
-    __tablename__ = "highs"
+    __tablename__ = "lows"
+    __table_args__ = {'schema': 'algorithm'}
 
     # Primary key
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -47,24 +48,24 @@ class High(Base):
     # Threshold as basis points (2000 = 20%, 1500 = 15%)
     threshold: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
 
-    # Low start - the trough price before the rise
-    low_start_price: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    low_start_date: Mapped[date_type] = mapped_column(Date, nullable=False)
+    # High start - the peak price before the drop
+    high_start_price: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    high_start_date: Mapped[date_type] = mapped_column(Date, nullable=False)
 
-    # High threshold - first price at or above low_start * (1 + threshold)
-    high_threshold_price: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    high_threshold_date: Mapped[date_type | None] = mapped_column(Date, nullable=True)
-
-    # Highest - the actual highest point in the pattern
-    highest_price: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    highest_date: Mapped[date_type | None] = mapped_column(Date, nullable=True)
-
-    # Low threshold - decline point at highest / (1 + threshold)
+    # Low threshold - first price at or below high_start * (1 - threshold)
     low_threshold_price: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     low_threshold_date: Mapped[date_type | None] = mapped_column(Date, nullable=True)
 
-    # Threshold crossing counter - tracks number of times low_threshold is crossed
-    number_of_low_thresholds: Mapped[int] = mapped_column(
+    # Lowest - the actual lowest point in the pattern
+    lowest_price: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    lowest_date: Mapped[date_type | None] = mapped_column(Date, nullable=True)
+
+    # High threshold - recovery point at lowest * (1 + threshold)
+    high_threshold_price: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    high_threshold_date: Mapped[date_type | None] = mapped_column(Date, nullable=True)
+
+    # Threshold crossing counter - tracks number of times high_threshold is crossed
+    number_of_high_thresholds: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0
     )
 
@@ -77,8 +78,8 @@ class High(Base):
     # Use ticker_history_id foreign key for joins at the application level
 
     def __repr__(self) -> str:
-        """String representation of High."""
+        """String representation of Low."""
         return (
-            f"<High(id={self.id}, ticker_history_id={self.ticker_history_id}, "
+            f"<Low(id={self.id}, ticker_history_id={self.ticker_history_id}, "
             f"threshold={self.threshold}, last_updated={self.last_updated})>"
         )

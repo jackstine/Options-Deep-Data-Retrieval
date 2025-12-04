@@ -206,6 +206,7 @@ class DelistedCompanyPipeline:
                 # No EOD data - still insert company but mark as invalid
                 self.logger.warning(f"No EOD data found for {symbol}")
                 company.is_valid_data = False
+                company.active = False
                 result["failed_company_info"] = {
                     "code": symbol,
                     "name": company.company_name,
@@ -231,6 +232,7 @@ class DelistedCompanyPipeline:
                 # Error calculating metrics
                 self.logger.warning(f"Error calculating metrics for {symbol}: {metrics['error']}")
                 company.is_valid_data = False
+                company.active = False
                 result["failed_company_info"] = {
                     "code": symbol,
                     "name": company.company_name,
@@ -251,6 +253,7 @@ class DelistedCompanyPipeline:
 
             # Calculate is_valid_data flag
             company.is_valid_data = self._calculate_is_valid_data(company.exchange, metrics)
+            company.active = False
 
             # Insert or update company
             existing_company_data = self.company_service.get_company_by_ticker(symbol)
@@ -330,6 +333,7 @@ class DelistedCompanyPipeline:
             # Try to insert company with is_valid_data=False
             try:
                 company.is_valid_data = False
+                company.active = False
                 existing_company_data = self.company_service.get_company_by_ticker(symbol)
                 if existing_company_data:
                     self.company_service.update_company(symbol, company)

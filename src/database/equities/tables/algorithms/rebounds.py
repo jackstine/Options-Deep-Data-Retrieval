@@ -7,7 +7,7 @@ from datetime import date as date_type
 from sqlalchemy import BigInteger, Date, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.database.algorithms.base import Base
+from src.database.equities.base import Base
 
 # Price multiplier constant: $1.00 = 1,000,000 (6 decimal places, penny = 10,000)
 PRICE_MULTIPLIER = 1000000
@@ -32,6 +32,7 @@ class Rebound(Base):
     """
 
     __tablename__ = "rebounds"
+    __table_args__ = {'schema': 'algorithm'}
 
     # Primary key
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)

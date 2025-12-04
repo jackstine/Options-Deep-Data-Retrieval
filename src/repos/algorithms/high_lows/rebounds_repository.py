@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from src.algorithms.high_lows.models.rebound import Rebound as ReboundDataModel
 from src.config.configuration import CONFIG
-from src.database.algorithms.tables.high_lows.rebounds import Rebound as ReboundDBModel
+from src.database.equities.tables.algorithms.rebounds import Rebound as ReboundDBModel
 from src.pipelines.algorithms.base.interfaces import CompletedPatternRepository
 from src.repos.base_repository import BaseRepository
 
@@ -30,7 +30,7 @@ class ReboundsRepository(
     def __init__(self) -> None:
         """Initialize rebounds repository."""
         super().__init__(
-            config_getter=CONFIG.get_algorithm_config,
+            config_getter=CONFIG.get_equities_config,
             data_model_class=ReboundDataModel,
             db_model_class=ReboundDBModel,
         )
@@ -45,7 +45,7 @@ class ReboundsRepository(
         Returns:
             Rebound: Data model instance
         """
-        from src.database.algorithms.tables.high_lows.rebounds import PRICE_MULTIPLIER
+        from src.database.equities.tables.algorithms.rebounds import PRICE_MULTIPLIER
 
         # Convert threshold from basis points to decimal (2000 -> 0.20)
         threshold = Decimal(db_model.threshold) / Decimal("10000")
@@ -79,7 +79,7 @@ class ReboundsRepository(
         Returns:
             ReboundDBModel: SQLAlchemy model instance ready for database operations
         """
-        from src.database.algorithms.tables.high_lows.rebounds import PRICE_MULTIPLIER
+        from src.database.equities.tables.algorithms.rebounds import PRICE_MULTIPLIER
 
         # Convert threshold from decimal to basis points (0.20 -> 2000)
         threshold_bp = int(data_model.threshold * Decimal("10000"))

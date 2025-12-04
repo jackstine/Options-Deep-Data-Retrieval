@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from src.algorithms.low_highs.models.high import High as HighDataModel
 from src.config.configuration import CONFIG
-from src.database.algorithms.tables.low_highs.highs import High as HighDBModel
+from src.database.equities.tables.algorithms.highs import High as HighDBModel
 from src.pipelines.algorithms.base.interfaces import ActivePatternRepository
 from src.repos.base_repository import BaseRepository
 
@@ -30,7 +30,7 @@ class HighsRepository(
     def __init__(self) -> None:
         """Initialize highs repository."""
         super().__init__(
-            config_getter=CONFIG.get_algorithm_config,
+            config_getter=CONFIG.get_equities_config,
             data_model_class=HighDataModel,
             db_model_class=HighDBModel,
         )
@@ -45,7 +45,7 @@ class HighsRepository(
         Returns:
             High: Data model instance
         """
-        from src.database.algorithms.tables.low_highs.highs import PRICE_MULTIPLIER
+        from src.database.equities.tables.algorithms.highs import PRICE_MULTIPLIER
 
         # Convert threshold from basis points to decimal (2000 -> 0.20)
         threshold = Decimal(db_model.threshold) / Decimal("10000")
@@ -90,7 +90,7 @@ class HighsRepository(
         Returns:
             HighDBModel: SQLAlchemy model instance ready for database operations
         """
-        from src.database.algorithms.tables.low_highs.highs import PRICE_MULTIPLIER
+        from src.database.equities.tables.algorithms.highs import PRICE_MULTIPLIER
 
         # Convert threshold from decimal to basis points (0.20 -> 2000)
         threshold_bp = int(data_model.threshold * Decimal("10000"))
@@ -139,7 +139,7 @@ class HighsRepository(
             data_model: High data model instance with new values
             db_model: SQLAlchemy High instance to update
         """
-        from src.database.algorithms.tables.low_highs.highs import PRICE_MULTIPLIER
+        from src.database.equities.tables.algorithms.highs import PRICE_MULTIPLIER
 
         # Convert threshold from decimal to basis points
         threshold_bp = int(data_model.threshold * Decimal("10000"))
